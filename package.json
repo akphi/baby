@@ -1,0 +1,50 @@
+{
+  "name": "little-one",
+  "version": "0.0.0",
+  "description": "",
+  "private": true,
+  "sideEffects": false,
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "check:update": "npm-check-updates",
+    "build": "remix build",
+    "dev": "remix dev",
+    "start": "remix-serve ./build/index.js",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@iconify/react": "4.1.1",
+    "@mikro-orm/core": "5.9.4",
+    "@mikro-orm/sqlite": "5.9.4",
+    "@remix-run/node": "2.3.1",
+    "@remix-run/react": "2.3.1",
+    "@remix-run/serve": "2.3.1",
+    "@types/react": "18.2.39",
+    "@types/react-dom": "18.2.17",
+    "@types/uuid": "9.0.7",
+    "isbot": "3.7.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "uuid": "9.0.1"
+  },
+  "devDependencies": {
+    "@mikro-orm/better-sqlite": "5.9.4",
+    "@mikro-orm/entity-generator": "5.9.4",
+    "@mikro-orm/mariadb": "5.9.4",
+    "@mikro-orm/migrations": "5.9.4",
+    "@mikro-orm/migrations-mongodb": "5.9.4",
+    "@mikro-orm/mongodb": "5.9.4",
+    "@mikro-orm/mysql": "5.9.4",
+    "@mikro-orm/postgresql": "5.9.4",
+    "@mikro-orm/seeder": "5.9.4",
+    "@remix-run/dev": "2.3.1",
+    "better-sqlite3": "9.2.0",
+    "chalk": "5.3.0",
+    "npm-check-updates": "16.14.11",
+    "tailwindcss": "3.3.5",
+    "typescript": "5.3.2"
+  }
+}

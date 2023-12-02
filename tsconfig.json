@@ -1,0 +1,34 @@
+{
+  "include": ["remix.env.d.ts", "app/**/*.ts", "app/**/*.tsx"],
+  "compilerOptions": {
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "moduleResolution": "Bundler",
+    "target": "esnext",
+    "baseUrl": ".",
+
+    // Remix takes care of building everything in `remix build`.
+    "noEmit": true,
+
+    // support React JSX
+    "jsx": "react-jsx",
+
+    "strict": true,
+    "skipLibCheck": true, // skip type checking of all declaration files (*.d.ts)
+    "resolveJsonModule": true, // include JSON files module and auto-interpret types
+    "verbatimModuleSyntax": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    // ---exactOptionalPropertyTypes specifies that optional property types should be interpreted exactly as
+    // written, meaning that `| undefined` is not added to the type.
+    // This makes it possible to ensure that optional properties are never `undefined` when they're present
+    // on an object, and that `undefined` values read from optional properties unequivocally indicate that
+    // the properties are not present.
+    // See https://github.com/microsoft/TypeScript/pull/43947
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // support decorators
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  }
+}
