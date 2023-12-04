@@ -5,14 +5,23 @@ import {
   Connection,
   Property,
   ManyToOne,
+  Enum,
 } from "@mikro-orm/core";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
 import { v4 as uuid } from "uuid";
 
+export enum Gender {
+  MALE = "MALE",
+  FEMALE = "FEMALE",
+}
+
 @Entity()
 export class BabyCareProfile {
   @PrimaryKey({ type: "string" })
-  id = uuid();
+  readonly id = uuid();
+
+  @Property({ type: "string", nullable: true })
+  shortId?: string;
 
   @Property({ type: "string" })
   name: string;
@@ -20,30 +29,37 @@ export class BabyCareProfile {
   @Property({ type: "string", nullable: true })
   nickname?: string;
 
+  @Property({ type: () => Gender })
+  genderAtBirth: Gender;
+
   @Property({ type: "Date" })
-  birthTime: Date;
+  dob: Date;
 
   @Property({ type: "number", nullable: true })
-  defaultBreastMilkVolume?: number;
+  defaultFeedingVolume?: number;
 
-  @Property({ type: "number", nullable: true })
-  defaultFormulaMilkVolume?: number;
-
-  constructor(name: string, birthTime: Date) {
+  constructor(name: string, genderAtBirth: Gender, dob: Date) {
     this.name = name;
-    this.birthTime = birthTime;
+    this.genderAtBirth = genderAtBirth;
+    this.dob = dob;
   }
 }
 
 class BabyCareEvent {
   @PrimaryKey({ type: "string" })
-  id = uuid();
+  readonly id = uuid();
 
   @Property({ type: "Date" })
   time: Date;
 
+  @Property({ type: "number", nullable: true })
+  duration?: number;
+
   @ManyToOne(() => BabyCareProfile, { onDelete: "cascade" })
   profile: BabyCareProfile;
+
+  @Property({ type: "string", nullable: true })
+  comment?: string;
 
   constructor(time: Date, profile: BabyCareProfile) {
     this.time = time;
@@ -54,33 +70,50 @@ class BabyCareEvent {
 @Entity()
 export class BottleEvent extends BabyCareEvent {
   @Property({ type: "number" })
-  breastMilkVolume: number;
+  volume: number;
 
   @Property({ type: "number" })
-  formulaMilkVolume: number;
+  breastMilkVolume: number;
 
   constructor(
     time: Date,
     profile: BabyCareProfile,
-    breastMilkVolume: number,
-    formulaMilkVolume: number
+    volume: number,
+    breastMilkVolume: number
   ) {
     super(time, profile);
+    this.volume = volume;
     this.breastMilkVolume = breastMilkVolume;
-    this.formulaMilkVolume = formulaMilkVolume;
   }
 }
 
 @Entity()
-export class DiaperChangeEvent extends BabyCareEvent {
-  @Property({ type: "boolean", nullable: true })
-  dirty?: boolean;
-}
+export class PeeEvent extends BabyCareEvent {}
+
+@Entity()
+export class PoopEvent extends BabyCareEvent {}
+
+@Entity()
+export class SleepEvent extends BabyCareEvent {}
+
+@Entity()
+export class PlayEvent extends BabyCareEvent {}
+
+@Entity()
+export class BathEvent extends BabyCareEvent {}
 
 const BABY_CARE_DB_CONFIG: Options = {
   dbName: "./storage/baby-care.db",
   type: "sqlite",
-  entities: [BabyCareProfile, DiaperChangeEvent, BottleEvent],
+  entities: [
+    BabyCareProfile,
+    BottleEvent,
+    PoopEvent,
+    PeeEvent,
+    SleepEvent,
+    PlayEvent,
+    BathEvent,
+  ],
   discovery: { disableDynamicFileAccess: true },
 };
 

@@ -6,12 +6,12 @@ import {
   Outlet,
   Scripts,
 } from "@remix-run/react";
-import tailwind_styles from "./tailwind.css";
+import styles from "./style.css";
 import type { LinksFunction } from "@remix-run/node";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
-export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: tailwind_styles },
-];
+export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
 
 export default function Root() {
   return (
@@ -23,7 +23,11 @@ export default function Root() {
         <Links />
       </head>
       <body>
-        <Outlet />
+        <div className="h-screen w-screen overflow-hidden">
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <Outlet />
+          </LocalizationProvider>
+        </div>
         <ScrollRestoration />
 
         <LiveReload />

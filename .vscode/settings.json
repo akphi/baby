@@ -14,5 +14,6 @@
   "typescript.tsdk": "node_modules/typescript/lib",
   "[sql]": {
     "editor.defaultFormatter": "inferrinizzard.prettier-sql-vscode"
-  }
+  },
+  "eslint.options": { "overrideConfigFile": "./.eslintrc.cjs" }
 }
