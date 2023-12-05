@@ -22,7 +22,7 @@ export default function Root() {
         <Meta />
         <Links />
       </head>
-      <body>
+      <body id="root">
         <div className="h-screen w-screen overflow-hidden">
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <Outlet />

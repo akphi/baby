@@ -2,10 +2,10 @@ import {
   MikroORM,
   type Options,
   type IDatabaseDriver,
-  Connection,
+  type Connection,
   Property,
   ManyToOne,
-  Enum,
+  DateType,
 } from "@mikro-orm/core";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
 import { v4 as uuid } from "uuid";
@@ -32,7 +32,7 @@ export class BabyCareProfile {
   @Property({ type: () => Gender })
   genderAtBirth: Gender;
 
-  @Property({ type: "Date" })
+  @Property({ type: DateType })
   dob: Date;
 
   @Property({ type: "number", nullable: true })
@@ -121,6 +121,7 @@ export class BabyCareDataRegistry {
   private static _instance: BabyCareDataRegistry;
   private static _orm: MikroORM<IDatabaseDriver<Connection>>;
 
+  // eslint-disable-next-line no-useless-constructor
   private constructor() {}
 
   public static getInstance(): BabyCareDataRegistry {

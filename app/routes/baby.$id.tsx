@@ -1,12 +1,12 @@
-import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { BabyCareDataRegistry, BabyCareProfile } from "../data/baby-care";
+// import { json, type LoaderFunctionArgs } from "@remix-run/node";
+// import { BabyCareDataRegistry, BabyCareProfile } from "../data/baby-care";
 import { AppBar, Box, Container, Toolbar } from "@mui/material";
 
-export const loader = async ({ params }: LoaderFunctionArgs) => {
-  const entityManager = await BabyCareDataRegistry.getEntityManager();
-  const profiles = await entityManager.getRepository(BabyCareProfile).findAll();
-  return json({ profiles });
-};
+// export const loader = async ({ params }: LoaderFunctionArgs) => {
+//   const entityManager = await BabyCareDataRegistry.getEntityManager();
+//   const profiles = await entityManager.getRepository(BabyCareProfile).findAll();
+//   return json({ profiles });
+// };
 
 export default function BabyCare() {
   // const { profiles } = useLoaderData<typeof loader>();
