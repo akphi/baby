@@ -339,4 +339,12 @@ export type GeneratorFn<T> = Generator<
   T
 >;
 
-export const hasWhiteSpace = (val: string): boolean => Boolean(val.match(/\s/));
+export const returnUndefOnError = <T extends SuperGenericFunction>(
+  fn: T
+): ReturnType<T> | undefined => {
+  try {
+    return fn();
+  } catch {
+    return undefined;
+  }
+};

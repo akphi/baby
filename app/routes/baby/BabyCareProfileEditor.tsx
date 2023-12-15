@@ -17,29 +17,49 @@ import { useState } from "react";
 import { LoadingButton } from "@mui/lab";
 import { NumberInput } from "../../shared/NumberInput";
 import { DatePicker } from "@mui/x-date-pickers";
+import type { SerializeFrom } from "@remix-run/node";
+import { parseISO } from "date-fns";
+import { useForm } from "react-hook-form";
 
 export const CREATE_PROFILE_SUBMIT_ACTION = "CREATE_PROFILE";
 export const UPDATE_PROFILE_SUBMIT_ACTION = "UPDATE_PROFILE";
+export const REMOVE_PROFILE_SUBMIT_ACTION = "REMOVE_PROFILE";
 
 export const BabyCareProfileEditor = (props: {
   open: boolean;
   onClose: () => void;
-  profile?: BabyCareProfile;
+  profile?: SerializeFrom<BabyCareProfile>;
 }) => {
   const { open, onClose, profile } = props;
   const submit = useSubmit();
   const { state } = useNavigation();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
   const [name, setName] = useState(profile?.name ?? "");
-  const [nickname, setNickname] = useState(profile?.nickname ?? "");
   const [gender, setGender] = useState(profile?.genderAtBirth ?? Gender.MALE);
-  const [dob, setDob] = useState(profile?.dob ?? new Date());
+  const [dob, setDob] = useState(
+    profile?.dob ? parseISO(profile?.dob) : new Date()
+  );
+  const [nickname, setNickname] = useState(profile?.nickname ?? "");
   const [shortId, setShortId] = useState(profile?.shortId ?? "");
-  const [milkVolume, setMilkVolume] = useState(
+  const [feedingVolume, setFeedingVolume] = useState(
     profile?.defaultFeedingVolume ?? 0
   );
-  const onSubmit: React.FormEventHandler<HTMLFormElement> = (event) => {
-    submit(event.currentTarget);
-  };
+  const [pumpingDuration, setPumpingDuration] = useState(
+    profile?.defaultPumpingDuration ?? 0
+  );
+  const [feedingInterval, setFeedingInterval] = useState(
+    profile?.feedingInterval ?? 0
+  );
+  const onSubmit: React.FormEventHandler<HTMLFormElement> = handleSubmit(
+    (data, event) => {
+      submit(event?.target);
+      onClose();
+    }
+  );
 
   return (
     <Dialog
@@ -74,13 +94,19 @@ export const BabyCareProfileEditor = (props: {
           <div className="w-full py-2">
             <TextField
               label="Name"
-              name="name"
+              error={Boolean(errors.name)}
+              helperText={errors.name ? "Name is required" : " "}
               value={name}
-              onChange={(event) => setName(event.target.value)}
               required
               autoFocus
               variant="outlined"
               className="w-full"
+              {...register("name", {
+                required: true,
+                onChange: (event) => {
+                  setName(event.target.value);
+                },
+              })}
             />
           </div>
           <div className="w-full py-2">
@@ -88,7 +114,9 @@ export const BabyCareProfileEditor = (props: {
               label="Nickname"
               name="nickname"
               value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
+              onChange={(event) => {
+                setNickname(event.target.value);
+              }}
               variant="outlined"
               className="w-full"
             />
@@ -114,7 +142,9 @@ export const BabyCareProfileEditor = (props: {
               label="Date of Birth"
               slotProps={{ textField: { name: "dob" } }}
               value={dob}
-              onChange={(value: Date | null) => setDob(value ?? new Date())}
+              onChange={(value: Date | null) => {
+                setDob(value ?? new Date());
+              }}
               className="w-full"
             />
           </div>
@@ -123,21 +153,56 @@ export const BabyCareProfileEditor = (props: {
               label="Short ID"
               name="shortId"
               value={shortId}
-              onChange={(event) => setShortId(event.target.value)}
+              onChange={(event) => {
+                setShortId(event.target.value);
+              }}
               variant="outlined"
               className="w-full"
             />
           </div>
           <div className="w-full py-2">
             <NumberInput
-              label="Feeding Milk Volume"
+              label="Feeding Volume"
               name="defaultFeedingVolume"
               min={0}
               max={1000}
               step={5}
               unit="ml"
-              value={milkVolume}
-              setValue={(value) => setMilkVolume(value)}
+              value={feedingVolume}
+              setValue={(value) => {
+                setFeedingVolume(value);
+              }}
+              className="flex-1"
+            />
+          </div>
+          <div className="w-full py-2">
+            <NumberInput
+              label="Pumping Duration"
+              name="defaultPumpingDuration"
+              min={0}
+              max={60}
+              step={5}
+              unit="min"
+              value={pumpingDuration}
+              setValue={(value) => {
+                setPumpingDuration(value);
+              }}
+              className="flex-1"
+            />
+          </div>
+          <div className="w-full py-2">
+            <NumberInput
+              label="Feeding Interval"
+              name="feedingInterval"
+              min={0}
+              max={12}
+              step={0.5}
+              unit="hr"
+              value={feedingInterval}
+              setValue={(value) => {
+                setFeedingInterval(value);
+              }}
+              className="flex-1"
             />
           </div>
         </DialogContent>

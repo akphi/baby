@@ -8,6 +8,5 @@ node_modules/
 *.tsbuildinfo
 .temp
 .cache
+.node-red
 
-
-/storage/

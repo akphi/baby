@@ -6,6 +6,8 @@ import {
   Property,
   ManyToOne,
   DateType,
+  DateTimeType,
+  TableExistsException,
 } from "@mikro-orm/core";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
 import { v4 as uuid } from "uuid";
@@ -15,19 +17,15 @@ export enum Gender {
   FEMALE = "FEMALE",
 }
 
+export const DEFAULT_PUMPING_TIME = 30 * 60 * 1000; // 30 minutes
+
 @Entity()
 export class BabyCareProfile {
   @PrimaryKey({ type: "string" })
   readonly id = uuid();
 
-  @Property({ type: "string", nullable: true })
-  shortId?: string;
-
   @Property({ type: "string" })
   name: string;
-
-  @Property({ type: "string", nullable: true })
-  nickname?: string;
 
   @Property({ type: () => Gender })
   genderAtBirth: Gender;
@@ -35,8 +33,20 @@ export class BabyCareProfile {
   @Property({ type: DateType })
   dob: Date;
 
+  @Property({ type: "string", nullable: true })
+  shortId?: string | undefined;
+
+  @Property({ type: "string", nullable: true })
+  nickname?: string | undefined;
+
   @Property({ type: "number", nullable: true })
-  defaultFeedingVolume?: number;
+  feedingInterval?: number | undefined;
+
+  @Property({ type: "number", nullable: true })
+  defaultFeedingVolume?: number | undefined;
+
+  @Property({ type: "number", nullable: true })
+  defaultPumpingDuration?: number | undefined;
 
   constructor(name: string, genderAtBirth: Gender, dob: Date) {
     this.name = name;
@@ -45,21 +55,21 @@ export class BabyCareProfile {
   }
 }
 
-class BabyCareEvent {
+export abstract class BabyCareEvent {
   @PrimaryKey({ type: "string" })
   readonly id = uuid();
 
-  @Property({ type: "Date" })
+  @Property({ type: DateTimeType })
   time: Date;
 
   @Property({ type: "number", nullable: true })
-  duration?: number;
+  duration?: number | undefined;
 
   @ManyToOne(() => BabyCareProfile, { onDelete: "cascade" })
   profile: BabyCareProfile;
 
   @Property({ type: "string", nullable: true })
-  comment?: string;
+  comment?: string | undefined;
 
   constructor(time: Date, profile: BabyCareProfile) {
     this.time = time;
@@ -68,30 +78,37 @@ class BabyCareEvent {
 }
 
 @Entity()
-export class BottleEvent extends BabyCareEvent {
+export class BottleFeedEvent extends BabyCareEvent {
   @Property({ type: "number" })
   volume: number;
 
-  @Property({ type: "number" })
-  breastMilkVolume: number;
+  // by default, assume undefined breast milk volume means it's 100% breast pumped milk, 0% formula
+  @Property({ type: "number", nullable: true })
+  breastMilkVolume?: number | undefined;
 
-  constructor(
-    time: Date,
-    profile: BabyCareProfile,
-    volume: number,
-    breastMilkVolume: number
-  ) {
+  constructor(time: Date, profile: BabyCareProfile, volume: number) {
     super(time, profile);
     this.volume = volume;
-    this.breastMilkVolume = breastMilkVolume;
   }
 }
 
 @Entity()
-export class PeeEvent extends BabyCareEvent {}
+export class NursingEvent extends BabyCareEvent {
+  @Property({ type: "number", nullable: true })
+  leftDuration?: number | undefined;
+
+  @Property({ type: "number", nullable: true })
+  rightDuration?: number | undefined;
+}
 
 @Entity()
-export class PoopEvent extends BabyCareEvent {}
+export class DiaperChangeEvent extends BabyCareEvent {
+  @Property({ type: "boolean", nullable: true })
+  pee?: boolean | undefined;
+
+  @Property({ type: "boolean", nullable: true })
+  poop?: boolean | undefined;
+}
 
 @Entity()
 export class SleepEvent extends BabyCareEvent {}
@@ -102,14 +119,20 @@ export class PlayEvent extends BabyCareEvent {}
 @Entity()
 export class BathEvent extends BabyCareEvent {}
 
+@Entity()
+export class PumpingEvent extends BabyCareEvent {
+  @Property({ type: "number", nullable: true })
+  volume?: number | undefined;
+}
+
 const BABY_CARE_DB_CONFIG: Options = {
-  dbName: "./storage/baby-care.db",
+  dbName: "../home-storage/baby-care.sqlite",
   type: "sqlite",
   entities: [
     BabyCareProfile,
-    BottleEvent,
-    PoopEvent,
-    PeeEvent,
+    BottleFeedEvent,
+    NursingEvent,
+    DiaperChangeEvent,
     SleepEvent,
     PlayEvent,
     BathEvent,
@@ -137,8 +160,15 @@ export class BabyCareDataRegistry {
       // auto-populate the first time
       try {
         await orm.getSchemaGenerator().createSchema();
-      } catch {
-        // do nothing
+      } catch (error) {
+        // optimistic schema update
+        if (error instanceof TableExistsException) {
+          try {
+            await orm.getSchemaGenerator().updateSchema();
+          } catch {
+            // do nothing
+          }
+        }
       }
       BabyCareDataRegistry._orm = orm;
     }

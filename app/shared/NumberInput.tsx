@@ -22,6 +22,7 @@ export const NumberInput = (
   const _setValue = (value: number) => {
     const _min = min ?? 0;
     const _max = max ?? Number.MAX_SAFE_INTEGER;
+    console.log(value, _min, _max);
     setValue(Math.max(_min, Math.min(_max, value)));
   };
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -33,7 +34,7 @@ export const NumberInput = (
   return (
     <div className="flex">
       <TextField
-        label="Feeding Milk Volume"
+        label={label}
         type="number"
         inputMode="numeric"
         value={value}
@@ -53,14 +54,14 @@ export const NumberInput = (
         <IconButton
           className="w-12 h-12"
           color="primary"
-          onClick={() => setValue(value - (step ?? 1))}
+          onClick={() => _setValue(value - (step ?? 1))}
         >
           <RemoveCircleIcon fontSize="large" />
         </IconButton>
         <IconButton
           className="w-12 h-12"
           color="primary"
-          onClick={() => setValue(value + (step ?? 1))}
+          onClick={() => _setValue(value + (step ?? 1))}
         >
           <AddCircleIcon fontSize="large" />
         </IconButton>
