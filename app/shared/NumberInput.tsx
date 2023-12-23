@@ -22,7 +22,6 @@ export const NumberInput = (
   const _setValue = (value: number) => {
     const _min = min ?? 0;
     const _max = max ?? Number.MAX_SAFE_INTEGER;
-    console.log(value, _min, _max);
     setValue(Math.max(_min, Math.min(_max, value)));
   };
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {

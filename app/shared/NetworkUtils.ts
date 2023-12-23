@@ -18,8 +18,8 @@ export enum ContentType {
 }
 
 export enum HttpMethod {
-  GET = "GET",
-  PUT = "PUT",
-  POST = "POST",
-  DELETE = "DELETE",
+  GET = "get",
+  PUT = "put",
+  POST = "post",
+  DELETE = "delete",
 }

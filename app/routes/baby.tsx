@@ -29,6 +29,7 @@ import { guaranteeNonEmptyString, isString } from "../shared/AssertionUtils";
 import { parseNumber } from "../shared/CommonUtils";
 import { formatDistanceStrict } from "date-fns";
 import { ConfirmationDialog } from "../shared/ConfirmationDialog";
+import { HttpMethod } from "../shared/NetworkUtils";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const entityManager = await BabyCareDataRegistry.getEntityManager();
@@ -46,8 +47,8 @@ export default function BabyCareProfileManager() {
   const submit = useSubmit();
 
   return (
-    <div className="h-full w-full bg-slate-50 flex justify-center items-center">
-      <div className="flex w-1/3 py-16 px-10 bg-slate-100 rounded-xl shadow-md flex-col">
+    <div className="h-full w-full flex justify-center items-center px-4 bg-slate-50">
+      <div className="flex py-16 px-10 bg-white rounded-xl shadow-md flex-col">
         {profiles.map((profile) => (
           <div key={profile.id} className="flex">
             <Link
@@ -107,7 +108,7 @@ export default function BabyCareProfileManager() {
               const data = new FormData();
               data.set("id", profileIdToRemove);
               data.set("action", REMOVE_PROFILE_SUBMIT_ACTION);
-              submit(data, { method: "post" });
+              submit(data, { method: HttpMethod.POST });
             }}
           />
         )}
@@ -134,7 +135,6 @@ export async function action({ request }: ActionFunctionArgs) {
   const entityManager = await BabyCareDataRegistry.getEntityManager();
   const formData = await request.formData();
   const action = formData.get("action");
-  console.log("asdasd");
 
   switch (action) {
     case CREATE_PROFILE_SUBMIT_ACTION:
@@ -188,7 +188,7 @@ export async function action({ request }: ActionFunctionArgs) {
           formData.get("defaultPumpingDuration") as string
         );
         profile.defaultPumpingDuration = defaultPumpingDuration
-          ? defaultPumpingDuration
+          ? defaultPumpingDuration * 60 * 1000
           : undefined;
       }
       if (
@@ -198,7 +198,9 @@ export async function action({ request }: ActionFunctionArgs) {
         const feedingInterval = parseNumber(
           formData.get("feedingInterval") as string
         );
-        profile.feedingInterval = feedingInterval ? feedingInterval : undefined;
+        profile.feedingInterval = feedingInterval
+          ? feedingInterval * 3600 * 1000
+          : undefined;
       }
 
       await entityManager.persistAndFlush(profile);

@@ -7,19 +7,55 @@ import {
   Female,
   Male,
 } from "@mui/icons-material";
-import Icon from "@mui/material/Icon";
+import Icon, { type IconProps } from "@mui/material/Icon";
 
-export const NursingIcon = <Icon>🤱</Icon>;
-export const HomeIcon = <Icon>🏠</Icon>;
-export const ChildToyIcon = <Icon>🧸</Icon>;
-export const BabyIcon = <Icon>👶</Icon>;
-export const SleepIcon = <Icon>😴</Icon>;
-export const PoopIcon = <Icon>💩</Icon>;
-export const PeeIcon = <Icon>💦</Icon>;
-export const BathIcon = <Icon>🛁</Icon>;
-export const BottleIcon = <Icon>🍼</Icon>;
-export const SnackIcon = <Icon>🍿</Icon>;
-export const BreastPumpIcon = <Icon>⛽️</Icon>;
+export enum BabyCareEmoji {
+  HOME = "🏠",
+  BABY = "👶",
+  BOTTLE = "🍼",
+  BREAST_PUMP = "⛽️",
+  NURSING = "🤱",
+  CHILD_TOY = "🧸",
+  SLEEP = "😴",
+  BATH = "🛁",
+  SNACK = "🍿",
+  PEE = "💦",
+  POOP = "💩",
+}
+
+export const NursingIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.NURSING}</Icon>
+);
+export const HomeIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.HOME}</Icon>
+);
+export const ChildToyIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.CHILD_TOY}</Icon>
+);
+export const BabyIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.BABY}</Icon>
+);
+export const SleepIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.SLEEP}</Icon>
+);
+export const PoopIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.POOP}</Icon>
+);
+export const PeeIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.PEE}</Icon>
+);
+export const BathIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.BATH}</Icon>
+);
+export const BottleIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.BOTTLE}</Icon>
+);
+export const SnackIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.SNACK}</Icon>
+);
+export const BreastPumpIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.BREAST_PUMP}</Icon>
+);
 export const AddIcon = Add;
 export const AddCircleIcon = AddCircle;
 export const RemoveIcon = Remove;

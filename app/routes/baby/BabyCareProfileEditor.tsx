@@ -12,14 +12,14 @@ import {
   type SelectChangeEvent,
 } from "@mui/material";
 import { type BabyCareProfile, Gender } from "../../data/baby-care";
-import { Form, useNavigation, useSubmit } from "@remix-run/react";
+import { Form, useSubmit } from "@remix-run/react";
 import { useState } from "react";
-import { LoadingButton } from "@mui/lab";
 import { NumberInput } from "../../shared/NumberInput";
 import { DatePicker } from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
 import { parseISO } from "date-fns";
 import { useForm } from "react-hook-form";
+import { HttpMethod } from "../../shared/NetworkUtils";
 
 export const CREATE_PROFILE_SUBMIT_ACTION = "CREATE_PROFILE";
 export const UPDATE_PROFILE_SUBMIT_ACTION = "UPDATE_PROFILE";
@@ -32,7 +32,6 @@ export const BabyCareProfileEditor = (props: {
 }) => {
   const { open, onClose, profile } = props;
   const submit = useSubmit();
-  const { state } = useNavigation();
   const {
     register,
     handleSubmit,
@@ -75,7 +74,7 @@ export const BabyCareProfileEditor = (props: {
       </DialogTitle>
       <Form
         onSubmit={onSubmit}
-        method="post"
+        method={HttpMethod.POST}
         autoComplete="off"
         noValidate
         className="flex-col"
@@ -94,13 +93,13 @@ export const BabyCareProfileEditor = (props: {
           <div className="w-full py-2">
             <TextField
               label="Name"
-              error={Boolean(errors.name)}
-              helperText={errors.name ? "Name is required" : " "}
               value={name}
               required
               autoFocus
               variant="outlined"
+              error={Boolean(errors.name)}
               className="w-full"
+              helperText={errors.name ? "Name is required" : undefined}
               {...register("name", {
                 required: true,
                 onChange: (event) => {
@@ -210,13 +209,9 @@ export const BabyCareProfileEditor = (props: {
           <Button variant="outlined" onClick={onClose}>
             Cancel
           </Button>
-          <LoadingButton
-            loading={state === "loading"}
-            variant="contained"
-            type="submit"
-          >
+          <Button variant="contained" type="submit">
             {profile ? "Update" : "Create"}
-          </LoadingButton>
+          </Button>
         </DialogActions>
       </Form>
     </Dialog>

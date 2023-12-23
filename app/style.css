@@ -1,3 +1,23 @@
+@import url("@ag-grid-community/styles/ag-grid.css");
+@import url("@ag-grid-community/styles/ag-theme-quartz.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.ag-customized-icon-header .ag-header-cell-text {
+  font-size: 20px;
+}
+
+.ag-customized-icon-header .ag-cell-label-container {
+  font-size: 20px;
+}
+
+.ag-customized-icon-cell.ag-cell-value {
+  font-size: 20px;
+  text-overflow: unset;
+}
+
+.ag-theme-quartz {
+  --ag-cell-horizontal-padding: 10px;
+}

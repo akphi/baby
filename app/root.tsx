@@ -11,7 +11,37 @@ import type { LinksFunction } from "@remix-run/node";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
-export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
+export const links: LinksFunction = () => [
+  {
+    rel: "icon",
+    href: "/favicon.ico",
+    type: "image/png",
+  },
+  {
+    rel: "apple-touch-icon",
+    href: "/apple-touch-icon.png",
+    type: "image/png",
+    sizes: "180x180",
+  },
+  {
+    rel: "icon",
+    href: "/favicon-32x32.png",
+    type: "image/png",
+    sizes: "32x32",
+  },
+  {
+    rel: "icon",
+    href: "/favicon-16x16.png",
+    type: "image/png",
+    sizes: "16x16",
+  },
+  {
+    rel: "manifest",
+    href: "/site.webmanifest",
+    type: "application/json",
+  },
+  { rel: "stylesheet", href: styles },
+];
 
 export default function Root() {
   return (
