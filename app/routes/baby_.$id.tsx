@@ -4,18 +4,7 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
 } from "@remix-run/node";
-import {
-  type BabyCareEvent,
-  BabyCareDataRegistry,
-  BabyCareProfile,
-  BathEvent,
-  BottleFeedEvent,
-  DiaperChangeEvent,
-  NursingEvent,
-  PlayEvent,
-  PumpingEvent,
-  SleepEvent,
-} from "../data/baby-care";
+import { BabyCareDataRegistry, BabyCareProfile } from "../data/baby-care";
 import {
   guaranteeNonEmptyString,
   guaranteeNonNullable,
@@ -24,24 +13,30 @@ import { useLoaderData } from "@remix-run/react";
 import { HttpStatus } from "../shared/NetworkUtils";
 import { Command, generateBabyCareEvent } from "./api.runCommand.$command";
 import { BabyCareDashboard } from "./baby/BabyCareDashboard";
-import { startOfDay } from "date-fns";
 import { BabyCareEventViewer } from "./baby/BabyCareEventViewer";
-// import { wrap } from "@mikro-orm/core";
+import { parseISO } from "date-fns";
 
-export const loader = async ({ params }: LoaderFunctionArgs) => {
+export const loader = async ({ params, request }: LoaderFunctionArgs) => {
+  const { searchParams } = new URL(request.url);
+  const date = searchParams.get("date");
+
   const id = guaranteeNonNullable(params.id);
   const entityManager = await BabyCareDataRegistry.getEntityManager();
   const profile = await entityManager.findOneOrFail(BabyCareProfile, {
     $or: [{ id }, { shortId: id }],
   });
-  const events = await BabyCareDataRegistry.fetchEvents(profile, new Date());
+  const events = await BabyCareDataRegistry.fetchEvents(
+    profile,
+    // NOTE: `date-fns` parseISO will return time in local timezone, which is what we pass in
+    // if we use `new Date()` instead, it will be in UTC timezone and therefore, throw off the result
+    date ? parseISO(date) : new Date()
+  );
 
   return json({ profile, events });
 };
 
 export default function BabyCare() {
   const { profile, events } = useLoaderData<typeof loader>();
-  console.log("tartar", events);
 
   return (
     <div className="flex h-full w-full">
@@ -75,7 +70,6 @@ export default function BabyCare() {
         {/* empty toolbar to offset the content the height of the floating toolbar */}
         <Toolbar />
         <BabyCareDashboard profile={profile} />
-        {/* <div className="w-full h-screen">TODO: Stats</div> */}
         <BabyCareEventViewer profile={profile} events={events} />
       </main>
     </div>

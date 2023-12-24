@@ -5,13 +5,18 @@
 @tailwind components;
 @tailwind utilities;
 
-.ag-customized-icon-header .ag-header-cell-text {
-  font-size: 20px;
+/********************** Normalize ****************************/
+
+/*
+ * Disable overscroll that causes accidental back navigation
+ * See https://stackoverflow.com/questions/17474930/disable-chrome-two-fingers-back-forward-swipe
+ */
+html,
+body {
+  overscroll-behavior-x: none;
 }
 
-.ag-customized-icon-header .ag-cell-label-container {
-  font-size: 20px;
-}
+/********************** Override Library ****************************/
 
 .ag-customized-icon-cell.ag-cell-value {
   font-size: 20px;
@@ -20,4 +25,14 @@
 
 .ag-theme-quartz {
   --ag-cell-horizontal-padding: 10px;
+}
+
+.home__event-grid .ag-root-wrapper {
+  border-radius: 0;
+  border: none;
+}
+
+.home__event-grid__action-icon {
+  font-size: 22px !important;
+  line-height: 22px;
 }

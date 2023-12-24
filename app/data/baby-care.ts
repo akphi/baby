@@ -67,6 +67,9 @@ export enum BabyCareEventType {
   SLEEP = "Sleep",
   PLAY = "Play",
   BATH = "Bath",
+
+  __POOP = "Poop",
+  __PEE = "Pee",
 }
 
 export abstract class BabyCareEvent {

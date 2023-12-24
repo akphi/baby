@@ -20,7 +20,6 @@ export const BabyCareDashboard = (props: {
 }) => {
   const { profile } = props;
   const fetcher = useFetcher();
-  // console.log('d', fetcher.data);
 
   return (
     <div className="flex justify-center items-center w-full p-6 bg-slate-50">
