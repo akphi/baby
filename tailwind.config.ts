@@ -6,7 +6,12 @@ export default {
     extend: {
       fontSize: {
         "2xs": "0.6rem",
+        "3xs": "0.5rem",
+        "4xs": "0.45rem",
       },
+      width: {
+        "22": "5.5rem",
+      }
     },
   },
   plugins: [],

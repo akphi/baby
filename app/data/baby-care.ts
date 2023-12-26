@@ -81,6 +81,9 @@ export abstract class BabyCareEvent {
   @PrimaryKey({ type: "string" })
   readonly id = uuid();
 
+  @ManyToOne(() => BabyCareProfile, { onDelete: "cascade" })
+  readonly profile: BabyCareProfile;
+
   // NOTE: This should be 'DateTimeType', but there's a bug in v5 where this gets returned as timestamp for SQLite
   // The workaround is to use `Date` type. This should be fixed in v6
   // See https://github.com/mikro-orm/mikro-orm/issues/4362
@@ -90,14 +93,13 @@ export abstract class BabyCareEvent {
   @Property({ type: "number", nullable: true })
   duration?: number | undefined;
 
-  @ManyToOne(() => BabyCareProfile, { onDelete: "cascade" })
-  profile: BabyCareProfile;
-
   @Property({ type: "string", nullable: true })
   comment?: string | undefined;
 
-  @Property({ type: "string", nullable: true })
-  tags?: string[] | undefined;
+  // TODO: if this is useful, we can have a separate table for tags per event type
+  // this would enable a quick way to add extra metadata to events
+  // @Property({ type: "string", nullable: true })
+  // tags?: string[] | undefined;
 
   constructor(time: Date, profile: BabyCareProfile) {
     this.time = time;
@@ -110,9 +112,8 @@ export class BottleFeedEvent extends BabyCareEvent {
   @Property({ type: "number" })
   volume: number;
 
-  // by default, assume undefined breast milk volume means it's 100% breast pumped milk, 0% formula
   @Property({ type: "number", nullable: true })
-  breastMilkVolume?: number | undefined;
+  formulaMilkVolume?: number | undefined;
 
   constructor(time: Date, profile: BabyCareProfile, volume: number) {
     super(time, profile);
@@ -122,20 +123,28 @@ export class BottleFeedEvent extends BabyCareEvent {
 
 @Entity()
 export class NursingEvent extends BabyCareEvent {
-  @Property({ type: "number", nullable: true })
-  leftDuration?: number | undefined;
+  @Property({ type: "number" })
+  leftDuration = 0;
 
-  @Property({ type: "number", nullable: true })
-  rightDuration?: number | undefined;
+  @Property({ type: "number" })
+  rightDuration = 0;
+}
+
+@Entity()
+export class PumpingEvent extends BabyCareEvent {
+  @Property({ type: "number" })
+  volume = 0;
 }
 
 @Entity()
 export class DiaperChangeEvent extends BabyCareEvent {
-  @Property({ type: "boolean", nullable: true })
-  pee?: boolean | undefined;
+  // NOTE: this is a fair default, every time we change diaper, it's likely due to poop or pee,
+  // but mostly likely poop comes with pee
+  @Property({ type: "boolean" })
+  pee = true;
 
-  @Property({ type: "boolean", nullable: true })
-  poop?: boolean | undefined;
+  @Property({ type: "boolean" })
+  poop = false;
 }
 
 @Entity()
@@ -146,12 +155,6 @@ export class PlayEvent extends BabyCareEvent {}
 
 @Entity()
 export class BathEvent extends BabyCareEvent {}
-
-@Entity()
-export class PumpingEvent extends BabyCareEvent {
-  @Property({ type: "number", nullable: true })
-  volume?: number | undefined;
-}
 
 const BABY_CARE_DB_CONFIG: Options = {
   dbName: "../home-storage/baby-care.sqlite",
@@ -339,4 +342,39 @@ export class BabyCareDataRegistry {
 
     return events;
   }
+}
+
+export enum BabyCareAction {
+  CREATE_PROFILE = "baby-care.profile.create",
+  UPDATE_PROFILE = "baby-care.profile.update",
+  REMOVE_PROFILE = "baby-care.profile.remove",
+
+  CREATE_BOTTLE_FEED_EVENT = "baby-care.bottle-feed-event.create",
+  UPDATE_BOTTLE_FEED_EVENT = "baby-care.bottle-feed-event.update",
+  REMOVE_BOTTLE_FEED_EVENT = "baby-care.bottle-feed-event.remove",
+
+  CREATE_PUMPING_EVENT = "baby-care.pumping-event.create",
+  UPDATE_PUMPING_EVENT = "baby-care.pumping-event.update",
+  REMOVE_PUMPING_EVENT = "baby-care.pumping-event.remove",
+
+  CREATE_NURSING_EVENT = "baby-care.nursing-event.create",
+  UPDATE_NURSING_EVENT = "baby-care.nursing-event.update",
+  REMOVE_NURSING_EVENT = "baby-care.nursing-event.remove",
+
+  CREATE_DIAPER_CHANGE_POOP_EVENT = "baby-care.diaper-change-event.poop.create",
+  CREATE_DIAPER_CHANGE_PEE_EVENT = "baby-care.diaper-change-event.pee.create",
+  UPDATE_DIAPER_CHANGE_EVENT = "baby-care.diaper-change-event.update",
+  REMOVE_DIAPER_CHANGE_EVENT = "baby-care.diaper-change-event.remove",
+
+  CREATE_SLEEP_EVENT = "baby-care.sleep-event.create",
+  UPDATE_SLEEP_EVENT = "baby-care.sleep-event.update",
+  REMOVE_SLEEP_EVENT = "baby-care.sleep-event.remove",
+
+  CREATE_BATH_EVENT = "baby-care.bath-event.create",
+  UPDATE_BATH_EVENT = "baby-care.bath-event.update",
+  REMOVE_BATH_EVENT = "baby-care.bath-event.remove",
+
+  CREATE_PLAY_EVENT = "baby-care.play-event.create",
+  UPDATE_PLAY_EVENT = "baby-care.play-event.update",
+  REMOVE_PLAY_EVENT = "baby-care.play-event.remove",
 }

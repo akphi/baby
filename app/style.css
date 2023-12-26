@@ -25,6 +25,7 @@ body {
 
 .ag-theme-quartz {
   --ag-cell-horizontal-padding: 10px;
+  --ag-row-hover-color: #f8fafc70;
 }
 
 .home__event-grid .ag-root-wrapper {

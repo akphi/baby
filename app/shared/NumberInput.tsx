@@ -13,16 +13,27 @@ export const NumberInput = (
     max?: number;
     step?: number;
     unit?: string;
+    factor?: number;
     value: number;
     setValue: (value: number) => void;
   }
 ) => {
-  const { label, min, max, step, unit, value, setValue, ...otherProps } = props;
-
-  const _setValue = (value: number) => {
+  const {
+    label,
+    min,
+    max,
+    step,
+    unit,
+    factor,
+    value,
+    setValue,
+    ...otherProps
+  } = props;
+  const _value = value / (factor ?? 1);
+  const _setValue = (val: number) => {
     const _min = min ?? 0;
     const _max = max ?? Number.MAX_SAFE_INTEGER;
-    setValue(Math.max(_min, Math.min(_max, value)));
+    setValue(Math.max(_min, Math.min(_max, val)) * (factor ?? 1));
   };
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     let newValue = parseInt(event.target.value);
@@ -36,7 +47,7 @@ export const NumberInput = (
         label={label}
         type="number"
         inputMode="numeric"
-        value={value}
+        value={_value}
         onChange={onChange}
         InputProps={
           unit
@@ -53,14 +64,14 @@ export const NumberInput = (
         <IconButton
           className="w-12 h-12"
           color="primary"
-          onClick={() => _setValue(value - (step ?? 1))}
+          onClick={() => _setValue(_value - (step ?? 1))}
         >
           <RemoveCircleIcon fontSize="large" />
         </IconButton>
         <IconButton
           className="w-12 h-12"
           color="primary"
-          onClick={() => _setValue(value + (step ?? 1))}
+          onClick={() => _setValue(_value + (step ?? 1))}
         >
           <AddCircleIcon fontSize="large" />
         </IconButton>

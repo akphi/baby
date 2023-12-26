@@ -8,6 +8,8 @@ import {
   Male,
   ChevronLeft,
   ChevronRight,
+  Delete,
+  MoreVert,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -62,8 +64,10 @@ export const AddIcon = Add;
 export const AddCircleIcon = AddCircle;
 export const RemoveIcon = Remove;
 export const RemoveCircleIcon = RemoveCircle;
+export const DeleteIcon = Delete;
 export const EditIcon = Edit;
 export const MaleIcon = Male;
 export const FemaleIcon = Female;
 export const ChevronLeftIcon = ChevronLeft;
 export const ChevronRightIcon = ChevronRight;
+export const MoreVertIcon = MoreVert;

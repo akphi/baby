@@ -1,5 +1,5 @@
 import type { SerializeFrom } from "@remix-run/node";
-import type { BabyCareProfile } from "../../data/baby-care";
+import { BabyCareAction, type BabyCareProfile } from "../../data/baby-care";
 import { useFetcher } from "@remix-run/react";
 import {
   BathIcon,
@@ -12,7 +12,6 @@ import {
   SleepIcon,
 } from "../../shared/Icons";
 import { IconButton } from "@mui/material";
-import { Command } from "../api.runCommand.$command";
 import { HttpMethod } from "../../shared/NetworkUtils";
 
 export const BabyCareDashboard = (props: {
@@ -30,7 +29,7 @@ export const BabyCareDashboard = (props: {
             onClick={() =>
               fetcher.submit(
                 {
-                  action: Command.BABY_CARE__BOTTLE_FEED,
+                  __action: BabyCareAction.CREATE_BOTTLE_FEED_EVENT,
                   id: profile.id,
                 },
                 { method: HttpMethod.POST }
@@ -44,7 +43,7 @@ export const BabyCareDashboard = (props: {
             onClick={() =>
               fetcher.submit(
                 {
-                  action: Command.BABY_CARE__NURSING,
+                  __action: BabyCareAction.CREATE_NURSING_EVENT,
                   id: profile.id,
                 },
                 { method: HttpMethod.POST }
@@ -58,7 +57,7 @@ export const BabyCareDashboard = (props: {
             onClick={() =>
               fetcher.submit(
                 {
-                  action: Command.BABY_CARE__PUMPING,
+                  __action: BabyCareAction.CREATE_PUMPING_EVENT,
                   id: profile.id,
                 },
                 { method: HttpMethod.POST }
@@ -74,7 +73,7 @@ export const BabyCareDashboard = (props: {
             onClick={() =>
               fetcher.submit(
                 {
-                  action: Command.BABY_CARE__DIAPER_CHANGE__POOP,
+                  __action: BabyCareAction.CREATE_DIAPER_CHANGE_POOP_EVENT,
                   id: profile.id,
                 },
                 { method: HttpMethod.POST }
@@ -88,7 +87,7 @@ export const BabyCareDashboard = (props: {
             onClick={() =>
               fetcher.submit(
                 {
-                  action: Command.BABY_CARE__DIAPER_CHANGE__PEE,
+                  __action: BabyCareAction.CREATE_DIAPER_CHANGE_PEE_EVENT,
                   id: profile.id,
                 },
                 { method: HttpMethod.POST }
@@ -105,7 +104,7 @@ export const BabyCareDashboard = (props: {
             onClick={() =>
               fetcher.submit(
                 {
-                  action: Command.BABY_CARE__PLAY,
+                  __action: BabyCareAction.CREATE_PLAY_EVENT,
                   id: profile.id,
                 },
                 { method: HttpMethod.POST }
@@ -119,7 +118,7 @@ export const BabyCareDashboard = (props: {
             onClick={() =>
               fetcher.submit(
                 {
-                  action: Command.BABY_CARE__BATH,
+                  __action: BabyCareAction.CREATE_BATH_EVENT,
                   id: profile.id,
                 },
                 { method: HttpMethod.POST }
@@ -133,7 +132,7 @@ export const BabyCareDashboard = (props: {
             onClick={() =>
               fetcher.submit(
                 {
-                  action: Command.BABY_CARE__SLEEP,
+                  __action: BabyCareAction.CREATE_SLEEP_EVENT,
                   id: profile.id,
                 },
                 { method: HttpMethod.POST }

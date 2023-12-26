@@ -10,6 +10,7 @@ import styles from "./style.css";
 import type { LinksFunction } from "@remix-run/node";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { SettingsProvider } from "./storage";
 
 export const links: LinksFunction = () => [
   {
@@ -55,7 +56,9 @@ export default function Root() {
       <body id="root">
         <div className="h-screen w-screen overflow-hidden">
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <Outlet />
+            <SettingsProvider>
+              <Outlet />
+            </SettingsProvider>
           </LocalizationProvider>
         </div>
         <ScrollRestoration />

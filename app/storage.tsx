@@ -19,8 +19,12 @@ const DEFAULT_SETTINGS: StorageStoreData = {
 class SettingsStorage {
   private readonly data!: StorageStoreData;
 
+  private _window() {
+    return typeof window !== "undefined" ? window : undefined;
+  }
+
   constructor() {
-    const data = window.localStorage.getItem("settings");
+    const data = this._window()?.localStorage.getItem("settings");
     this.data = data
       ? returnUndefOnError(
           () => JSON.parse(data) as Record<string, StorageStoreData>
@@ -62,7 +66,7 @@ class SettingsStorage {
     } else {
       delete this.data[key];
     }
-    window.localStorage.setItem("settings", JSON.stringify(this.data));
+    this._window()?.localStorage.setItem("settings", JSON.stringify(this.data));
   }
 }
 

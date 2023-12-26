@@ -5,6 +5,7 @@ import {
   redirect,
 } from "@remix-run/node";
 import {
+  BabyCareAction,
   BabyCareDataRegistry,
   BabyCareProfile,
   Gender,
@@ -19,14 +20,9 @@ import {
 import { Button, IconButton } from "@mui/material";
 import { Link, useLoaderData, useSubmit } from "@remix-run/react";
 import { useState } from "react";
-import {
-  BabyCareProfileEditor,
-  CREATE_PROFILE_SUBMIT_ACTION,
-  REMOVE_PROFILE_SUBMIT_ACTION,
-  UPDATE_PROFILE_SUBMIT_ACTION,
-} from "./baby/BabyCareProfileEditor";
+import { BabyCareProfileEditor } from "./baby/BabyCareProfileEditor";
 import { guaranteeNonEmptyString, isString } from "../shared/AssertionUtils";
-import { parseNumber } from "../shared/CommonUtils";
+import { parseNumber, returnUndefOnError } from "../shared/CommonUtils";
 import { formatDistanceStrict } from "date-fns";
 import { ConfirmationDialog } from "../shared/ConfirmationDialog";
 import { HttpMethod } from "../shared/NetworkUtils";
@@ -107,7 +103,7 @@ export default function BabyCareProfileManager() {
             action={() => {
               const data = new FormData();
               data.set("id", profileIdToRemove);
-              data.set("action", REMOVE_PROFILE_SUBMIT_ACTION);
+              data.set("action", BabyCareAction.REMOVE_PROFILE);
               submit(data, { method: HttpMethod.POST });
             }}
           />
@@ -134,11 +130,11 @@ export default function BabyCareProfileManager() {
 export async function action({ request }: ActionFunctionArgs) {
   const entityManager = await BabyCareDataRegistry.getEntityManager();
   const formData = await request.formData();
-  const action = formData.get("action");
+  const action = formData.get("__action");
 
   switch (action) {
-    case CREATE_PROFILE_SUBMIT_ACTION:
-    case UPDATE_PROFILE_SUBMIT_ACTION: {
+    case BabyCareAction.CREATE_PROFILE:
+    case BabyCareAction.UPDATE_PROFILE: {
       const id = formData.get("id");
 
       let profile: BabyCareProfile;
@@ -173,34 +169,25 @@ export async function action({ request }: ActionFunctionArgs) {
         formData.has("defaultFeedingVolume") &&
         isString(formData.get("defaultFeedingVolume"))
       ) {
-        const defaultFeedingVolume = parseNumber(
-          formData.get("defaultFeedingVolume") as string
+        profile.defaultFeedingVolume = returnUndefOnError(() =>
+          parseNumber(formData.get("defaultFeedingVolume") as string)
         );
-        profile.defaultFeedingVolume = defaultFeedingVolume
-          ? defaultFeedingVolume
-          : undefined;
       }
       if (
         formData.has("defaultPumpingDuration") &&
         isString(formData.get("defaultPumpingDuration"))
       ) {
-        const defaultPumpingDuration = parseNumber(
-          formData.get("defaultPumpingDuration") as string
+        profile.defaultPumpingDuration = returnUndefOnError(() =>
+          parseNumber(formData.get("defaultPumpingDuration") as string)
         );
-        profile.defaultPumpingDuration = defaultPumpingDuration
-          ? defaultPumpingDuration * 60 * 1000
-          : undefined;
       }
       if (
         formData.has("feedingInterval") &&
         isString(formData.get("feedingInterval"))
       ) {
-        const feedingInterval = parseNumber(
-          formData.get("feedingInterval") as string
+        profile.feedingInterval = returnUndefOnError(() =>
+          parseNumber(formData.get("feedingInterval") as string)
         );
-        profile.feedingInterval = feedingInterval
-          ? feedingInterval * 3600 * 1000
-          : undefined;
       }
 
       await entityManager.persistAndFlush(profile);
@@ -211,7 +198,7 @@ export async function action({ request }: ActionFunctionArgs) {
         return redirect(`/baby/${profile.shortId ?? profile.id}`);
       }
     }
-    case REMOVE_PROFILE_SUBMIT_ACTION: {
+    case BabyCareAction.REMOVE_PROFILE: {
       const profile = await entityManager.findOneOrFail(BabyCareProfile, {
         id: guaranteeNonEmptyString(formData.get("id")),
       });

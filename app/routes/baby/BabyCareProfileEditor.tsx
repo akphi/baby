@@ -11,8 +11,12 @@ import {
   TextField,
   type SelectChangeEvent,
 } from "@mui/material";
-import { type BabyCareProfile, Gender } from "../../data/baby-care";
-import { Form, useSubmit } from "@remix-run/react";
+import {
+  type BabyCareProfile,
+  Gender,
+  BabyCareAction,
+} from "../../data/baby-care";
+import { useSubmit } from "@remix-run/react";
 import { useState } from "react";
 import { NumberInput } from "../../shared/NumberInput";
 import { DatePicker } from "@mui/x-date-pickers";
@@ -20,10 +24,6 @@ import type { SerializeFrom } from "@remix-run/node";
 import { parseISO } from "date-fns";
 import { useForm } from "react-hook-form";
 import { HttpMethod } from "../../shared/NetworkUtils";
-
-export const CREATE_PROFILE_SUBMIT_ACTION = "CREATE_PROFILE";
-export const UPDATE_PROFILE_SUBMIT_ACTION = "UPDATE_PROFILE";
-export const REMOVE_PROFILE_SUBMIT_ACTION = "REMOVE_PROFILE";
 
 export const BabyCareProfileEditor = (props: {
   open: boolean;
@@ -44,21 +44,36 @@ export const BabyCareProfileEditor = (props: {
   );
   const [nickname, setNickname] = useState(profile?.nickname ?? "");
   const [shortId, setShortId] = useState(profile?.shortId ?? "");
-  const [feedingVolume, setFeedingVolume] = useState(
+  const [defaultFeedingVolume, setDefaultFeedingVolume] = useState(
     profile?.defaultFeedingVolume ?? 0
   );
-  const [pumpingDuration, setPumpingDuration] = useState(
+  const [defaultPumpingDuration, setDefaultPumpingDuration] = useState(
     profile?.defaultPumpingDuration ?? 0
   );
   const [feedingInterval, setFeedingInterval] = useState(
     profile?.feedingInterval ?? 0
   );
-  const onSubmit: React.FormEventHandler<HTMLFormElement> = handleSubmit(
-    (data, event) => {
-      submit(event?.target);
-      onClose();
-    }
-  );
+  const onSubmit = handleSubmit((data, event) => {
+    submit(
+      {
+        __action: profile
+          ? BabyCareAction.UPDATE_PROFILE
+          : BabyCareAction.CREATE_PROFILE,
+        ...profile,
+        id: profile?.id ?? null,
+        name,
+        gender,
+        dob: dob.toISOString(),
+        nickname,
+        shortId,
+        defaultFeedingVolume,
+        defaultPumpingDuration,
+        feedingInterval,
+      },
+      { method: HttpMethod.POST }
+    );
+    onClose();
+  });
 
   return (
     <Dialog
@@ -72,24 +87,13 @@ export const BabyCareProfileEditor = (props: {
       <DialogTitle>
         {profile ? `👶 Update Baby Profile` : `👶 New Baby Profile`}
       </DialogTitle>
-      <Form
-        onSubmit={onSubmit}
-        method={HttpMethod.POST}
-        autoComplete="off"
-        noValidate
-        className="flex-col"
-      >
-        <DialogContent dividers>
-          <input name="id" type="hidden" value={profile?.id} />
-          <input
-            name="action"
-            type="hidden"
-            value={
-              profile
-                ? UPDATE_PROFILE_SUBMIT_ACTION
-                : CREATE_PROFILE_SUBMIT_ACTION
-            }
-          />
+      <DialogContent dividers>
+        <form
+          onSubmit={onSubmit}
+          method={HttpMethod.POST}
+          autoComplete="off"
+          noValidate
+        >
           <div className="w-full py-2">
             <TextField
               label="Name"
@@ -150,7 +154,6 @@ export const BabyCareProfileEditor = (props: {
           <div className="w-full py-2">
             <TextField
               label="Short ID"
-              name="shortId"
               value={shortId}
               onChange={(event) => {
                 setShortId(event.target.value);
@@ -162,14 +165,13 @@ export const BabyCareProfileEditor = (props: {
           <div className="w-full py-2">
             <NumberInput
               label="Feeding Volume"
-              name="defaultFeedingVolume"
               min={0}
               max={1000}
               step={5}
               unit="ml"
-              value={feedingVolume}
+              value={defaultFeedingVolume}
               setValue={(value) => {
-                setFeedingVolume(value);
+                setDefaultFeedingVolume(value);
               }}
               className="flex-1"
             />
@@ -177,14 +179,14 @@ export const BabyCareProfileEditor = (props: {
           <div className="w-full py-2">
             <NumberInput
               label="Pumping Duration"
-              name="defaultPumpingDuration"
               min={0}
               max={60}
               step={5}
               unit="min"
-              value={pumpingDuration}
+              factor={60 * 1000}
+              value={defaultPumpingDuration}
               setValue={(value) => {
-                setPumpingDuration(value);
+                setDefaultPumpingDuration(value);
               }}
               className="flex-1"
             />
@@ -192,11 +194,11 @@ export const BabyCareProfileEditor = (props: {
           <div className="w-full py-2">
             <NumberInput
               label="Feeding Interval"
-              name="feedingInterval"
               min={0}
               max={12}
               step={0.5}
               unit="hr"
+              factor={60 * 60 * 1000}
               value={feedingInterval}
               setValue={(value) => {
                 setFeedingInterval(value);
@@ -204,16 +206,16 @@ export const BabyCareProfileEditor = (props: {
               className="flex-1"
             />
           </div>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="contained" type="submit">
-            {profile ? "Update" : "Create"}
-          </Button>
-        </DialogActions>
-      </Form>
+        </form>
+      </DialogContent>
+      <DialogActions>
+        <Button variant="outlined" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button variant="contained" onClick={onSubmit}>
+          {profile ? "Update" : "Create"}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
