@@ -36,6 +36,7 @@ import { useSearchParams, useSubmit } from "@remix-run/react";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { useBooleanSetting } from "../../storage";
 import { Dropdown, Menu, MenuButton, MenuItem } from "@mui/base";
+import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
 
 const GridNumberInput = (props: {
   value: number;
@@ -274,6 +275,8 @@ const EventOverviewRenderer = (
   }
 ) => {
   const data = params.data;
+  const [showDeleteConfirmationDialog, setShowDeleteConfirmationDialog] =
+    useState(false);
   const submit = useSubmit();
 
   if (!data) {
@@ -310,14 +313,61 @@ const EventOverviewRenderer = (
           </MenuItem>
           <MenuItem
             className="flex items-center px-2 h-8 text-sm text-red-500 hover:bg-slate-100"
-            onClick={() => {
-              /* od nothing */
-            }}
+            onClick={() => setShowDeleteConfirmationDialog(true)}
           >
             Delete
           </MenuItem>
         </Menu>
       </Dropdown>
+      {showDeleteConfirmationDialog && (
+        <ConfirmationDialog
+          open={showDeleteConfirmationDialog}
+          onClose={() => setShowDeleteConfirmationDialog(false)}
+          message="Are you sure you want to remove this event?"
+          action={() => {
+            let action: string;
+            switch (data.type) {
+              case BabyCareEventType.BOTTLE_FEED: {
+                action = BabyCareAction.REMOVE_BOTTLE_FEED_EVENT;
+                break;
+              }
+              case BabyCareEventType.PUMPING: {
+                action = BabyCareAction.REMOVE_PUMPING_EVENT;
+                break;
+              }
+              case BabyCareEventType.NURSING: {
+                action = BabyCareAction.REMOVE_NURSING_EVENT;
+                break;
+              }
+              case BabyCareEventType.DIAPER_CHANGE: {
+                action = BabyCareAction.REMOVE_DIAPER_CHANGE_EVENT;
+                break;
+              }
+              case BabyCareEventType.PLAY: {
+                action = BabyCareAction.REMOVE_PLAY_EVENT;
+                break;
+              }
+              case BabyCareEventType.BATH: {
+                action = BabyCareAction.REMOVE_BATH_EVENT;
+                break;
+              }
+              case BabyCareEventType.SLEEP: {
+                action = BabyCareAction.REMOVE_SLEEP_EVENT;
+                break;
+              }
+              default:
+                return;
+            }
+            submit(
+              {
+                __action: action,
+                ...data,
+              },
+              { method: HttpMethod.POST }
+            );
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -541,7 +591,6 @@ export const BabyCareEventGrid = (props: {
             getRowId: (data) => data.data.id,
             suppressCellFocus: true,
             onRowDoubleClicked: (event) => {
-              // console.log(event, "ai");
               console.log(event);
               alert(event.event?.defaultPrevented);
               // TODO

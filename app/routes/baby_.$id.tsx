@@ -12,6 +12,10 @@ import {
   BottleFeedEvent,
   NursingEvent,
   PumpingEvent,
+  DiaperChangeEvent,
+  PlayEvent,
+  BathEvent,
+  SleepEvent,
 } from "../data/baby-care";
 import {
   guaranteeNonEmptyString,
@@ -230,6 +234,44 @@ export async function action({ request }: ActionFunctionArgs) {
 
       entityManager.persistAndFlush(event);
       return json({ event }, HttpStatus.OK);
+    }
+    case BabyCareAction.REMOVE_BOTTLE_FEED_EVENT:
+    case BabyCareAction.REMOVE_PUMPING_EVENT:
+    case BabyCareAction.REMOVE_NURSING_EVENT:
+    case BabyCareAction.REMOVE_DIAPER_CHANGE_EVENT:
+    case BabyCareAction.REMOVE_PLAY_EVENT:
+    case BabyCareAction.REMOVE_BATH_EVENT:
+    case BabyCareAction.REMOVE_SLEEP_EVENT: {
+      const entityManager = await BabyCareDataRegistry.getEntityManager();
+      const id = guaranteeNonEmptyString(
+        formData.get("id"),
+        "'id is missing or empty"
+      ).trim();
+      const clazz =
+        action === BabyCareAction.REMOVE_BOTTLE_FEED_EVENT
+          ? BottleFeedEvent
+          : action === BabyCareAction.REMOVE_PUMPING_EVENT
+          ? PumpingEvent
+          : action === BabyCareAction.REMOVE_NURSING_EVENT
+          ? NursingEvent
+          : action === BabyCareAction.REMOVE_DIAPER_CHANGE_EVENT
+          ? DiaperChangeEvent
+          : action === BabyCareAction.REMOVE_PLAY_EVENT
+          ? PlayEvent
+          : action === BabyCareAction.REMOVE_BATH_EVENT
+          ? BathEvent
+          : action === BabyCareAction.REMOVE_SLEEP_EVENT
+          ? SleepEvent
+          : undefined;
+      if (!clazz) {
+        return json(
+          { error: `Unsupported remove action (${action})` },
+          HttpStatus.BAD_REQUEST
+        );
+      }
+      await entityManager.nativeDelete(clazz, { id });
+      await entityManager.flush();
+      return json({ id }, HttpStatus.OK);
     }
     default:
       return null;
