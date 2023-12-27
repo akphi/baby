@@ -5,6 +5,7 @@ import {
   type TextFieldProps,
 } from "@mui/material";
 import { AddCircleIcon, RemoveCircleIcon } from "./Icons";
+import { isNonNullable } from "./AssertionUtils";
 
 export const NumberInput = (
   props: TextFieldProps & {
@@ -14,7 +15,7 @@ export const NumberInput = (
     step?: number;
     unit?: string;
     factor?: number;
-    value: number;
+    value: number | undefined;
     setValue: (value: number) => void;
   }
 ) => {
@@ -29,7 +30,7 @@ export const NumberInput = (
     setValue,
     ...otherProps
   } = props;
-  const _value = value / (factor ?? 1);
+  const _value = isNonNullable(value) ? value / (factor ?? 1) : undefined;
   const _setValue = (val: number) => {
     const _min = min ?? 0;
     const _max = max ?? Number.MAX_SAFE_INTEGER;
@@ -47,7 +48,7 @@ export const NumberInput = (
         label={label}
         type="number"
         inputMode="numeric"
-        value={_value}
+        value={_value ?? ""}
         onChange={onChange}
         InputProps={
           unit
@@ -64,14 +65,14 @@ export const NumberInput = (
         <IconButton
           className="w-12 h-12"
           color="primary"
-          onClick={() => _setValue(_value - (step ?? 1))}
+          onClick={() => _setValue((_value ?? 0) - (step ?? 1))}
         >
           <RemoveCircleIcon fontSize="large" />
         </IconButton>
         <IconButton
           className="w-12 h-12"
           color="primary"
-          onClick={() => _setValue(_value + (step ?? 1))}
+          onClick={() => _setValue((_value ?? 0) + (step ?? 1))}
         >
           <AddCircleIcon fontSize="large" />
         </IconButton>

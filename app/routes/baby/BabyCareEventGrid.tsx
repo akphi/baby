@@ -35,8 +35,8 @@ import { cn } from "../../shared/StyleUtils";
 import { useSearchParams, useSubmit } from "@remix-run/react";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { useBooleanSetting } from "../../storage";
-import { Dropdown, Menu, MenuButton, MenuItem } from "@mui/base";
-import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
+import { BabyCareEventEditor } from "./BabyCareEventEditor";
+import { isNonNullable } from "../../shared/AssertionUtils";
 
 const GridNumberInput = (props: {
   value: number;
@@ -51,8 +51,7 @@ const GridNumberInput = (props: {
 }) => {
   const { min, max, step, unit, factor, value, setValue, className, children } =
     props;
-  const _value = value / (factor ?? 1);
-
+  const _value = isNonNullable(value) ? value / (factor ?? 1) : undefined;
   const _setValue = (value: number) => {
     const _min = min ?? 0;
     const _max = max ?? Number.MAX_SAFE_INTEGER;
@@ -62,7 +61,7 @@ const GridNumberInput = (props: {
   return (
     <div
       className={cn(
-        "h-6 w-22 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
+        "h-6 w-22 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
         className
       )}
     >
@@ -80,7 +79,7 @@ const GridNumberInput = (props: {
             e.stopPropagation();
           };
         }}
-        onClick={() => _setValue(_value - (step ?? 1))}
+        onClick={() => _setValue((_value ?? 0) - (step ?? 1))}
       >
         <RemoveIcon className="text-2xs" />
       </button>
@@ -105,7 +104,7 @@ const GridNumberInput = (props: {
             e.stopPropagation();
           };
         }}
-        onClick={() => _setValue(_value + (step ?? 1))}
+        onClick={() => _setValue((_value ?? 0) + (step ?? 1))}
       >
         <AddIcon className="text-2xs" />
       </button>
@@ -136,18 +135,17 @@ const BottleFeedEventOverview = (props: {
   );
 
   return (
-    <div className="flex items-center h-full w-full">
-      <GridNumberInput
-        value={volume}
-        unit={useMetric ? "ml" : "oz"}
-        step={5}
-        setValue={(value) => {
-          debouncedUpdate.cancel();
-          setVolume(value);
-          debouncedUpdate(value);
-        }}
-      />
-    </div>
+    <GridNumberInput
+      value={volume}
+      unit={useMetric ? "ml" : "oz"}
+      step={5}
+      setValue={(value) => {
+        debouncedUpdate.cancel();
+        setVolume(value);
+        debouncedUpdate(value);
+      }}
+      className="mr-2"
+    />
   );
 };
 
@@ -172,18 +170,17 @@ const PumpingEventOverview = (props: { data: SerializeFrom<PumpingEvent> }) => {
   );
 
   return (
-    <div className="flex items-center h-full w-full">
-      <GridNumberInput
-        value={volume}
-        unit={useMetric ? "ml" : "oz"}
-        step={5}
-        setValue={(value) => {
-          debouncedUpdate.cancel();
-          setVolume(value);
-          debouncedUpdate(value);
-        }}
-      />
-    </div>
+    <GridNumberInput
+      value={volume}
+      unit={useMetric ? "ml" : "oz"}
+      step={5}
+      setValue={(value) => {
+        debouncedUpdate.cancel();
+        setVolume(value);
+        debouncedUpdate(value);
+      }}
+      className="mr-2"
+    />
   );
 };
 
@@ -209,7 +206,7 @@ const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
   );
 
   return (
-    <div className="flex items-center h-full w-full overflow-x-auto overflow-y-hidden">
+    <>
       <GridNumberInput
         value={leftDuration}
         unit={"mn"}
@@ -220,6 +217,7 @@ const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
           setLeftDuration(value);
           debouncedUpdate(value, rightDuration);
         }}
+        className="mr-2"
       >
         <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
           L
@@ -235,13 +233,13 @@ const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
           setRightDuration(value);
           debouncedUpdate(leftDuration, value);
         }}
-        className="ml-2"
+        className="mr-2"
       >
         <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
           R
         </div>
       </GridNumberInput>
-    </div>
+    </>
   );
 };
 
@@ -264,110 +262,46 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
         <NursingEventOverview data={data as SerializeFrom<NursingEvent>} />
       );
     default:
-      // TODO: for these events, showing the tags and comments might be important
-      return <div className="h-full w-full" />;
+      return <></>;
   }
 };
 
 const EventOverviewRenderer = (
   params: ICellRendererParams<SerializeFrom<BabyCareEvent>> & {
     profile: SerializeFrom<BabyCareProfile>;
+    setEventToEdit: (event: SerializeFrom<BabyCareEvent>) => void;
   }
 ) => {
   const data = params.data;
-  const [showDeleteConfirmationDialog, setShowDeleteConfirmationDialog] =
-    useState(false);
-  const submit = useSubmit();
+  const setEventToEdit = params.setEventToEdit;
 
   if (!data) {
     return null;
   }
   return (
     <div className="flex items-center h-full w-full justify-between">
-      <EventOverview data={data} />
-      <Dropdown>
-        <MenuButton
-          className="flex items-center justify-center w-7 h-full"
-          ref={(ref) => {
-            if (!ref) {
-              return;
-            }
-            ref.ondblclick = (e) => {
-              e.stopPropagation();
-            };
-          }}
-        >
-          <MoreVertIcon className="text-lg text-slate-300 hover:text-slate-500" />
-        </MenuButton>
-        <Menu
-          slots={{ listbox: "ol" }}
-          className="bg-white cursor-pointer rounded shadow-md border"
-        >
-          <MenuItem
-            className="flex items-center px-2 h-8 text-sm text-slate-700 hover:bg-slate-100"
-            onClick={() => {
-              /* od nothing */
-            }}
-          >
-            Edit
-          </MenuItem>
-          <MenuItem
-            className="flex items-center px-2 h-8 text-sm text-red-500 hover:bg-slate-100"
-            onClick={() => setShowDeleteConfirmationDialog(true)}
-          >
-            Delete
-          </MenuItem>
-        </Menu>
-      </Dropdown>
-      {showDeleteConfirmationDialog && (
-        <ConfirmationDialog
-          open={showDeleteConfirmationDialog}
-          onClose={() => setShowDeleteConfirmationDialog(false)}
-          message="Are you sure you want to remove this event?"
-          action={() => {
-            let action: string;
-            switch (data.type) {
-              case BabyCareEventType.BOTTLE_FEED: {
-                action = BabyCareAction.REMOVE_BOTTLE_FEED_EVENT;
-                break;
-              }
-              case BabyCareEventType.PUMPING: {
-                action = BabyCareAction.REMOVE_PUMPING_EVENT;
-                break;
-              }
-              case BabyCareEventType.NURSING: {
-                action = BabyCareAction.REMOVE_NURSING_EVENT;
-                break;
-              }
-              case BabyCareEventType.DIAPER_CHANGE: {
-                action = BabyCareAction.REMOVE_DIAPER_CHANGE_EVENT;
-                break;
-              }
-              case BabyCareEventType.PLAY: {
-                action = BabyCareAction.REMOVE_PLAY_EVENT;
-                break;
-              }
-              case BabyCareEventType.BATH: {
-                action = BabyCareAction.REMOVE_BATH_EVENT;
-                break;
-              }
-              case BabyCareEventType.SLEEP: {
-                action = BabyCareAction.REMOVE_SLEEP_EVENT;
-                break;
-              }
-              default:
-                return;
-            }
-            submit(
-              {
-                __action: action,
-                ...data,
-              },
-              { method: HttpMethod.POST }
-            );
-          }}
-        />
-      )}
+      <div className="flex items-center h-full w-full overflow-x-auto overflow-y-hidden">
+        <EventOverview data={data} />
+        {data.comment && (
+          <div className="flex items-center rounded h-6 text-2xs text-slate-600 bg-amber-100 px-2">
+            {data.comment}
+          </div>
+        )}
+      </div>
+      <button
+        className="flex items-center justify-center w-7 h-full"
+        ref={(ref) => {
+          if (!ref) {
+            return;
+          }
+          ref.ondblclick = (e) => {
+            e.stopPropagation();
+          };
+        }}
+        onClick={() => setEventToEdit(data)}
+      >
+        <MoreVertIcon className="text-lg text-slate-300 hover:text-slate-500" />
+      </button>
     </div>
   );
 };
@@ -422,6 +356,9 @@ export const BabyCareEventGrid = (props: {
   const { profile, events } = props;
   const [params] = useSearchParams();
   const submit = useSubmit();
+  const [eventToEdit, setEventToEdit] = useState<
+    SerializeFrom<BabyCareEvent> | undefined
+  >(undefined);
   const [selectedEvent, setSelectedEvent] = useState<string | undefined>(
     undefined
   );
@@ -588,12 +525,10 @@ export const BabyCareEventGrid = (props: {
         <AgGridReact
           headerHeight={0}
           gridOptions={{
-            getRowId: (data) => data.data.id,
+            getRowId: (data) => data.data.hash,
             suppressCellFocus: true,
             onRowDoubleClicked: (event) => {
-              console.log(event);
-              alert(event.event?.defaultPrevented);
-              // TODO
+              setEventToEdit(event.data);
             },
             rowStyle: { cursor: "pointer" },
           }}
@@ -628,6 +563,7 @@ export const BabyCareEventGrid = (props: {
               cellClass: "pr-0 pl-1",
               cellRendererParams: {
                 profile,
+                setEventToEdit,
               },
               cellRenderer: EventOverviewRenderer,
             },
@@ -652,7 +588,14 @@ export const BabyCareEventGrid = (props: {
             }
           })}
           modules={[ClientSideRowModelModule]}
-        ></AgGridReact>
+        />
+        {eventToEdit && (
+          <BabyCareEventEditor
+            open={Boolean(eventToEdit)}
+            onClose={() => setEventToEdit(undefined)}
+            data={eventToEdit}
+          />
+        )}
       </div>
     </div>
   );

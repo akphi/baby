@@ -192,14 +192,6 @@ export const parseNumber = (val: string): number => {
   return num;
 };
 
-export const parseNumberSafe = (val: string): number => {
-  const num = toNumber(val);
-  if (isNaN(num)) {
-    return 0;
-  }
-  return num;
-};
-
 /**
  * Stringify object shallowly
  * See https://stackoverflow.com/questions/16466220/limit-json-stringification-depth

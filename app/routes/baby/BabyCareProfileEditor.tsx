@@ -24,6 +24,7 @@ import type { SerializeFrom } from "@remix-run/node";
 import { parseISO } from "date-fns";
 import { useForm } from "react-hook-form";
 import { HttpMethod } from "../../shared/NetworkUtils";
+import { pruneFormData } from "../../shared/FormDataUtils";
 
 export const BabyCareProfileEditor = (props: {
   open: boolean;
@@ -42,34 +43,38 @@ export const BabyCareProfileEditor = (props: {
   const [dob, setDob] = useState(
     profile?.dob ? parseISO(profile?.dob) : new Date()
   );
-  const [nickname, setNickname] = useState(profile?.nickname ?? "");
-  const [shortId, setShortId] = useState(profile?.shortId ?? "");
+  const [nickname, setNickname] = useState(profile?.nickname);
+  const [shortId, setShortId] = useState(profile?.shortId);
   const [defaultFeedingVolume, setDefaultFeedingVolume] = useState(
-    profile?.defaultFeedingVolume ?? 0
+    profile?.defaultFeedingVolume
   );
   const [defaultPumpingDuration, setDefaultPumpingDuration] = useState(
-    profile?.defaultPumpingDuration ?? 0
+    profile?.defaultPumpingDuration
   );
-  const [feedingInterval, setFeedingInterval] = useState(
-    profile?.feedingInterval ?? 0
+  const [defaultPumpingInterval, setDefaultPumpingInterval] = useState(
+    profile?.defaultPumpingInterval
+  );
+  const [defaultFeedingInterval, setDefaultFeedingInterval] = useState(
+    profile?.defaultFeedingInterval
   );
   const onSubmit = handleSubmit((data, event) => {
     submit(
-      {
+      pruneFormData({
         __action: profile
           ? BabyCareAction.UPDATE_PROFILE
           : BabyCareAction.CREATE_PROFILE,
         ...profile,
-        id: profile?.id ?? null,
+        id: profile?.id,
         name,
         gender,
         dob: dob.toISOString(),
         nickname,
         shortId,
         defaultFeedingVolume,
+        defaultFeedingInterval,
         defaultPumpingDuration,
-        feedingInterval,
-      },
+        defaultPumpingInterval,
+      }),
       { method: HttpMethod.POST }
     );
     onClose();
@@ -143,7 +148,6 @@ export const BabyCareProfileEditor = (props: {
           <div className="w-full py-2">
             <DatePicker
               label="Date of Birth"
-              slotProps={{ textField: { name: "dob" } }}
               value={dob}
               onChange={(value: Date | null) => {
                 setDob(value ?? new Date());
@@ -178,6 +182,21 @@ export const BabyCareProfileEditor = (props: {
           </div>
           <div className="w-full py-2">
             <NumberInput
+              label="Feeding Interval"
+              min={0}
+              max={12}
+              step={0.5}
+              unit="hr"
+              factor={60 * 60 * 1000}
+              value={defaultFeedingInterval}
+              setValue={(value) => {
+                setDefaultFeedingInterval(value);
+              }}
+              className="flex-1"
+            />
+          </div>
+          <div className="w-full py-2">
+            <NumberInput
               label="Pumping Duration"
               min={0}
               max={60}
@@ -193,15 +212,15 @@ export const BabyCareProfileEditor = (props: {
           </div>
           <div className="w-full py-2">
             <NumberInput
-              label="Feeding Interval"
+              label="Pumping Interval"
               min={0}
               max={12}
               step={0.5}
               unit="hr"
               factor={60 * 60 * 1000}
-              value={feedingInterval}
+              value={defaultPumpingInterval}
               setValue={(value) => {
-                setFeedingInterval(value);
+                setDefaultPumpingInterval(value);
               }}
               className="flex-1"
             />

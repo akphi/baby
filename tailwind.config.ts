@@ -11,7 +11,7 @@ export default {
       },
       width: {
         "22": "5.5rem",
-      }
+      },
     },
   },
   plugins: [],

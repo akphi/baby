@@ -12,6 +12,13 @@ import {
 import { Entity, PrimaryKey } from "@mikro-orm/core";
 import { add, startOfDay } from "date-fns";
 import { v4 as uuid } from "uuid";
+import { hasher as initHasher } from "node-object-hash";
+import { readFileSync } from "node:fs";
+import { returnUndefOnError } from "../shared/CommonUtils";
+import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
+import { ContentType, HttpHeader, HttpMethod } from "../shared/NetworkUtils";
+
+const HASHER = initHasher({});
 
 export enum Gender {
   MALE = "MALE",
@@ -20,8 +27,9 @@ export enum Gender {
 
 export const DEFAULT_NURSING_DURATION_FOR_EACH_SIDE = 15 * 60 * 1000; // 15 minutes
 export const DEFAULT_PUMPING_DURATION = 30 * 60 * 1000; // 30 minutes
+export const DEFAULT_PUMPING_INTERNAL = 3 * 60 * 60 * 1000; // 3 hours
 export const DEFAULT_FEEDING_INTERVAL = 3 * 60 * 60 * 1000; // 3 hours
-export const DEFAULT_FEEDING_VOLUME = 60;
+export const DEFAULT_FEEDING_VOLUME = 60; // 60 ml
 
 @Entity()
 export class BabyCareProfile {
@@ -44,10 +52,13 @@ export class BabyCareProfile {
   nickname?: string | undefined;
 
   @Property({ type: "number", nullable: true })
-  feedingInterval?: number | undefined;
+  defaultFeedingInterval?: number | undefined;
 
   @Property({ type: "number", nullable: true })
   defaultFeedingVolume?: number | undefined;
+
+  @Property({ type: "number", nullable: true })
+  defaultPumpingInterval?: number | undefined;
 
   @Property({ type: "number", nullable: true })
   defaultPumpingDuration?: number | undefined;
@@ -73,10 +84,15 @@ export enum BabyCareEventType {
 }
 
 export abstract class BabyCareEvent {
-  // Shadowed field that should not be persisted to the DB, used to keep track of type of event
+  // Keep track of type of event during serialization
+  // Shadowed field that should not be persisted to the DB
   // See https://mikro-orm.io/docs/serializing#shadow-properties
   @Property({ type: "string", persist: false })
   type!: string;
+
+  // Keep track of hash of event
+  @Property({ type: "string", persist: false })
+  hash!: string;
 
   @PrimaryKey({ type: "string" })
   readonly id = uuid();
@@ -105,6 +121,8 @@ export abstract class BabyCareEvent {
     this.time = time;
     this.profile = profile;
   }
+
+  abstract get hashCode(): string;
 }
 
 @Entity()
@@ -119,6 +137,20 @@ export class BottleFeedEvent extends BabyCareEvent {
     super(time, profile);
     this.volume = volume;
   }
+
+  override get hashCode() {
+    return HASHER.hash({
+      type: BabyCareEventType.BOTTLE_FEED,
+      id: this.id,
+      profile: this.profile.id,
+      time: this.time,
+      duration: this.duration,
+      comment: this.comment,
+
+      volume: this.volume,
+      formulaMilkVolume: this.formulaMilkVolume,
+    });
+  }
 }
 
 @Entity()
@@ -128,12 +160,39 @@ export class NursingEvent extends BabyCareEvent {
 
   @Property({ type: "number" })
   rightDuration = 0;
+
+  override get hashCode() {
+    return HASHER.hash({
+      type: BabyCareEventType.NURSING,
+      id: this.id,
+      profile: this.profile.id,
+      time: this.time,
+      duration: this.duration,
+      comment: this.comment,
+
+      leftDuration: this.leftDuration,
+      rightDuration: this.rightDuration,
+    });
+  }
 }
 
 @Entity()
 export class PumpingEvent extends BabyCareEvent {
   @Property({ type: "number" })
   volume = 0;
+
+  override get hashCode() {
+    return HASHER.hash({
+      type: BabyCareEventType.PUMPING,
+      id: this.id,
+      profile: this.profile.id,
+      time: this.time,
+      duration: this.duration,
+      comment: this.comment,
+
+      volume: this.volume,
+    });
+  }
 }
 
 @Entity()
@@ -145,16 +204,63 @@ export class DiaperChangeEvent extends BabyCareEvent {
 
   @Property({ type: "boolean" })
   poop = false;
+
+  override get hashCode() {
+    return HASHER.hash({
+      type: BabyCareEventType.DIAPER_CHANGE,
+      id: this.id,
+      profile: this.profile.id,
+      time: this.time,
+      duration: this.duration,
+      comment: this.comment,
+
+      pee: this.pee,
+      poop: this.poop,
+    });
+  }
 }
 
 @Entity()
-export class SleepEvent extends BabyCareEvent {}
+export class SleepEvent extends BabyCareEvent {
+  override get hashCode() {
+    return HASHER.hash({
+      type: BabyCareEventType.SLEEP,
+      id: this.id,
+      profile: this.profile.id,
+      time: this.time,
+      duration: this.duration,
+      comment: this.comment,
+    });
+  }
+}
 
 @Entity()
-export class PlayEvent extends BabyCareEvent {}
+export class PlayEvent extends BabyCareEvent {
+  override get hashCode() {
+    return HASHER.hash({
+      type: BabyCareEventType.PLAY,
+      id: this.id,
+      profile: this.profile.id,
+      time: this.time,
+      duration: this.duration,
+      comment: this.comment,
+    });
+  }
+}
 
 @Entity()
-export class BathEvent extends BabyCareEvent {}
+export class BathEvent extends BabyCareEvent {
+  override get hashCode() {
+    return HASHER.hash({
+      type: BabyCareEventType.BATH,
+      id: this.id,
+      profile: this.profile.id,
+      time: this.time,
+      duration: this.duration,
+      comment: this.comment,
+    });
+  }
+}
 
 const BABY_CARE_DB_CONFIG: Options = {
   dbName: "../home-storage/baby-care.sqlite",
@@ -229,7 +335,10 @@ export class BabyCareDataRegistry {
           })
           .then((events) =>
             events.map((event) =>
-              wrap(event).assign({ type: BabyCareEventType.BOTTLE_FEED })
+              wrap(event).assign({
+                type: BabyCareEventType.BOTTLE_FEED,
+                hash: event.hashCode,
+              })
             )
           ),
         entityManager
@@ -246,7 +355,10 @@ export class BabyCareDataRegistry {
           })
           .then((events) =>
             events.map((event) =>
-              wrap(event).assign({ type: BabyCareEventType.NURSING })
+              wrap(event).assign({
+                type: BabyCareEventType.NURSING,
+                hash: event.hashCode,
+              })
             )
           ),
         entityManager
@@ -263,7 +375,10 @@ export class BabyCareDataRegistry {
           })
           .then((events) =>
             events.map((event) =>
-              wrap(event).assign({ type: BabyCareEventType.PUMPING })
+              wrap(event).assign({
+                type: BabyCareEventType.PUMPING,
+                hash: event.hashCode,
+              })
             )
           ),
         entityManager
@@ -280,7 +395,10 @@ export class BabyCareDataRegistry {
           })
           .then((events) =>
             events.map((event) =>
-              wrap(event).assign({ type: BabyCareEventType.DIAPER_CHANGE })
+              wrap(event).assign({
+                type: BabyCareEventType.DIAPER_CHANGE,
+                hash: event.hashCode,
+              })
             )
           ),
         entityManager
@@ -297,7 +415,10 @@ export class BabyCareDataRegistry {
           })
           .then((events) =>
             events.map((event) =>
-              wrap(event).assign({ type: BabyCareEventType.SLEEP })
+              wrap(event).assign({
+                type: BabyCareEventType.SLEEP,
+                hash: event.hashCode,
+              })
             )
           ),
         entityManager
@@ -314,7 +435,10 @@ export class BabyCareDataRegistry {
           })
           .then((events) =>
             events.map((event) =>
-              wrap(event).assign({ type: BabyCareEventType.PLAY })
+              wrap(event).assign({
+                type: BabyCareEventType.PLAY,
+                hash: event.hashCode,
+              })
             )
           ),
         entityManager
@@ -331,7 +455,10 @@ export class BabyCareDataRegistry {
           })
           .then((events) =>
             events.map((event) =>
-              wrap(event).assign({ type: BabyCareEventType.BATH })
+              wrap(event).assign({
+                type: BabyCareEventType.BATH,
+                hash: event.hashCode,
+              })
             )
           ),
       ])
@@ -341,6 +468,28 @@ export class BabyCareDataRegistry {
       .sort((a, b) => b.time.getTime() - a.time.getTime());
 
     return events;
+  }
+
+  public static async remind(message: string) {
+    const config = JSON.parse(
+      readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
+    );
+    const url = returnUndefOnError(() =>
+      guaranteeNonEmptyString(config.babyCare.reminderWebhookUrl)
+    );
+    if (!url) {
+      return;
+    }
+    await fetch(url, {
+      method: HttpMethod.POST,
+      headers: {
+        [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
+      },
+      body: JSON.stringify({
+        content: message,
+        username: "Reminder",
+      }),
+    });
   }
 }
 

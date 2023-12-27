@@ -2,6 +2,7 @@ import {
   json,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
+  type SerializeFrom,
   redirect,
 } from "@remix-run/node";
 import {
@@ -21,11 +22,15 @@ import { Button, IconButton } from "@mui/material";
 import { Link, useLoaderData, useSubmit } from "@remix-run/react";
 import { useState } from "react";
 import { BabyCareProfileEditor } from "./baby/BabyCareProfileEditor";
-import { guaranteeNonEmptyString, isString } from "../shared/AssertionUtils";
-import { parseNumber, returnUndefOnError } from "../shared/CommonUtils";
+import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
 import { formatDistanceStrict } from "date-fns";
 import { ConfirmationDialog } from "../shared/ConfirmationDialog";
 import { HttpMethod } from "../shared/NetworkUtils";
+import {
+  extractOptionalNumber,
+  extractOptionalString,
+  extractRequiredString,
+} from "../shared/FormDataUtils";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const entityManager = await BabyCareDataRegistry.getEntityManager();
@@ -36,7 +41,9 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 export default function BabyCareProfileManager() {
   const { profiles } = useLoaderData<typeof loader>();
   const [showCreateProfileForm, setShowCreateProfileForm] = useState(false);
-  const [showEditProfileForm, setShowEditProfileForm] = useState(false);
+  const [profileToEdit, setProfileToEdit] = useState<
+    SerializeFrom<BabyCareProfile> | undefined
+  >(undefined);
   const [profileIdToRemove, setProfileIdToRemove] = useState<
     string | undefined
   >(undefined);
@@ -74,7 +81,7 @@ export default function BabyCareProfileManager() {
               <IconButton
                 color="primary"
                 className="w-8 h-8 pl-2"
-                onClick={() => setShowEditProfileForm(true)}
+                onClick={() => setProfileToEdit(profile)}
               >
                 <EditIcon fontSize="medium" />
               </IconButton>
@@ -86,15 +93,15 @@ export default function BabyCareProfileManager() {
                 <RemoveCircleIcon fontSize="medium" />
               </IconButton>
             </div>
-            {showEditProfileForm && (
-              <BabyCareProfileEditor
-                open={showEditProfileForm}
-                onClose={() => setShowEditProfileForm(false)}
-                profile={profile}
-              />
-            )}
           </div>
         ))}
+        {profileToEdit && (
+          <BabyCareProfileEditor
+            open={Boolean(profileToEdit)}
+            onClose={() => setProfileToEdit(undefined)}
+            profile={profileToEdit}
+          />
+        )}
         {profileIdToRemove && (
           <ConfirmationDialog
             open={profileIdToRemove !== undefined}
@@ -139,12 +146,10 @@ export async function action({ request }: ActionFunctionArgs) {
 
       let profile: BabyCareProfile;
 
-      const name = guaranteeNonEmptyString(
-        formData.get("name"),
-        "Name is required"
-      );
-      const dob = new Date(formData.get("dob") as string);
-      const gender = Gender[formData.get("gender") as Gender];
+      const name = extractRequiredString(formData, "name");
+      const dob = new Date(extractRequiredString(formData, "dob"));
+      const gender =
+        Gender[extractRequiredString(formData, "gender") as Gender];
 
       if (id) {
         profile = await entityManager.findOneOrFail(BabyCareProfile, {
@@ -157,38 +162,24 @@ export async function action({ request }: ActionFunctionArgs) {
         profile = new BabyCareProfile(name, gender, dob);
       }
 
-      if (formData.has("nickname") && isString(formData.get("nickname"))) {
-        const nickname = (formData.get("nickname") as string).trim();
-        profile.nickname = nickname ? nickname : undefined;
-      }
-      if (formData.has("shortId") && isString(formData.get("shortId"))) {
-        const shortId = (formData.get("shortId") as string).trim();
-        profile.shortId = shortId ? shortId : undefined;
-      }
-      if (
-        formData.has("defaultFeedingVolume") &&
-        isString(formData.get("defaultFeedingVolume"))
-      ) {
-        profile.defaultFeedingVolume = returnUndefOnError(() =>
-          parseNumber(formData.get("defaultFeedingVolume") as string)
-        );
-      }
-      if (
-        formData.has("defaultPumpingDuration") &&
-        isString(formData.get("defaultPumpingDuration"))
-      ) {
-        profile.defaultPumpingDuration = returnUndefOnError(() =>
-          parseNumber(formData.get("defaultPumpingDuration") as string)
-        );
-      }
-      if (
-        formData.has("feedingInterval") &&
-        isString(formData.get("feedingInterval"))
-      ) {
-        profile.feedingInterval = returnUndefOnError(() =>
-          parseNumber(formData.get("feedingInterval") as string)
-        );
-      }
+      profile.nickname = extractOptionalString(formData, "nickname")?.trim();
+      profile.shortId = extractOptionalString(formData, "shortId")?.trim();
+      profile.defaultFeedingVolume = extractOptionalNumber(
+        formData,
+        "defaultFeedingVolume"
+      );
+      profile.defaultFeedingInterval = extractOptionalNumber(
+        formData,
+        "defaultFeedingInterval"
+      );
+      profile.defaultPumpingDuration = extractOptionalNumber(
+        formData,
+        "defaultPumpingDuration"
+      );
+      profile.defaultPumpingInterval = extractOptionalNumber(
+        formData,
+        "defaultPumpingInterval"
+      );
 
       await entityManager.persistAndFlush(profile);
 
