@@ -15,8 +15,8 @@ import {
   type BabyCareEvent,
   type BottleFeedEvent,
   type PumpingEvent,
-  NursingEvent,
-  DiaperChangeEvent,
+  type NursingEvent,
+  type DiaperChangeEvent,
 } from "../../data/baby-care";
 import { useSubmit } from "@remix-run/react";
 import { useState } from "react";
