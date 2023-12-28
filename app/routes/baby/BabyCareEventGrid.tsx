@@ -38,7 +38,7 @@ import { useBooleanSetting } from "../../storage";
 import { BabyCareEventEditor } from "./BabyCareEventEditor";
 import { isNonNullable } from "../../shared/AssertionUtils";
 
-const GridNumberInput = (props: {
+const InlineNumberInput = (props: {
   value: number;
   setValue: (value: number) => void;
   unit: string;
@@ -67,7 +67,6 @@ const GridNumberInput = (props: {
     >
       <button
         className="absolute h-full w-1/2 flex justify-start items-center pl-1 left-0"
-        color="primary"
         // NOTE: suppress double click row event of ag-grid, which we cannot stop propagation with React
         // since React wraps native event
         // See https://stackoverflow.com/a/63968681
@@ -92,7 +91,6 @@ const GridNumberInput = (props: {
       </div>
       <button
         className="absolute h-full w-1/2 flex justify-end items-center pr-1 right-0"
-        color="primary"
         // NOTE: suppress double click row event of ag-grid, which we cannot stop propagation with React
         // since React wraps native event
         // See https://stackoverflow.com/a/63968681
@@ -135,7 +133,7 @@ const BottleFeedEventOverview = (props: {
   );
 
   return (
-    <GridNumberInput
+    <InlineNumberInput
       value={volume}
       unit={useMetric ? "ml" : "oz"}
       step={5}
@@ -170,7 +168,7 @@ const PumpingEventOverview = (props: { data: SerializeFrom<PumpingEvent> }) => {
   );
 
   return (
-    <GridNumberInput
+    <InlineNumberInput
       value={volume}
       unit={useMetric ? "ml" : "oz"}
       step={5}
@@ -207,7 +205,7 @@ const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
 
   return (
     <>
-      <GridNumberInput
+      <InlineNumberInput
         value={leftDuration}
         unit={"mn"}
         factor={60 * 1000}
@@ -222,8 +220,8 @@ const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
         <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
           L
         </div>
-      </GridNumberInput>
-      <GridNumberInput
+      </InlineNumberInput>
+      <InlineNumberInput
         value={rightDuration}
         unit={"mn"}
         factor={60 * 1000}
@@ -238,7 +236,7 @@ const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
         <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
           R
         </div>
-      </GridNumberInput>
+      </InlineNumberInput>
     </>
   );
 };
@@ -380,7 +378,7 @@ export const BabyCareEventGrid = (props: {
   };
 
   return (
-    <div className="w-screen home__event-grid">
+    <div className="w-screen h-half-screen home__event-grid sticky">
       <div className="flex items-center w-full bg-slate-100 border-t overflow-x-auto overflow-y-hidden">
         <div className="h-10 w-auto flex items-center px-2">
           <button
@@ -521,7 +519,7 @@ export const BabyCareEventGrid = (props: {
           ))}
         </div>
       </div>
-      <div className="ag-theme-quartz ">
+      <div className="ag-theme-quartz h-full">
         <AgGridReact
           headerHeight={0}
           gridOptions={{
@@ -568,7 +566,6 @@ export const BabyCareEventGrid = (props: {
               cellRenderer: EventOverviewRenderer,
             },
           ]}
-          domLayout="autoHeight"
           rowData={events.filter((event) => {
             switch (selectedEvent) {
               case undefined:

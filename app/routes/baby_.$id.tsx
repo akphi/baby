@@ -86,7 +86,6 @@ export default function BabyCare() {
         <Toolbar />
         <BabyCareDashboard profile={profile} />
         <BabyCareEventGrid profile={profile} events={events} />
-        <div className="w-full h-12" />
       </main>
     </div>
   );

@@ -4,83 +4,347 @@ import {
   BabyCareEventType,
   type BabyCareEvent,
   type BabyCareProfile,
+  type BottleFeedEvent,
+  type PumpingEvent,
+  type NursingEvent,
 } from "../../data/baby-care";
-import { useFetcher } from "@remix-run/react";
+import { useFetcher, useSubmit } from "@remix-run/react";
 import {
+  AddIcon,
   BathIcon,
   BottleIcon,
   BreastPumpIcon,
   ChildToyIcon,
   CloseIcon,
+  DeleteIcon,
   NursingIcon,
   PeeIcon,
   PoopIcon,
+  RemoveIcon,
   SleepIcon,
 } from "../../shared/Icons";
-import { CircularProgress, IconButton, Popper } from "@mui/material";
+import { CircularProgress, Fade, IconButton, Snackbar } from "@mui/material";
 import { HttpMethod } from "../../shared/NetworkUtils";
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { debounce } from "lodash-es";
+import { isNonNullable } from "../../shared/AssertionUtils";
+import { cn } from "../../shared/StyleUtils";
+import { pruneFormData } from "../../shared/FormDataUtils";
 
-const QUICK_EDIT_TIMEOUT = 10 * 1000; // 10 seconds
-const QUICK_EDIT_TIMER_STEP_SIZE = 100;
-
-const EventQuickEdit = (props: {
-  event: SerializeFrom<BabyCareEvent>;
-  onClose: () => void;
+const InlineNumberInput = (props: {
+  value: number;
+  setValue: (value: number) => void;
+  unit: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  factor?: number;
+  className?: string;
+  children?: React.ReactNode;
 }) => {
-  const { event, onClose } = props;
-  const [counter, setCounter] = useState(0);
-  const timer = useRef<NodeJS.Timeout>();
-
-  useEffect(() => {
-    timer.current = setInterval(() => {
-      setCounter((value) => value + 100 / QUICK_EDIT_TIMER_STEP_SIZE);
-    }, QUICK_EDIT_TIMEOUT / QUICK_EDIT_TIMER_STEP_SIZE);
-    return () => clearInterval(timer.current);
-  }, []);
-
-  useEffect(() => {
-    if (counter >= 100) {
-      onClose();
-    }
-  }, [counter, onClose]);
+  const { min, max, step, unit, factor, value, setValue, className, children } =
+    props;
+  const _value = isNonNullable(value) ? value / (factor ?? 1) : undefined;
+  const _setValue = (value: number) => {
+    const _min = min ?? 0;
+    const _max = max ?? Number.MAX_SAFE_INTEGER;
+    setValue(Math.max(_min, Math.min(_max, value)) * (factor ?? 1));
+  };
 
   return (
-    <Popper
-      open={Boolean(event)}
-      anchorEl={{
-        getBoundingClientRect: () => ({
-          ...window.document.body.getBoundingClientRect(),
-        }),
-      }} // place it relative to the screen
-      placement="top"
-      className="w-full h-16 px-2 pb-2 right-0 left-0"
+    <div
+      className={cn(
+        "h-8 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
+        className
+      )}
     >
-      <div className="flex items-center justify-between w-full h-full shadow-md shadow-slate-300 rounded border border-slate-200 bg-white">
-        <div className="pl-4">asd</div>
-        <div className="h-14 w-14 flex items-center justify-center relative">
-          <CircularProgress
-            size={36}
-            thickness={5}
-            variant="determinate"
-            value={100}
-            classes={{
-              root: "absolute",
-              circleDeterminate: "text-slate-100",
-            }}
-          />
-          <CircularProgress
-            size={36}
-            thickness={5}
-            variant="determinate"
-            value={counter}
-          />
-          <button className="absolute" onClick={onClose}>
-            <CloseIcon />
-          </button>
+      <button
+        className="absolute h-full w-4 flex justify-start items-center pl-1 left-0"
+        onClick={() => _setValue((_value ?? 0) - (step ?? 1))}
+      >
+        <RemoveIcon className="text-xs" />
+      </button>
+      <div className="w-full h-full flex rounded justify-center items-center">
+        {children}
+        <div className="flex items-center font-mono text-sm">{_value}</div>
+        <div className="flex items-center font-mono text-xs ml-0.5">{unit}</div>
+      </div>
+      <button
+        className="absolute h-full w-1/2 flex justify-end items-center pr-1 right-0"
+        onClick={() => _setValue((_value ?? 0) + (step ?? 1))}
+      >
+        <AddIcon className="text-xs" />
+      </button>
+    </div>
+  );
+};
+
+const QUICK_EDIT_TIMEOUT = 30 * 1000; // 30 seconds
+const QUICK_EDIT_TIMER_INTERVAL = 250; // 250ms
+const QUICK_EDIT_DELETE_BUTTON_HOLD_TIMER_INTERVAL = 1.5 * 1000; // 1.5 second
+
+const EventQuickEditAction = forwardRef(
+  (
+    props: {
+      data: SerializeFrom<BabyCareEvent>;
+      onClose: () => void;
+    },
+    ref
+  ) => {
+    const { data, onClose } = props;
+    const submit = useSubmit();
+    const [autoCloseTimerCounter, setAutoCloseTimerCounter] = useState(0);
+    const autoCloseTimer = useRef<NodeJS.Timeout>();
+    const [deleteButtonHoldTimerCounter, setDeleteButtonHoldTimerCounter] =
+      useState(0);
+    const deleteButtonHoldTimer = useRef<NodeJS.Timeout>();
+
+    useEffect(() => {
+      autoCloseTimer.current = setInterval(() => {
+        setAutoCloseTimerCounter(
+          (value) =>
+            value + 100 / (QUICK_EDIT_TIMEOUT / QUICK_EDIT_TIMER_INTERVAL)
+        );
+      }, QUICK_EDIT_TIMER_INTERVAL);
+      return () => clearInterval(autoCloseTimer.current);
+    }, []);
+
+    useEffect(() => {
+      if (autoCloseTimerCounter > 100) {
+        onClose();
+        return () => setAutoCloseTimerCounter(0);
+      }
+    }, [autoCloseTimerCounter, onClose]);
+
+    useEffect(() => {
+      if (deleteButtonHoldTimerCounter > 100) {
+        if (data) {
+          let action: string;
+          switch (data.TYPE) {
+            case BabyCareEventType.BOTTLE_FEED: {
+              action = BabyCareAction.REMOVE_BOTTLE_FEED_EVENT;
+              break;
+            }
+            case BabyCareEventType.PUMPING: {
+              action = BabyCareAction.REMOVE_PUMPING_EVENT;
+              break;
+            }
+            case BabyCareEventType.NURSING: {
+              action = BabyCareAction.REMOVE_NURSING_EVENT;
+              break;
+            }
+            default:
+              return;
+          }
+          submit(
+            {
+              __action: action,
+              ...data,
+            },
+            { method: HttpMethod.POST }
+          );
+        }
+        onClose();
+
+        return () => {
+          setDeleteButtonHoldTimerCounter(0);
+          clearInterval(deleteButtonHoldTimer.current);
+        };
+      }
+    }, [data, deleteButtonHoldTimerCounter, onClose, submit]);
+
+    const [volume, setVolume] = useState(
+      (data as SerializeFrom<BottleFeedEvent | PumpingEvent>).volume
+    );
+    const [leftDuration, setLeftDuration] = useState(
+      (data as SerializeFrom<NursingEvent>).leftDuration
+    );
+    const [rightDuration, setRightDuration] = useState(
+      (data as SerializeFrom<NursingEvent>).rightDuration
+    );
+
+    const debouncedUpdate = useMemo(
+      () =>
+        debounce(
+          (formData: {
+            volume?: number | undefined;
+            leftDuration?: number | undefined;
+            rightDuration?: number | undefined;
+          }) => {
+            let action: string;
+            switch (data.TYPE) {
+              case BabyCareEventType.BOTTLE_FEED: {
+                action = BabyCareAction.UPDATE_BOTTLE_FEED_EVENT;
+                break;
+              }
+              case BabyCareEventType.PUMPING: {
+                action = BabyCareAction.UPDATE_PUMPING_EVENT;
+                break;
+              }
+              case BabyCareEventType.NURSING: {
+                action = BabyCareAction.UPDATE_NURSING_EVENT;
+                break;
+              }
+              default:
+                return;
+            }
+            submit(
+              pruneFormData({
+                __action: action,
+                ...data,
+                volume: formData?.volume,
+                leftDuration: formData?.leftDuration,
+                rightDuration: formData?.rightDuration,
+              }),
+              { method: HttpMethod.POST }
+            );
+          },
+          200
+        ),
+      [submit, data]
+    );
+
+    return (
+      <div
+        ref={ref as any}
+        className="flex items-center justify-between w-full h-full shadow-md shadow-slate-300 rounded bg-slate-700"
+      >
+        <div className="pl-4">
+          <div className="w-full h-full flex items-center">
+            {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
+              data.TYPE === BabyCareEventType.PUMPING) && (
+              <InlineNumberInput
+                value={volume}
+                unit={"ml"}
+                step={5}
+                setValue={(value) => {
+                  debouncedUpdate.cancel();
+                  setVolume(value);
+                  debouncedUpdate({ volume: value });
+                }}
+                className="mr-2"
+              />
+            )}
+            {data.TYPE === BabyCareEventType.NURSING && (
+              <>
+                <InlineNumberInput
+                  value={leftDuration}
+                  unit={"mn"}
+                  factor={60 * 1000}
+                  step={1}
+                  setValue={(value) => {
+                    debouncedUpdate.cancel();
+                    setLeftDuration(value);
+                    debouncedUpdate({ leftDuration: value, rightDuration });
+                  }}
+                  className="mr-2"
+                />
+                <InlineNumberInput
+                  value={rightDuration}
+                  unit={"mn"}
+                  factor={60 * 1000}
+                  step={1}
+                  setValue={(value) => {
+                    debouncedUpdate.cancel();
+                    setRightDuration(value);
+                    debouncedUpdate({ leftDuration, rightDuration: value });
+                  }}
+                  className="mr-2"
+                />
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex relative">
+          <div className="h-14 w-10 flex items-center justify-center">
+            <CircularProgress
+              size={36}
+              thickness={5}
+              variant="determinate"
+              value={100}
+              classes={{
+                root: "absolute",
+                circleDeterminate: "text-slate-500",
+              }}
+            />
+            <CircularProgress
+              size={36}
+              thickness={5}
+              variant="determinate"
+              value={deleteButtonHoldTimerCounter}
+              classes={{
+                circleDeterminate: "text-red-500",
+              }}
+            />
+            <button
+              className="absolute"
+              onMouseDown={() => {
+                const startTime = Date.now();
+                deleteButtonHoldTimer.current = setInterval(() => {
+                  // NOTE: compared to how we do the other timer, this might be slightly
+                  // more reliable since it's based of Date.now() instead of an incrementer
+                  setDeleteButtonHoldTimerCounter(
+                    () =>
+                      ((Date.now() - startTime) /
+                        QUICK_EDIT_DELETE_BUTTON_HOLD_TIMER_INTERVAL) *
+                      100
+                  );
+                }, 250);
+              }}
+              onMouseUp={() => {
+                setDeleteButtonHoldTimerCounter(0);
+                clearInterval(deleteButtonHoldTimer.current);
+              }}
+            >
+              <DeleteIcon className="text-slate-500 hover:text-slate-200 text-2xl" />
+            </button>
+          </div>
+          <div className="h-14 w-14 flex items-center justify-center">
+            <CircularProgress
+              size={36}
+              thickness={5}
+              variant="determinate"
+              value={100}
+              classes={{
+                root: "absolute",
+                circleDeterminate: "text-slate-500",
+              }}
+            />
+            <CircularProgress
+              size={36}
+              thickness={5}
+              variant="determinate"
+              value={autoCloseTimerCounter}
+              classes={{
+                circleDeterminate: "text-sky-500",
+              }}
+            />
+            <button className="absolute" onClick={onClose}>
+              <CloseIcon className="text-slate-500 hover:text-slate-200" />
+            </button>
+          </div>
         </div>
       </div>
-    </Popper>
+    );
+  }
+);
+
+const EventQuickEdit = (props: {
+  data: SerializeFrom<BabyCareEvent> | undefined;
+  onClose: () => void;
+}) => {
+  const { data, onClose } = props;
+
+  return (
+    <Snackbar
+      open={Boolean(data)}
+      TransitionComponent={Fade as any}
+      onClose={onClose}
+      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      className="w-full md:w-1/2 p-2 bottom-0 left-0 right-0 md:left-[unset]"
+    >
+      {data ? <EventQuickEditAction data={data} onClose={onClose} /> : <div />}
+    </Snackbar>
   );
 };
 
@@ -101,7 +365,6 @@ export const BabyCareDashboard = (props: {
           BabyCareEventType.BOTTLE_FEED,
           BabyCareEventType.NURSING,
           BabyCareEventType.PUMPING,
-          BabyCareEventType.DIAPER_CHANGE,
         ] as string[]
       ).includes(fetcher.data.event.TYPE)
     ) {
@@ -230,13 +493,11 @@ export const BabyCareDashboard = (props: {
           >
             <SleepIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-lime-100 border-lime-500 text-5xl text-black" />
           </IconButton>
-          {eventToQuickEdit && (
-            <EventQuickEdit
-              key={eventToQuickEdit.id} // force re-mount everytime the event changes
-              event={eventToQuickEdit}
-              onClose={() => setEventToQuickEdit(undefined)}
-            />
-          )}
+          <EventQuickEdit
+            key={eventToQuickEdit?.id}
+            data={eventToQuickEdit}
+            onClose={() => setEventToQuickEdit(undefined)}
+          />
         </div>
       </div>
     </div>
