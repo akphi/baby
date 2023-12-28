@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Delete,
   MoreVert,
+  Close,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -71,3 +72,4 @@ export const FemaleIcon = Female;
 export const ChevronLeftIcon = ChevronLeft;
 export const ChevronRightIcon = ChevronRight;
 export const MoreVertIcon = MoreVert;
+export const CloseIcon = Close;

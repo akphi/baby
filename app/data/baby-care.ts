@@ -88,11 +88,11 @@ export abstract class BabyCareEvent {
   // Shadowed field that should not be persisted to the DB
   // See https://mikro-orm.io/docs/serializing#shadow-properties
   @Property({ type: "string", persist: false })
-  type!: string;
+  TYPE!: string;
 
   // Keep track of hash of event
   @Property({ type: "string", persist: false })
-  hash!: string;
+  HASH!: string;
 
   @PrimaryKey({ type: "string" })
   readonly id = uuid();
@@ -122,7 +122,22 @@ export abstract class BabyCareEvent {
     this.profile = profile;
   }
 
-  abstract get hashCode(): string;
+  abstract get eventType(): string;
+
+  get hashContent() {
+    return {
+      type: this.eventType,
+      id: this.id,
+      profile: this.profile.id,
+      time: this.time,
+      duration: this.duration,
+      comment: this.comment,
+    };
+  }
+
+  get hashCode() {
+    return HASHER.hash(this.hashContent);
+  }
 }
 
 @Entity()
@@ -138,15 +153,13 @@ export class BottleFeedEvent extends BabyCareEvent {
     this.volume = volume;
   }
 
+  override get eventType() {
+    return BabyCareEventType.BOTTLE_FEED;
+  }
+
   override get hashCode() {
     return HASHER.hash({
-      type: BabyCareEventType.BOTTLE_FEED,
-      id: this.id,
-      profile: this.profile.id,
-      time: this.time,
-      duration: this.duration,
-      comment: this.comment,
-
+      ...this.hashContent,
       volume: this.volume,
       formulaMilkVolume: this.formulaMilkVolume,
     });
@@ -161,15 +174,13 @@ export class NursingEvent extends BabyCareEvent {
   @Property({ type: "number" })
   rightDuration = 0;
 
+  override get eventType() {
+    return BabyCareEventType.NURSING;
+  }
+
   override get hashCode() {
     return HASHER.hash({
-      type: BabyCareEventType.NURSING,
-      id: this.id,
-      profile: this.profile.id,
-      time: this.time,
-      duration: this.duration,
-      comment: this.comment,
-
+      ...this.hashContent,
       leftDuration: this.leftDuration,
       rightDuration: this.rightDuration,
     });
@@ -181,15 +192,13 @@ export class PumpingEvent extends BabyCareEvent {
   @Property({ type: "number" })
   volume = 0;
 
+  override get eventType() {
+    return BabyCareEventType.PUMPING;
+  }
+
   override get hashCode() {
     return HASHER.hash({
-      type: BabyCareEventType.PUMPING,
-      id: this.id,
-      profile: this.profile.id,
-      time: this.time,
-      duration: this.duration,
-      comment: this.comment,
-
+      ...this.hashContent,
       volume: this.volume,
     });
   }
@@ -205,15 +214,13 @@ export class DiaperChangeEvent extends BabyCareEvent {
   @Property({ type: "boolean" })
   poop = false;
 
+  override get eventType() {
+    return BabyCareEventType.DIAPER_CHANGE;
+  }
+
   override get hashCode() {
     return HASHER.hash({
-      type: BabyCareEventType.DIAPER_CHANGE,
-      id: this.id,
-      profile: this.profile.id,
-      time: this.time,
-      duration: this.duration,
-      comment: this.comment,
-
+      ...this.hashContent,
       pee: this.pee,
       poop: this.poop,
     });
@@ -222,43 +229,22 @@ export class DiaperChangeEvent extends BabyCareEvent {
 
 @Entity()
 export class SleepEvent extends BabyCareEvent {
-  override get hashCode() {
-    return HASHER.hash({
-      type: BabyCareEventType.SLEEP,
-      id: this.id,
-      profile: this.profile.id,
-      time: this.time,
-      duration: this.duration,
-      comment: this.comment,
-    });
+  override get eventType() {
+    return BabyCareEventType.SLEEP;
   }
 }
 
 @Entity()
 export class PlayEvent extends BabyCareEvent {
-  override get hashCode() {
-    return HASHER.hash({
-      type: BabyCareEventType.PLAY,
-      id: this.id,
-      profile: this.profile.id,
-      time: this.time,
-      duration: this.duration,
-      comment: this.comment,
-    });
+  override get eventType() {
+    return BabyCareEventType.PLAY;
   }
 }
 
 @Entity()
 export class BathEvent extends BabyCareEvent {
-  override get hashCode() {
-    return HASHER.hash({
-      type: BabyCareEventType.BATH,
-      id: this.id,
-      profile: this.profile.id,
-      time: this.time,
-      duration: this.duration,
-      comment: this.comment,
-    });
+  override get eventType() {
+    return BabyCareEventType.BATH;
   }
 }
 
@@ -321,149 +307,92 @@ export class BabyCareDataRegistry {
     const entityManager = await BabyCareDataRegistry.getEntityManager();
     const events: BabyCareEvent[] = (
       await Promise.all([
-        entityManager
-          .find(BottleFeedEvent, {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: startOfDay(date),
-                  $lt: startOfDay(add(date, { days: 1 })),
-                },
+        entityManager.find(BottleFeedEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
               },
-            ],
-          })
-          .then((events) =>
-            events.map((event) =>
-              wrap(event).assign({
-                type: BabyCareEventType.BOTTLE_FEED,
-                hash: event.hashCode,
-              })
-            )
-          ),
-        entityManager
-          .find(NursingEvent, {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: startOfDay(date),
-                  $lt: startOfDay(add(date, { days: 1 })),
-                },
+            },
+          ],
+        }),
+        entityManager.find(NursingEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
               },
-            ],
-          })
-          .then((events) =>
-            events.map((event) =>
-              wrap(event).assign({
-                type: BabyCareEventType.NURSING,
-                hash: event.hashCode,
-              })
-            )
-          ),
-        entityManager
-          .find(PumpingEvent, {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: startOfDay(date),
-                  $lt: startOfDay(add(date, { days: 1 })),
-                },
+            },
+          ],
+        }),
+        entityManager.find(PumpingEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
               },
-            ],
-          })
-          .then((events) =>
-            events.map((event) =>
-              wrap(event).assign({
-                type: BabyCareEventType.PUMPING,
-                hash: event.hashCode,
-              })
-            )
-          ),
-        entityManager
-          .find(DiaperChangeEvent, {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: startOfDay(date),
-                  $lt: startOfDay(add(date, { days: 1 })),
-                },
+            },
+          ],
+        }),
+        entityManager.find(DiaperChangeEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
               },
-            ],
-          })
-          .then((events) =>
-            events.map((event) =>
-              wrap(event).assign({
-                type: BabyCareEventType.DIAPER_CHANGE,
-                hash: event.hashCode,
-              })
-            )
-          ),
-        entityManager
-          .find(SleepEvent, {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: startOfDay(date),
-                  $lt: startOfDay(add(date, { days: 1 })),
-                },
+            },
+          ],
+        }),
+        entityManager.find(SleepEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
               },
-            ],
-          })
-          .then((events) =>
-            events.map((event) =>
-              wrap(event).assign({
-                type: BabyCareEventType.SLEEP,
-                hash: event.hashCode,
-              })
-            )
-          ),
-        entityManager
-          .find(PlayEvent, {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: startOfDay(date),
-                  $lt: startOfDay(add(date, { days: 1 })),
-                },
+            },
+          ],
+        }),
+        entityManager.find(PlayEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
               },
-            ],
-          })
-          .then((events) =>
-            events.map((event) =>
-              wrap(event).assign({
-                type: BabyCareEventType.PLAY,
-                hash: event.hashCode,
-              })
-            )
-          ),
-        entityManager
-          .find(BathEvent, {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: startOfDay(date),
-                  $lt: startOfDay(add(date, { days: 1 })),
-                },
+            },
+          ],
+        }),
+        entityManager.find(BathEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
               },
-            ],
-          })
-          .then((events) =>
-            events.map((event) =>
-              wrap(event).assign({
-                type: BabyCareEventType.BATH,
-                hash: event.hashCode,
-              })
-            )
-          ),
+            },
+          ],
+        }),
       ])
     )
       .flat()
+      .map((event) =>
+        wrap(event).assign({
+          TYPE: event.eventType,
+          HASH: event.hashCode,
+        })
+      )
       // sort latest events first
       .sort((a, b) => b.time.getTime() - a.time.getTime());
 

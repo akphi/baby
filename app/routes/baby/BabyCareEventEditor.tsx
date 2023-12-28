@@ -39,6 +39,7 @@ export const BabyCareEventEditor = (props: {
   const [showDeleteConfirmationDialog, setShowDeleteConfirmationDialog] =
     useState(false);
   const submit = useSubmit();
+
   const [time, setTime] = useState(parseISO(data.time));
   const [comment, setComment] = useState(data.comment ?? undefined);
   const [duration, setDuration] = useState(data.duration ?? undefined);
@@ -65,7 +66,7 @@ export const BabyCareEventEditor = (props: {
 
   const onSubmit = () => {
     let action: string;
-    switch (data.type) {
+    switch (data.TYPE) {
       case BabyCareEventType.BOTTLE_FEED: {
         action = BabyCareAction.UPDATE_BOTTLE_FEED_EVENT;
         break;
@@ -146,8 +147,8 @@ export const BabyCareEventEditor = (props: {
               className="w-full"
             />
           </div>
-          {(data.type === BabyCareEventType.BOTTLE_FEED ||
-            data.type === BabyCareEventType.PUMPING) && (
+          {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
+            data.TYPE === BabyCareEventType.PUMPING) && (
             <div className="w-full py-2">
               <NumberInput
                 label="Volume"
@@ -163,7 +164,7 @@ export const BabyCareEventEditor = (props: {
               />
             </div>
           )}
-          {data.type === BabyCareEventType.BOTTLE_FEED && (
+          {data.TYPE === BabyCareEventType.BOTTLE_FEED && (
             <div className="w-full py-2">
               <NumberInput
                 label="Formula Milk Volume"
@@ -179,7 +180,7 @@ export const BabyCareEventEditor = (props: {
               />
             </div>
           )}
-          {data.type === BabyCareEventType.NURSING && (
+          {data.TYPE === BabyCareEventType.NURSING && (
             <>
               <div className="w-full py-2">
                 <NumberInput
@@ -213,7 +214,7 @@ export const BabyCareEventEditor = (props: {
               </div>
             </>
           )}
-          {data.type === BabyCareEventType.DIAPER_CHANGE && (
+          {data.TYPE === BabyCareEventType.DIAPER_CHANGE && (
             <div className="w-full py-2">
               <FormControlLabel
                 control={
@@ -286,7 +287,7 @@ export const BabyCareEventEditor = (props: {
             message="Are you sure you want to remove this event?"
             action={() => {
               let action: string;
-              switch (data.type) {
+              switch (data.TYPE) {
                 case BabyCareEventType.BOTTLE_FEED: {
                   action = BabyCareAction.REMOVE_BOTTLE_FEED_EVENT;
                   break;

@@ -246,7 +246,7 @@ const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
 const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
   const { data } = props;
 
-  switch (data?.type) {
+  switch (data?.TYPE) {
     case BabyCareEventType.BOTTLE_FEED:
       return (
         <BottleFeedEventOverview
@@ -312,37 +312,37 @@ const EventTypeRenderer = (
   const data = params.data;
   return (
     <div className="flex items-center h-full w-full">
-      {data?.type === BabyCareEventType.BOTTLE_FEED && (
+      {data?.TYPE === BabyCareEventType.BOTTLE_FEED && (
         <BottleIcon className="h-full w-5 flex items-center text-base" />
       )}
-      {data?.type === BabyCareEventType.NURSING && (
+      {data?.TYPE === BabyCareEventType.NURSING && (
         <NursingIcon className="h-full w-5 flex items-center text-base" />
       )}
-      {data?.type === BabyCareEventType.PUMPING && (
+      {data?.TYPE === BabyCareEventType.PUMPING && (
         <BreastPumpIcon className="h-full w-5 flex items-center text-base" />
       )}
-      {data?.type === BabyCareEventType.DIAPER_CHANGE &&
+      {data?.TYPE === BabyCareEventType.DIAPER_CHANGE &&
         ((data as SerializeFrom<DiaperChangeEvent>).poop ? (
           <PoopIcon className="h-full w-5 flex items-center text-base" />
         ) : (
           <PeeIcon className="h-full w-5 flex items-center text-base" />
         ))}
-      {data?.type === BabyCareEventType.SLEEP && (
+      {data?.TYPE === BabyCareEventType.SLEEP && (
         <SleepIcon className="h-full w-5 flex items-center text-base" />
       )}
-      {data?.type === BabyCareEventType.PLAY && (
+      {data?.TYPE === BabyCareEventType.PLAY && (
         <ChildToyIcon className="h-full w-5 flex items-center text-base" />
       )}
-      {data?.type === BabyCareEventType.BATH && (
+      {data?.TYPE === BabyCareEventType.BATH && (
         <BathIcon className="h-full w-5 flex items-center text-base" />
       )}
       {data && (
         <div className="flex items-center justify-center rounded uppercase ml-1 text-3xs font-medium leading-4 bg-slate-500 px-1 text-slate-100">
-          {data.type === BabyCareEventType.DIAPER_CHANGE
+          {data.TYPE === BabyCareEventType.DIAPER_CHANGE
             ? (data as SerializeFrom<DiaperChangeEvent>).poop
               ? BabyCareEventType.__POOP
               : BabyCareEventType.__PEE
-            : data.type}
+            : data.TYPE}
         </div>
       )}
     </div>
@@ -468,11 +468,11 @@ export const BabyCareEventGrid = (props: {
                 [BabyCareEventType.NURSING]: 0,
               },
               groupBy(events, (event) =>
-                event.type === BabyCareEventType.DIAPER_CHANGE
+                event.TYPE === BabyCareEventType.DIAPER_CHANGE
                   ? (event as SerializeFrom<DiaperChangeEvent>).poop
                     ? BabyCareEventType.__POOP
                     : BabyCareEventType.__PEE
-                  : event.type
+                  : event.TYPE
               )
             )
           ).map(([type, items]) => (
@@ -525,7 +525,7 @@ export const BabyCareEventGrid = (props: {
         <AgGridReact
           headerHeight={0}
           gridOptions={{
-            getRowId: (data) => data.data.hash,
+            getRowId: (data) => data.data.HASH,
             suppressCellFocus: true,
             onRowDoubleClicked: (event) => {
               setEventToEdit(event.data);
@@ -575,16 +575,16 @@ export const BabyCareEventGrid = (props: {
                 return true;
               case BabyCareEventType.__POOP:
                 return (
-                  event.type === BabyCareEventType.DIAPER_CHANGE &&
+                  event.TYPE === BabyCareEventType.DIAPER_CHANGE &&
                   (event as SerializeFrom<DiaperChangeEvent>).poop
                 );
               case BabyCareEventType.__PEE:
                 return (
-                  event.type === BabyCareEventType.DIAPER_CHANGE &&
+                  event.TYPE === BabyCareEventType.DIAPER_CHANGE &&
                   !(event as SerializeFrom<DiaperChangeEvent>).poop
                 );
               default:
-                return event.type === selectedEvent;
+                return event.TYPE === selectedEvent;
             }
           })}
           modules={[ClientSideRowModelModule]}

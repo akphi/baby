@@ -86,6 +86,7 @@ export default function BabyCare() {
         <Toolbar />
         <BabyCareDashboard profile={profile} />
         <BabyCareEventGrid profile={profile} events={events} />
+        <div className="w-full h-12" />
       </main>
     </div>
   );
@@ -128,6 +129,10 @@ export async function action({ request }: ActionFunctionArgs) {
       }
 
       entityManager.persistAndFlush(event);
+
+      event.TYPE = event.eventType;
+      event.HASH = event.hashCode;
+
       return json({ event }, HttpStatus.OK);
     }
     case BabyCareAction.UPDATE_BOTTLE_FEED_EVENT: {
@@ -240,9 +245,14 @@ export async function action({ request }: ActionFunctionArgs) {
           : action === BabyCareAction.REMOVE_SLEEP_EVENT
           ? SleepEvent
           : undefined;
-      await entityManager.nativeDelete(guaranteeNonNullable(clazz), { id });
-      await entityManager.flush();
-      return json({ id }, HttpStatus.OK);
+      const event = await entityManager.findOneOrFail(
+        guaranteeNonNullable(clazz),
+        {
+          id,
+        }
+      );
+      await entityManager.removeAndFlush(event);
+      return json({ event }, HttpStatus.OK);
     }
     default:
       return null;
