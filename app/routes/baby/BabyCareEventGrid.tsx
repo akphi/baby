@@ -378,8 +378,8 @@ export const BabyCareEventGrid = (props: {
   };
 
   return (
-    <div className="w-screen h-half-screen home__event-grid sticky">
-      <div className="flex items-center w-full bg-slate-100 border-t overflow-x-auto overflow-y-hidden">
+    <div className="w-full h-full home__event-grid">
+      <div className="flex items-center w-full bg-slate-100 overflow-hidden">
         <div className="h-10 w-auto flex items-center px-2">
           <button
             className="text-slate-500 hover:text-slate-600"
@@ -519,7 +519,7 @@ export const BabyCareEventGrid = (props: {
           ))}
         </div>
       </div>
-      <div className="ag-theme-quartz h-full">
+      <div className="ag-theme-quartz h-[calc(100%_-_40px)]">
         <AgGridReact
           headerHeight={0}
           gridOptions={{

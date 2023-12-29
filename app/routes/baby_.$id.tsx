@@ -1,4 +1,4 @@
-import { AppBar, Box, Toolbar, Typography } from "@mui/material";
+import { Divider } from "@mui/material";
 import {
   json,
   type ActionFunctionArgs,
@@ -17,7 +17,7 @@ import {
   SleepEvent,
 } from "../data/baby-care";
 import { guaranteeNonNullable } from "../shared/AssertionUtils";
-import { useLoaderData } from "@remix-run/react";
+import { Link, useLoaderData } from "@remix-run/react";
 import { HttpStatus } from "../shared/NetworkUtils";
 import { generateBabyCareEvent } from "./api.runCommand.$command";
 import { BabyCareDashboard } from "./baby/BabyCareDashboard";
@@ -30,6 +30,10 @@ import {
   extractRequiredNumber,
   extractRequiredString,
 } from "../shared/FormDataUtils";
+import { BabyCareSummaryBar } from "./baby/BabyCareSummary";
+import { ControllerIcon, ClockIcon, HomeIcon } from "../shared/Icons";
+import { cn } from "../shared/StyleUtils";
+import { useState } from "react";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const { searchParams } = new URL(request.url);
@@ -50,43 +54,81 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   return json({ profile, events });
 };
 
+enum Activity {
+  DASHBOARD = "Dashboard",
+  EVENT_LOG = "Event Log",
+}
+
 export default function BabyCare() {
   const { profile, events } = useLoaderData<typeof loader>();
+  const [currentActivity, setCurrentActivity] = useState<Activity>(
+    Activity.DASHBOARD
+  );
 
   return (
-    <div className="flex h-full w-full">
-      <AppBar component="nav">
-        <Toolbar>
-          {/* <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: "none" } }}
-          >
-            {/* <MenuIcon /> */}
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{ flexGrow: 1, display: { xs: "none", sm: "block" } }}
-          >
-            Chopchop
-          </Typography>
-          <Box sx={{ display: { xs: "none", sm: "block" } }}>
-            {/* <Button key={item} sx={{ color: "#fff" }}>
-                {item}
-              </Button> */}
-            {/* {navItems.map((item) => (
-            ))} */}
-          </Box>
-        </Toolbar>
-      </AppBar>
-      <main className="w-full overflow-auto">
+    <div className="h-full w-full bg-slate-50">
+      <BabyCareSummaryBar />
+      <main className="w-full overflow-auto h-[calc(100%_-_64px)]">
         {/* empty toolbar to offset the content the height of the floating toolbar */}
-        <Toolbar />
-        <BabyCareDashboard profile={profile} />
-        <BabyCareEventGrid profile={profile} events={events} />
+        <div className="h-16 w-full" />
+        <div className="h-[calc(100%_-_64px)] w-full">
+          {currentActivity === Activity.DASHBOARD && (
+            <BabyCareDashboard profile={profile} />
+          )}
+          {currentActivity === Activity.EVENT_LOG && (
+            <BabyCareEventGrid profile={profile} events={events} />
+          )}
+        </div>
       </main>
+      <footer className="h-16 w-full flex justify-center items-end">
+        <div className="flex h-14 items-center rounded-t-lg shadow-lg bg-white px-4">
+          <Link to={`/baby`} className="h-full">
+            <button
+              className={cn(
+                "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white hover:border-blue-200"
+              )}
+            >
+              <HomeIcon className="text-4xl" />
+            </button>
+          </Link>
+          <Divider
+            orientation="vertical"
+            className="bg-slate-50 h-8 opacity-50 mx-2"
+          />
+          <button
+            className={cn(
+              "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white hover:border-blue-200",
+              {
+                "text-blue-500": currentActivity === Activity.DASHBOARD,
+                "border-blue-500": currentActivity === Activity.DASHBOARD,
+                "hover:text-blue-500": currentActivity === Activity.DASHBOARD,
+                "hover:border-blue-500": currentActivity === Activity.DASHBOARD,
+              }
+            )}
+            onClick={() => setCurrentActivity(Activity.DASHBOARD)}
+          >
+            <ControllerIcon className="text-7xl" />
+          </button>
+          <Divider
+            orientation="vertical"
+            className="bg-slate h-8 opacity-50 mx-2"
+          />
+          <button
+            className={cn(
+              "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white hover:border-blue-200",
+              {
+                "text-blue-500": currentActivity === Activity.EVENT_LOG,
+                "border-blue-500": currentActivity === Activity.EVENT_LOG,
+                "hover:text-blue-500": currentActivity === Activity.EVENT_LOG,
+                "hover:border-blue-500": currentActivity === Activity.EVENT_LOG,
+              }
+            )}
+            onClick={() => setCurrentActivity(Activity.EVENT_LOG)}
+          >
+            <ClockIcon className="text-4xl" />
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }

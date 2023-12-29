@@ -353,7 +353,7 @@ const EventQuickEdit = (props: {
       TransitionComponent={Fade as any}
       onClose={onClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      className="w-full md:w-1/2 p-2 bottom-0 left-0 right-0 md:left-[unset]"
+      className="w-full md:w-1/2 p-2 bottom-12 left-0 right-0 md:left-[unset]"
     >
       {data ? <EventQuickEditAction data={data} onClose={onClose} /> : <div />}
     </Snackbar>
@@ -385,7 +385,7 @@ export const BabyCareDashboard = (props: {
   }, [fetcher.data]);
 
   return (
-    <div className="flex justify-center items-center w-full p-6 bg-slate-50">
+    <div className="flex justify-center items-center w-full p-6">
       <div className="flex flex-col justify-center items-center p-6 bg-white rounded-xl shadow-md w-fit">
         <div className="flex justify-center items-center">
           <IconButton

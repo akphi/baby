@@ -50,7 +50,7 @@ export default function BabyCareProfileManager() {
   const submit = useSubmit();
 
   return (
-    <div className="h-full w-full flex justify-center items-center px-4 bg-slate-50">
+    <div className="h-full w-full flex justify-center items-center px-4">
       <div className="flex py-16 px-10 bg-white rounded-xl shadow-md flex-col">
         {profiles.map((profile) => (
           <div key={profile.id} className="flex">

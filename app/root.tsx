@@ -49,12 +49,15 @@ export default function Root() {
     <html>
       <head>
         <link rel="icon" href="data:image/x-icon;base64,AA" />
-        <meta name="viewport" content="initial-scale=1, width=device-width" />
+        <meta
+          name="viewport"
+          content="initial-scale=1, width=device-width user-scalable=no"
+        />
         <Meta />
         <Links />
       </head>
       <body id="root">
-        <div className="h-screen w-screen overflow-hidden">
+        <div className="h-full w-full overflow-hidden">
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <SettingsProvider>
               <Outlet />

@@ -11,6 +11,9 @@ import {
   Delete,
   MoreVert,
   Close,
+  VideogameAsset,
+  WatchLater,
+  Home,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -31,7 +34,7 @@ export enum BabyCareEmoji {
 export const NursingIcon = (props: IconProps) => (
   <Icon {...props}>{BabyCareEmoji.NURSING}</Icon>
 );
-export const HomeIcon = (props: IconProps) => (
+export const HouseIcon = (props: IconProps) => (
   <Icon {...props}>{BabyCareEmoji.HOME}</Icon>
 );
 export const ChildToyIcon = (props: IconProps) => (
@@ -73,3 +76,6 @@ export const ChevronLeftIcon = ChevronLeft;
 export const ChevronRightIcon = ChevronRight;
 export const MoreVertIcon = MoreVert;
 export const CloseIcon = Close;
+export const ControllerIcon = VideogameAsset;
+export const ClockIcon = WatchLater;
+export const HomeIcon = Home;
