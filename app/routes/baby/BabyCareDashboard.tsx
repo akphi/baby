@@ -153,6 +153,25 @@ const EventQuickEditAction = forwardRef(
       }
     }, [data, deleteButtonHoldTimerCounter, onClose, submit]);
 
+    function holdDelete() {
+      const startTime = Date.now();
+      deleteButtonHoldTimer.current = setInterval(() => {
+        // NOTE: compared to how we do the other timer, this might be slightly
+        // more reliable since it's based of Date.now() instead of an incrementer
+        setDeleteButtonHoldTimerCounter(
+          () =>
+            ((Date.now() - startTime) /
+              QUICK_EDIT_DELETE_BUTTON_HOLD_TIMER_INTERVAL) *
+            100
+        );
+      }, 250);
+    }
+
+    function unholdDelete() {
+      setDeleteButtonHoldTimerCounter(0);
+      clearInterval(deleteButtonHoldTimer.current);
+    }
+
     const [volume, setVolume] = useState(
       (data as SerializeFrom<BottleFeedEvent | PumpingEvent>).volume
     );
@@ -207,7 +226,7 @@ const EventQuickEditAction = forwardRef(
     return (
       <div
         ref={ref as any}
-        className="flex items-center justify-between w-full h-full shadow-md shadow-slate-300 rounded bg-slate-700"
+        className="flex items-center justify-between w-full h-full shadow-md shadow-slate-300 rounded bg-slate-700 select-none"
       >
         <div className="pl-4">
           <div className="w-full h-full flex items-center">
@@ -255,8 +274,8 @@ const EventQuickEditAction = forwardRef(
             )}
           </div>
         </div>
-        <div className="flex relative">
-          <div className="h-14 w-10 flex items-center justify-center">
+        <div className="flex relative h-14">
+          <div className="h-full w-10 flex items-center justify-center">
             <CircularProgress
               size={36}
               thickness={5}
@@ -277,29 +296,16 @@ const EventQuickEditAction = forwardRef(
               }}
             />
             <button
-              className="absolute"
-              onMouseDown={() => {
-                const startTime = Date.now();
-                deleteButtonHoldTimer.current = setInterval(() => {
-                  // NOTE: compared to how we do the other timer, this might be slightly
-                  // more reliable since it's based of Date.now() instead of an incrementer
-                  setDeleteButtonHoldTimerCounter(
-                    () =>
-                      ((Date.now() - startTime) /
-                        QUICK_EDIT_DELETE_BUTTON_HOLD_TIMER_INTERVAL) *
-                      100
-                  );
-                }, 250);
-              }}
-              onMouseUp={() => {
-                setDeleteButtonHoldTimerCounter(0);
-                clearInterval(deleteButtonHoldTimer.current);
-              }}
+              className="absolute w-10 h-full bg-transparent"
+              onMouseDown={holdDelete}
+              onMouseUp={unholdDelete}
+              onTouchStart={holdDelete}
+              onTouchEnd={unholdDelete}
             >
               <DeleteIcon className="text-slate-500 hover:text-slate-200 text-2xl" />
             </button>
           </div>
-          <div className="h-14 w-14 flex items-center justify-center">
+          <div className="h-full w-14 flex items-center justify-center">
             <CircularProgress
               size={36}
               thickness={5}
@@ -319,7 +325,13 @@ const EventQuickEditAction = forwardRef(
                 circleDeterminate: "text-sky-500",
               }}
             />
-            <button className="absolute" onClick={onClose}>
+            <button
+              className="absolute w-14 h-full bg-transparent"
+              onClick={() => {
+                console.log("asd");
+                onClose();
+              }}
+            >
               <CloseIcon className="text-slate-500 hover:text-slate-200" />
             </button>
           </div>
