@@ -37,6 +37,7 @@ import { HttpMethod } from "../../shared/NetworkUtils";
 import { useBooleanSetting } from "../../storage";
 import { BabyCareEventEditor } from "./BabyCareEventEditor";
 import { isNonNullable } from "../../shared/AssertionUtils";
+import { pruneFormData } from "../../shared/FormDataUtils";
 
 const InlineNumberInput = (props: {
   value: number;
@@ -121,11 +122,11 @@ const BottleFeedEventOverview = (props: {
     () =>
       debounce((_volume: number) => {
         submit(
-          {
+          pruneFormData({
             __action: BabyCareAction.UPDATE_BOTTLE_FEED_EVENT,
             ...data,
             volume: _volume,
-          },
+          }),
           { method: HttpMethod.POST }
         );
       }, 200),
@@ -156,11 +157,11 @@ const PumpingEventOverview = (props: { data: SerializeFrom<PumpingEvent> }) => {
     () =>
       debounce((_volume: number) => {
         submit(
-          {
+          pruneFormData({
             __action: BabyCareAction.UPDATE_PUMPING_EVENT,
             ...data,
             volume: _volume,
-          },
+          }),
           { method: HttpMethod.POST }
         );
       }, 200),
@@ -191,12 +192,12 @@ const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
     () =>
       debounce((_leftDuration: number, _rightDuration: number) => {
         submit(
-          {
+          pruneFormData({
             __action: BabyCareAction.UPDATE_NURSING_EVENT,
             ...data,
             leftDuration: _leftDuration,
             rightDuration: _rightDuration,
-          },
+          }),
           { method: HttpMethod.POST }
         );
       }, 200),

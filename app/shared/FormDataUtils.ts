@@ -5,7 +5,7 @@ import { parseNumber, returnUndefOnError } from "./CommonUtils";
 // submit function will automatically convert `null` and `undefined` into strings
 // See https://developer.mozilla.org/en-US/docs/Web/API/FormData/append
 export const pruneFormData = (data: Record<PropertyKey, unknown>): any =>
-  pickBy(data, (val: unknown): boolean => val !== undefined) as any;
+  pickBy(data, (val: unknown): boolean => val !== undefined && val !== null) as any;
 
 export const extractRequiredString = (
   formData: FormData,

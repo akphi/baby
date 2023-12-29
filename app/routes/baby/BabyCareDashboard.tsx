@@ -228,7 +228,7 @@ const EventQuickEditAction = forwardRef(
         ref={ref as any}
         className="flex items-center justify-between w-full h-full shadow-md shadow-slate-300 rounded bg-slate-700 select-none"
       >
-        <div className="pl-4">
+        <div className="pl-4 md:px-4">
           <div className="w-full h-full flex items-center">
             {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
               data.TYPE === BabyCareEventType.PUMPING) && (
@@ -257,7 +257,11 @@ const EventQuickEditAction = forwardRef(
                     debouncedUpdate({ leftDuration: value, rightDuration });
                   }}
                   className="mr-2"
-                />
+                >
+                  <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+                    L
+                  </div>
+                </InlineNumberInput>
                 <InlineNumberInput
                   value={rightDuration}
                   unit={"mn"}
@@ -269,7 +273,11 @@ const EventQuickEditAction = forwardRef(
                     debouncedUpdate({ leftDuration, rightDuration: value });
                   }}
                   className="mr-2"
-                />
+                >
+                  <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+                    R
+                  </div>
+                </InlineNumberInput>
               </>
             )}
           </div>
@@ -327,10 +335,7 @@ const EventQuickEditAction = forwardRef(
             />
             <button
               className="absolute w-14 h-full bg-transparent"
-              onClick={() => {
-                console.log("asd");
-                onClose();
-              }}
+              onClick={() => onClose()}
             >
               <CloseIcon className="text-slate-500 hover:text-slate-200" />
             </button>
@@ -353,7 +358,7 @@ const EventQuickEdit = (props: {
       TransitionComponent={Fade as any}
       onClose={onClose}
       anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-      className="w-full md:w-1/2 p-2 bottom-12 left-0 right-0 md:left-[unset]"
+      className="w-full md:w-auto p-2 bottom-14 left-0 right-0 md:left-[unset]"
     >
       {data ? <EventQuickEditAction data={data} onClose={onClose} /> : <div />}
     </Snackbar>
