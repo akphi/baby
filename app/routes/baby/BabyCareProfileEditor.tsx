@@ -21,10 +21,31 @@ import { useState } from "react";
 import { NumberInput } from "../../shared/NumberInput";
 import { DatePicker } from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
-import { parseISO } from "date-fns";
+import {
+  differenceInCalendarDays,
+  differenceInCalendarMonths,
+  differenceInCalendarWeeks,
+  differenceInCalendarYears,
+  parseISO,
+} from "date-fns";
 import { useForm } from "react-hook-form";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
+import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
+
+export const generateBabyAgeText = (dob: string) => {
+  const ageInDays = differenceInCalendarDays(new Date(), new Date(dob));
+  const ageInWeeks = differenceInCalendarWeeks(new Date(), new Date(dob));
+  const ageInMonths = differenceInCalendarMonths(new Date(), new Date(dob));
+  const ageInYears = differenceInCalendarYears(new Date(), new Date(dob));
+  return ageInYears >= 2
+    ? `${ageInYears} years`
+    : ageInMonths >= 12
+    ? `${ageInMonths} months`
+    : ageInWeeks > 1
+    ? `${ageInWeeks} weeks`
+    : `${ageInDays} days`;
+};
 
 export const BabyCareProfileEditor = (props: {
   open: boolean;
@@ -32,6 +53,8 @@ export const BabyCareProfileEditor = (props: {
   profile?: SerializeFrom<BabyCareProfile>;
 }) => {
   const { open, onClose, profile } = props;
+  const [showDeleteConfirmationDialog, setShowDeleteConfirmationDialog] =
+    useState(false);
   const submit = useSubmit();
   const {
     register,
@@ -48,14 +71,14 @@ export const BabyCareProfileEditor = (props: {
   const [defaultFeedingVolume, setDefaultFeedingVolume] = useState(
     profile?.defaultFeedingVolume
   );
+  const [defaultFeedingInterval, setDefaultFeedingInterval] = useState(
+    profile?.defaultFeedingInterval
+  );
   const [defaultPumpingDuration, setDefaultPumpingDuration] = useState(
     profile?.defaultPumpingDuration
   );
   const [defaultPumpingInterval, setDefaultPumpingInterval] = useState(
     profile?.defaultPumpingInterval
-  );
-  const [defaultFeedingInterval, setDefaultFeedingInterval] = useState(
-    profile?.defaultFeedingInterval
   );
   const onSubmit = handleSubmit((data, event) => {
     submit(
@@ -231,9 +254,36 @@ export const BabyCareProfileEditor = (props: {
         <Button variant="outlined" onClick={onClose}>
           Cancel
         </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={() => setShowDeleteConfirmationDialog(true)}
+        >
+          Remove
+        </Button>
         <Button variant="contained" onClick={onSubmit}>
           {profile ? "Update" : "Create"}
         </Button>
+        {showDeleteConfirmationDialog && (
+          <ConfirmationDialog
+            open={showDeleteConfirmationDialog}
+            onClose={() => setShowDeleteConfirmationDialog(false)}
+            message="All logs and data associated with this profile will be permanently removed. Do you want to proceed?"
+            action={() => {
+              if (!profile) {
+                return;
+              }
+              submit(
+                {
+                  __action: BabyCareAction.REMOVE_PROFILE,
+                  id: profile.id,
+                },
+                { method: HttpMethod.POST }
+              );
+              onClose();
+            }}
+          />
+        )}
       </DialogActions>
     </Dialog>
   );

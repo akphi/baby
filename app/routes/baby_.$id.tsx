@@ -3,6 +3,7 @@ import {
   json,
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
+  type MetaFunction,
 } from "@remix-run/node";
 import {
   BabyCareAction,
@@ -30,10 +31,17 @@ import {
   extractRequiredNumber,
   extractRequiredString,
 } from "../shared/FormDataUtils";
-import { BabyCareSummaryBar } from "./baby/BabyCareSummary";
+import { BabyCareSummary } from "./baby/BabyCareSummary";
 import { ControllerIcon, ClockIcon, HomeIcon } from "../shared/Icons";
 import { cn } from "../shared/StyleUtils";
 import { useState } from "react";
+
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  if (!data) {
+    return [];
+  }
+  return [{ title: `Home: ${data.profile.nickname ?? data.profile.name}` }];
+};
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const { searchParams } = new URL(request.url);
@@ -50,8 +58,16 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
     // if we use `new Date()` instead, it will be in UTC timezone and therefore, throw off the result
     date ? parseISO(date) : new Date()
   );
+  const currentEvents = !date
+    ? events
+    : await BabyCareDataRegistry.fetchEvents(
+        profile,
+        // NOTE: `date-fns` parseISO will return time in local timezone, which is what we pass in
+        // if we use `new Date()` instead, it will be in UTC timezone and therefore, throw off the result
+        new Date()
+      );
 
-  return json({ profile, events });
+  return json({ profile, events, currentEvents });
 };
 
 enum Activity {
@@ -60,18 +76,18 @@ enum Activity {
 }
 
 export default function BabyCare() {
-  const { profile, events } = useLoaderData<typeof loader>();
+  const { profile, events, currentEvents } = useLoaderData<typeof loader>();
   const [currentActivity, setCurrentActivity] = useState<Activity>(
     Activity.DASHBOARD
   );
 
   return (
     <div className="h-full w-full bg-slate-50">
-      <BabyCareSummaryBar />
-      <main className="w-full overflow-auto h-[calc(100%_-_64px)]">
+      <BabyCareSummary currentEvents={currentEvents} profile={profile} />
+      <main className="w-full overflow-auto h-[calc(100%_-_80px)]">
         {/* empty toolbar to offset the content the height of the floating toolbar */}
-        <div className="h-16 w-full" />
-        <div className="h-[calc(100%_-_64px)] w-full">
+        <div className="h-20 w-full" />
+        <div className="h-[calc(100%_-_80px)] w-full">
           {currentActivity === Activity.DASHBOARD && (
             <BabyCareDashboard profile={profile} />
           )}
@@ -80,7 +96,7 @@ export default function BabyCare() {
           )}
         </div>
       </main>
-      <footer className="h-16 w-full flex justify-center items-end">
+      <footer className="h-20 w-full flex justify-center items-end">
         <div className="flex h-14 items-center rounded-t-lg shadow-lg bg-white px-4">
           <Link to={`/baby`} className="h-full">
             <button

@@ -85,12 +85,13 @@ export enum BabyCareEventType {
 
 export abstract class BabyCareEvent {
   // Keep track of type of event during serialization
+  //
   // Shadowed field that should not be persisted to the DB
   // See https://mikro-orm.io/docs/serializing#shadow-properties
   @Property({ type: "string", persist: false })
   TYPE!: string;
 
-  // Keep track of hash of event
+  // Keep track of hash of event for change detection
   @Property({ type: "string", persist: false })
   HASH!: string;
 
@@ -399,7 +400,7 @@ export class BabyCareDataRegistry {
     return events;
   }
 
-  public static async remind(message: string) {
+  private static async message(sender: string, message: string) {
     const config = JSON.parse(
       readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
     );
@@ -415,8 +416,8 @@ export class BabyCareDataRegistry {
         [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
       },
       body: JSON.stringify({
+        username: sender,
         content: message,
-        username: "Reminder",
       }),
     });
   }

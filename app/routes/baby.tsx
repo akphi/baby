@@ -4,6 +4,7 @@ import {
   type LoaderFunctionArgs,
   type SerializeFrom,
   redirect,
+  type MetaFunction,
 } from "@remix-run/node";
 import {
   BabyCareAction,
@@ -13,24 +14,27 @@ import {
 } from "../data/baby-care";
 import {
   AddCircleIcon,
-  EditIcon,
   FemaleIcon,
   MaleIcon,
-  RemoveCircleIcon,
+  MoreVertIcon,
 } from "../shared/Icons";
-import { Button, IconButton } from "@mui/material";
-import { Link, useLoaderData, useSubmit } from "@remix-run/react";
+import { Button } from "@mui/material";
+import { Link, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
-import { BabyCareProfileEditor } from "./baby/BabyCareProfileEditor";
+import {
+  BabyCareProfileEditor,
+  generateBabyAgeText,
+} from "./baby/BabyCareProfileEditor";
 import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
-import { formatDistanceStrict } from "date-fns";
-import { ConfirmationDialog } from "../shared/ConfirmationDialog";
-import { HttpMethod } from "../shared/NetworkUtils";
 import {
   extractOptionalNumber,
   extractOptionalString,
   extractRequiredString,
 } from "../shared/FormDataUtils";
+
+export const meta: MetaFunction = () => {
+  return [{ title: "Home: Baby Care" }];
+};
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const entityManager = await BabyCareDataRegistry.getEntityManager();
@@ -44,10 +48,6 @@ export default function BabyCareProfileManager() {
   const [profileToEdit, setProfileToEdit] = useState<
     SerializeFrom<BabyCareProfile> | undefined
   >(undefined);
-  const [profileIdToRemove, setProfileIdToRemove] = useState<
-    string | undefined
-  >(undefined);
-  const submit = useSubmit();
 
   return (
     <div className="h-full w-full flex justify-center items-center px-4">
@@ -67,32 +67,28 @@ export default function BabyCareProfileManager() {
                     <FemaleIcon />
                   )
                 }
-                className="w-full h-10 my-1 flex items-center"
+                className="w-full h-10 my-1 flex items-center justify-between pr-0 pl-4"
               >
-                <div>{profile.nickname ?? profile.name}</div>
-                <div className="text-2xs font-semibold h-4 px-1 rounded-sm bg-blue-500 bg-blend-darken ml-2 text-slate-50">
-                  {formatDistanceStrict(new Date(), new Date(profile.dob)) +
-                    " old"}
+                <div className="h-full flex items-center">
+                  <div className="text-sm">
+                    {profile.nickname ?? profile.name}
+                  </div>
+                  <div className="flex items-center text-2xs font-semibold h-5 px-1.5 rounded bg-blue-500 bg-blend-darken ml-1.5 text-slate-50">
+                    {generateBabyAgeText(profile.dob) + " old"}
+                  </div>
+                </div>
+                <div
+                  className="w-7 h-full flex items-center justify-center"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    setProfileToEdit(profile);
+                  }}
+                >
+                  <MoreVertIcon className="text-lg text-blue-300 hover:text-blue-500" />
                 </div>
               </Button>
             </Link>
-
-            <div className="flex justify-center items-center ml-2">
-              <IconButton
-                color="primary"
-                className="w-8 h-8 pl-2"
-                onClick={() => setProfileToEdit(profile)}
-              >
-                <EditIcon fontSize="medium" />
-              </IconButton>
-              <IconButton
-                color="error"
-                className="w-8 h-8 pl-2"
-                onClick={() => setProfileIdToRemove(profile.id)}
-              >
-                <RemoveCircleIcon fontSize="medium" />
-              </IconButton>
-            </div>
           </div>
         ))}
         {profileToEdit && (
@@ -100,19 +96,6 @@ export default function BabyCareProfileManager() {
             open={Boolean(profileToEdit)}
             onClose={() => setProfileToEdit(undefined)}
             profile={profileToEdit}
-          />
-        )}
-        {profileIdToRemove && (
-          <ConfirmationDialog
-            open={profileIdToRemove !== undefined}
-            onClose={() => setProfileIdToRemove(undefined)}
-            message="All logs and data associated with this profile will be permanently removed. Do you want to proceed?"
-            action={() => {
-              const data = new FormData();
-              data.set("id", profileIdToRemove);
-              data.set("action", BabyCareAction.REMOVE_PROFILE);
-              submit(data, { method: HttpMethod.POST });
-            }}
           />
         )}
         <Button

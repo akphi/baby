@@ -29,12 +29,7 @@ body {
   --ag-row-hover-color: #f8fafc70;
 }
 
-.home__event-grid .ag-root-wrapper {
+.ag-root-wrapper {
   border-radius: 0;
   border: none;
-}
-
-.home__event-grid__action-icon {
-  font-size: 22px !important;
-  line-height: 22px;
 }

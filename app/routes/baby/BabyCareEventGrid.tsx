@@ -34,7 +34,6 @@ import { MobileDatePicker } from "@mui/x-date-pickers";
 import { cn } from "../../shared/StyleUtils";
 import { useSearchParams, useSubmit } from "@remix-run/react";
 import { HttpMethod } from "../../shared/NetworkUtils";
-import { useBooleanSetting } from "../../storage";
 import { BabyCareEventEditor } from "./BabyCareEventEditor";
 import { isNonNullable } from "../../shared/AssertionUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
@@ -116,7 +115,6 @@ const BottleFeedEventOverview = (props: {
 }) => {
   const { data } = props;
   const [volume, setVolume] = useState(data.volume);
-  const [useMetric] = useBooleanSetting("unit.useMetric");
   const submit = useSubmit();
   const debouncedUpdate = useMemo(
     () =>
@@ -136,7 +134,7 @@ const BottleFeedEventOverview = (props: {
   return (
     <InlineNumberInput
       value={volume}
-      unit={useMetric ? "ml" : "oz"}
+      unit="ml"
       step={5}
       setValue={(value) => {
         debouncedUpdate.cancel();
@@ -151,7 +149,6 @@ const BottleFeedEventOverview = (props: {
 const PumpingEventOverview = (props: { data: SerializeFrom<PumpingEvent> }) => {
   const { data } = props;
   const [volume, setVolume] = useState(data.volume);
-  const [useMetric] = useBooleanSetting("unit.useMetric");
   const submit = useSubmit();
   const debouncedUpdate = useMemo(
     () =>
@@ -171,7 +168,7 @@ const PumpingEventOverview = (props: { data: SerializeFrom<PumpingEvent> }) => {
   return (
     <InlineNumberInput
       value={volume}
-      unit={useMetric ? "ml" : "oz"}
+      unit="ml"
       step={5}
       setValue={(value) => {
         debouncedUpdate.cancel();
@@ -380,8 +377,8 @@ export const BabyCareEventGrid = (props: {
 
   return (
     <div className="w-full h-full home__event-grid">
-      <div className="flex items-center w-full bg-slate-100 overflow-hidden">
-        <div className="h-10 w-auto flex items-center px-2">
+      <div className="flex items-center w-full bg-slate-100 overflow-y-hidden overflow-x-auto">
+        <div className="h-10 flex items-center px-2">
           <button
             className="text-slate-500 hover:text-slate-600"
             onClick={() =>
@@ -457,14 +454,14 @@ export const BabyCareEventGrid = (props: {
           {Object.entries(
             merge(
               {
-                [BabyCareEventType.BOTTLE_FEED]: 0,
-                [BabyCareEventType.PUMPING]: 0,
-                [BabyCareEventType.__POOP]: 0,
-                [BabyCareEventType.__PEE]: 0,
-                [BabyCareEventType.SLEEP]: 0,
-                [BabyCareEventType.BATH]: 0,
-                [BabyCareEventType.PLAY]: 0,
-                [BabyCareEventType.NURSING]: 0,
+                [BabyCareEventType.BOTTLE_FEED]: [],
+                [BabyCareEventType.PUMPING]: [],
+                [BabyCareEventType.__POOP]: [],
+                [BabyCareEventType.__PEE]: [],
+                [BabyCareEventType.SLEEP]: [],
+                [BabyCareEventType.BATH]: [],
+                [BabyCareEventType.PLAY]: [],
+                [BabyCareEventType.NURSING]: [],
               },
               groupBy(events, (event) =>
                 event.TYPE === BabyCareEventType.DIAPER_CHANGE
@@ -489,28 +486,28 @@ export const BabyCareEventGrid = (props: {
             >
               <div className="h-full flex items-center justify-center">
                 {type === BabyCareEventType.BOTTLE_FEED && (
-                  <BottleIcon className="home__event-grid__action-icon" />
+                  <BottleIcon className="text-[22px] leading-[22px]" />
                 )}
                 {type === BabyCareEventType.NURSING && (
-                  <NursingIcon className="home__event-grid__action-icon" />
+                  <NursingIcon className="text-[22px] leading-[22px]" />
                 )}
                 {type === BabyCareEventType.PUMPING && (
-                  <BreastPumpIcon className="home__event-grid__action-icon" />
+                  <BreastPumpIcon className="text-[22px] leading-[22px]" />
                 )}
                 {type === BabyCareEventType.__PEE && (
-                  <PeeIcon className="home__event-grid__action-icon" />
+                  <PeeIcon className="text-[22px] leading-[22px]" />
                 )}
                 {type === BabyCareEventType.__POOP && (
-                  <PoopIcon className="home__event-grid__action-icon" />
+                  <PoopIcon className="text-[22px] leading-[22px]" />
                 )}
                 {type === BabyCareEventType.SLEEP && (
-                  <SleepIcon className="home__event-grid__action-icon" />
+                  <SleepIcon className="text-[22px] leading-[22px]" />
                 )}
                 {type === BabyCareEventType.PLAY && (
-                  <ChildToyIcon className="home__event-grid__action-icon" />
+                  <ChildToyIcon className="text-[22px] leading-[22px]" />
                 )}
                 {type === BabyCareEventType.BATH && (
-                  <BathIcon className="home__event-grid__action-icon" />
+                  <BathIcon className="text-[22px] leading-[22px]" />
                 )}
               </div>
               <div className="rounded  text-slate-100 bg-slate-500 text-2xs font-semibold px-1 h-4 flex items-center justify-center ml-1">
