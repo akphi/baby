@@ -17,6 +17,18 @@ import { readFileSync } from "node:fs";
 import { returnUndefOnError } from "../shared/CommonUtils";
 import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
 import { ContentType, HttpHeader, HttpMethod } from "../shared/NetworkUtils";
+import {
+  DEFAULT_FEEDING_VOLUME,
+  DEFAULT_FEEDING_INTERVAL,
+  DEFAULT_NIGHT_FEEDING_INTERVAL,
+  DEFAULT_PUMPING_DURATION,
+  DEFAULT_PUMPING_INTERNAL,
+  DEFAULT_NIGHT_PUMPING_INTERNAL,
+  DEFAULT_BABY_DAYTIME_START_HOUR,
+  DEFAULT_BABY_DAYTIME_END_HOUR,
+  DEFAULT_PARENT_DAYTIME_START_HOUR,
+  DEFAULT_PARENT_DAYTIME_END_HOUR,
+} from "./constants";
 
 const HASHER = initHasher({});
 
@@ -24,12 +36,6 @@ export enum Gender {
   MALE = "MALE",
   FEMALE = "FEMALE",
 }
-
-export const DEFAULT_NURSING_DURATION_FOR_EACH_SIDE = 15 * 60 * 1000; // 15 minutes
-export const DEFAULT_PUMPING_DURATION = 30 * 60 * 1000; // 30 minutes
-export const DEFAULT_PUMPING_INTERNAL = 3 * 60 * 60 * 1000; // 3 hours
-export const DEFAULT_FEEDING_INTERVAL = 3 * 60 * 60 * 1000; // 3 hours
-export const DEFAULT_FEEDING_VOLUME = 60; // 60 ml
 
 @Entity()
 export class BabyCareProfile {
@@ -46,22 +52,43 @@ export class BabyCareProfile {
   dob: Date;
 
   @Property({ type: "string", nullable: true })
-  shortId?: string | undefined;
+  handle?: string | undefined;
 
   @Property({ type: "string", nullable: true })
   nickname?: string | undefined;
 
-  @Property({ type: "number", nullable: true })
-  defaultFeedingInterval?: number | undefined;
+  // feeding
+  @Property({ type: "number" })
+  defaultFeedingVolume = DEFAULT_FEEDING_VOLUME;
 
-  @Property({ type: "number", nullable: true })
-  defaultFeedingVolume?: number | undefined;
+  @Property({ type: "number" })
+  defaultFeedingInterval = DEFAULT_FEEDING_INTERVAL;
 
-  @Property({ type: "number", nullable: true })
-  defaultPumpingInterval?: number | undefined;
+  @Property({ type: "number" })
+  defaultNightFeedingInterval = DEFAULT_NIGHT_FEEDING_INTERVAL;
 
-  @Property({ type: "number", nullable: true })
-  defaultPumpingDuration?: number | undefined;
+  // pumping
+  @Property({ type: "number" })
+  defaultPumpingDuration = DEFAULT_PUMPING_DURATION;
+
+  @Property({ type: "number" })
+  defaultPumpingInterval = DEFAULT_PUMPING_INTERNAL;
+
+  @Property({ type: "number" })
+  defaultNightPumpingInterval = DEFAULT_NIGHT_PUMPING_INTERNAL;
+
+  // timing
+  @Property({ type: "number" })
+  babyDaytimeStart = DEFAULT_BABY_DAYTIME_START_HOUR;
+
+  @Property({ type: "number" })
+  babyDaytimeEnd = DEFAULT_BABY_DAYTIME_END_HOUR;
+
+  @Property({ type: "number" })
+  parentDaytimeStart = DEFAULT_PARENT_DAYTIME_START_HOUR;
+
+  @Property({ type: "number" })
+  parentDaytimeEnd = DEFAULT_PARENT_DAYTIME_END_HOUR;
 
   constructor(name: string, genderAtBirth: Gender, dob: Date) {
     this.name = name;
@@ -400,7 +427,7 @@ export class BabyCareDataRegistry {
     return events;
   }
 
-  private static async message(sender: string, message: string) {
+  public static async message(sender: string, message: string) {
     const config = JSON.parse(
       readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
     );

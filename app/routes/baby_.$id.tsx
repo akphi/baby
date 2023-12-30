@@ -50,7 +50,7 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const id = guaranteeNonNullable(params.id);
   const entityManager = await BabyCareDataRegistry.getEntityManager();
   const profile = await entityManager.findOneOrFail(BabyCareProfile, {
-    $or: [{ id }, { shortId: id }],
+    $or: [{ id }, { handle: id }],
   });
   const events = await BabyCareDataRegistry.fetchEvents(
     profile,
@@ -168,11 +168,11 @@ export async function action({ request }: ActionFunctionArgs) {
       let profile: BabyCareProfile;
       try {
         profile = await entityManager.findOneOrFail(BabyCareProfile, {
-          $or: [{ id }, { shortId: id }],
+          $or: [{ id }, { handle: id }],
         });
       } catch {
         return json(
-          { error: `Baby care profile (id/shortId = ${id}) not found` },
+          { error: `Baby care profile (id/handle = ${id}) not found` },
           HttpStatus.NOT_FOUND
         );
       }

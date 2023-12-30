@@ -11,6 +11,8 @@ import type { LinksFunction } from "@remix-run/node";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { SettingsProvider } from "./storage";
+import { ThemeProvider } from "@emotion/react";
+import { createTheme } from "@mui/material";
 
 export const links: LinksFunction = () => [
   {
@@ -44,6 +46,19 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: styles },
 ];
 
+// Try to make MUI match tailwind default color pallete
+// See https://tailwindcss.com/docs/customizing-colors#default-color-palette
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: "#3b82f6",
+    },
+    error: {
+      main: "#ef4444",
+    },
+  },
+});
+
 export default function Root() {
   return (
     <html>
@@ -59,9 +74,11 @@ export default function Root() {
       <body id="root">
         <div className="h-full w-full overflow-hidden">
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <SettingsProvider>
-              <Outlet />
-            </SettingsProvider>
+            <ThemeProvider theme={theme}>
+              <SettingsProvider>
+                <Outlet />
+              </SettingsProvider>
+            </ThemeProvider>
           </LocalizationProvider>
         </div>
         <ScrollRestoration />

@@ -14,9 +14,16 @@ import {
   differenceInCalendarWeeks,
   differenceInCalendarYears,
 } from "date-fns";
-import { BottleIcon, BreastPumpIcon, PoopIcon } from "../../shared/Icons";
+import {
+  BottleIcon,
+  BreastPumpIcon,
+  DarkModeIcon,
+  LightModeIcon,
+  PoopIcon,
+} from "../../shared/Icons";
 import { mlToOz } from "../../shared/UnitUtils";
 import { Divider } from "@mui/material";
+import { isDuringDaytime } from "./BabyCareUtils";
 
 export const BabyCareSummary = (props: {
   currentEvents: SerializeFrom<BabyCareEvent>[];
@@ -85,32 +92,39 @@ export const BabyCareSummary = (props: {
       ? `${ageInWeeks} weeks`
       : `${ageInDays} days`;
   // quota
-  let quotaText = "";
-  if (profile.defaultFeedingVolume !== undefined) {
-    quotaText += `${profile.defaultFeedingVolume}ml`;
-  }
-  if (profile.defaultFeedingInterval !== undefined) {
-    quotaText += `${quotaText ? " / " : ""}${
-      profile.defaultFeedingInterval / (60 * 60 * 1000)
-    }hr`;
-  }
+  const isDaytime = isDuringDaytime(
+    new Date(),
+    profile.babyDaytimeStart,
+    profile.babyDaytimeEnd
+  );
+  const quotaText = `${profile.defaultFeedingVolume}ml / ${
+    (isDaytime
+      ? profile.defaultFeedingInterval
+      : profile.defaultNightFeedingInterval) /
+    (60 * 60 * 1000)
+  }hr`;
 
   return (
     <div className="h-20 w-full fixed flex items-center justify-center bg-slate-700 z-10 shadow-md select-none">
       <div className="flex flex-col items-center text-slate-300">
         <div className="flex items-center">
           <div className="select-none">{profile.nickname ?? profile.name}</div>
-          <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1 mono font-medium">
+          <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium">
             {ageDisplayText}
           </div>
-          {quotaText && (
-            <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1 mono font-medium">
-              {quotaText}
-            </div>
-          )}
+          <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium">
+            {quotaText}
+          </div>
+          <div className="rounded h-6 w-6 flex items-center justify-center bg-slate-800 ml-1.5">
+            {isDaytime ? (
+              <LightModeIcon className="text-base" />
+            ) : (
+              <DarkModeIcon className="text-base text-slate-500" />
+            )}
+          </div>
         </div>
-        <div className="flex mt-1">
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1 mono font-medium">
+        <div className="flex mt-1.5">
+          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1.5 mono font-medium">
             <BottleIcon className="text-[15px] leading-[15px] w-[23px]" />
             <div className="ml-0.5">{totalBottleFeedVolume}ml</div>
             <Divider
@@ -126,7 +140,7 @@ export const BabyCareSummary = (props: {
             />
             <div className="">{bottleEvents.length}</div>
           </div>
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1 mono font-medium">
+          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1.5 mono font-medium">
             <BreastPumpIcon className="text-[15px] leading-[15px] w-[23px]" />
             <div className="ml-0.5">{totalPumpingVolume}ml</div>
             <Divider
@@ -143,7 +157,7 @@ export const BabyCareSummary = (props: {
             />
             <div className="">{pumpingEvents.length}</div>
           </div>
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1 mono font-medium">
+          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1.5 mono font-medium">
             <PoopIcon className="text-[15px] leading-[15px] w-[23px]" />
             <div className="ml-0.5">{poopEventCount}</div>
           </div>

@@ -63,18 +63,18 @@ export const NumberInput = (
       />
       <div className="flex justify-center items-center ml-2">
         <IconButton
-          className="w-12 h-12"
+          className="w-10 h-10"
           color="primary"
           onClick={() => _setValue((_value ?? 0) - (step ?? 1))}
         >
-          <RemoveCircleIcon fontSize="large" />
+          <RemoveCircleIcon fontSize="large" className="text-blue-500" />
         </IconButton>
         <IconButton
-          className="w-12 h-12"
+          className="w-10 h-10"
           color="primary"
           onClick={() => _setValue((_value ?? 0) + (step ?? 1))}
         >
-          <AddCircleIcon fontSize="large" />
+          <AddCircleIcon fontSize="large" className="text-blue-500" />
         </IconButton>
       </div>
     </div>

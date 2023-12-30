@@ -7,16 +7,14 @@ import {
   type BabyCareEvent,
   NursingEvent,
   PumpingEvent,
-  DEFAULT_NURSING_DURATION_FOR_EACH_SIDE,
   DiaperChangeEvent,
   SleepEvent,
   PlayEvent,
   BathEvent,
   BabyCareAction,
-  DEFAULT_FEEDING_VOLUME,
-  DEFAULT_PUMPING_DURATION,
 } from "../data/baby-care";
 import { HttpStatus } from "../shared/NetworkUtils";
+import { DEFAULT_NURSING_DURATION_FOR_EACH_SIDE } from "../data/constants";
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
   const payload = await request.json();
@@ -43,11 +41,11 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       let profile: BabyCareProfile;
       try {
         profile = await entityManager.findOneOrFail(BabyCareProfile, {
-          $or: [{ id }, { shortId: id }],
+          $or: [{ id }, { handle: id }],
         });
       } catch {
         return json(
-          { error: `Baby care profile (id/shortId = ${id}) not found` },
+          { error: `Baby care profile (id/handle = ${id}) not found` },
           HttpStatus.NOT_FOUND
         );
       }
@@ -77,7 +75,7 @@ export function generateBabyCareEvent(
       return new BottleFeedEvent(
         new Date(),
         profile,
-        profile.defaultFeedingVolume ?? DEFAULT_FEEDING_VOLUME
+        profile.defaultFeedingVolume
       );
     }
     case BabyCareAction.CREATE_NURSING_EVENT: {
@@ -88,9 +86,8 @@ export function generateBabyCareEvent(
     }
     case BabyCareAction.CREATE_PUMPING_EVENT: {
       const event = new PumpingEvent(new Date(), profile);
-      event.duration =
-        profile.defaultPumpingDuration ?? DEFAULT_PUMPING_DURATION;
-      event.volume = profile.defaultFeedingVolume ?? DEFAULT_FEEDING_VOLUME;
+      event.duration = profile.defaultPumpingDuration;
+      event.volume = profile.defaultFeedingVolume;
       return event;
     }
     case BabyCareAction.CREATE_DIAPER_CHANGE_POOP_EVENT: {

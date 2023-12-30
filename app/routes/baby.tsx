@@ -21,16 +21,14 @@ import {
 import { Button } from "@mui/material";
 import { Link, useLoaderData } from "@remix-run/react";
 import { useState } from "react";
-import {
-  BabyCareProfileEditor,
-  generateBabyAgeText,
-} from "./baby/BabyCareProfileEditor";
+import { BabyCareProfileEditor } from "./baby/BabyCareProfileEditor";
 import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
 import {
-  extractOptionalNumber,
   extractOptionalString,
+  extractRequiredNumber,
   extractRequiredString,
 } from "../shared/FormDataUtils";
+import { generateBabyAgeText } from "./baby/BabyCareUtils";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Home: Baby Care" }];
@@ -55,7 +53,7 @@ export default function BabyCareProfileManager() {
         {profiles.map((profile) => (
           <div key={profile.id} className="flex">
             <Link
-              to={`/baby/${profile.shortId ?? profile.id}`}
+              to={`/baby/${profile.handle ?? profile.id}`}
               className="w-full"
             >
               <Button
@@ -146,22 +144,49 @@ export async function action({ request }: ActionFunctionArgs) {
       }
 
       profile.nickname = extractOptionalString(formData, "nickname")?.trim();
-      profile.shortId = extractOptionalString(formData, "shortId")?.trim();
-      profile.defaultFeedingVolume = extractOptionalNumber(
+      profile.handle = extractOptionalString(formData, "handle")?.trim();
+
+      profile.defaultFeedingVolume = extractRequiredNumber(
         formData,
         "defaultFeedingVolume"
       );
-      profile.defaultFeedingInterval = extractOptionalNumber(
+      profile.defaultFeedingInterval = extractRequiredNumber(
         formData,
         "defaultFeedingInterval"
       );
-      profile.defaultPumpingDuration = extractOptionalNumber(
+      profile.defaultNightFeedingInterval = extractRequiredNumber(
+        formData,
+        "defaultNightFeedingInterval"
+      );
+
+      profile.defaultPumpingDuration = extractRequiredNumber(
         formData,
         "defaultPumpingDuration"
       );
-      profile.defaultPumpingInterval = extractOptionalNumber(
+      profile.defaultPumpingInterval = extractRequiredNumber(
         formData,
         "defaultPumpingInterval"
+      );
+      profile.defaultNightPumpingInterval = extractRequiredNumber(
+        formData,
+        "defaultNightPumpingInterval"
+      );
+
+      profile.babyDaytimeStart = extractRequiredNumber(
+        formData,
+        "babyDaytimeStart"
+      );
+      profile.babyDaytimeEnd = extractRequiredNumber(
+        formData,
+        "babyDaytimeEnd"
+      );
+      profile.parentDaytimeStart = extractRequiredNumber(
+        formData,
+        "parentDaytimeStart"
+      );
+      profile.parentDaytimeEnd = extractRequiredNumber(
+        formData,
+        "parentDaytimeEnd"
       );
 
       await entityManager.persistAndFlush(profile);
@@ -169,7 +194,7 @@ export async function action({ request }: ActionFunctionArgs) {
       if (id) {
         return null;
       } else {
-        return redirect(`/baby/${profile.shortId ?? profile.id}`);
+        return redirect(`/baby/${profile.handle ?? profile.id}`);
       }
     }
     case BabyCareAction.REMOVE_PROFILE: {

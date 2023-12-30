@@ -14,6 +14,8 @@ import {
   VideogameAsset,
   WatchLater,
   Home,
+  LightMode,
+  DarkMode,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -79,3 +81,5 @@ export const CloseIcon = Close;
 export const ControllerIcon = VideogameAsset;
 export const ClockIcon = WatchLater;
 export const HomeIcon = Home;
+export const LightModeIcon = LightMode;
+export const DarkModeIcon = DarkMode;
