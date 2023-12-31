@@ -29,6 +29,7 @@ import {
   DEFAULT_PARENT_DAYTIME_START_HOUR,
   DEFAULT_PARENT_DAYTIME_END_HOUR,
 } from "./constants";
+import EventEmitter from "node:events";
 
 const HASHER = initHasher({});
 
@@ -295,6 +296,7 @@ const BABY_CARE_DB_CONFIG: Options = {
 export class BabyCareDataRegistry {
   private static _instance: BabyCareDataRegistry;
   private static _orm: MikroORM<IDatabaseDriver<Connection>>;
+  private static _eventEmitter = new EventEmitter();
 
   // eslint-disable-next-line no-useless-constructor
   private constructor() {}
@@ -427,6 +429,10 @@ export class BabyCareDataRegistry {
     return events;
   }
 
+  public static getEventEmitter() {
+    return BabyCareDataRegistry._eventEmitter;
+  }
+
   public static async message(sender: string, message: string) {
     const config = JSON.parse(
       readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
@@ -483,4 +489,8 @@ export enum BabyCareAction {
   CREATE_PLAY_EVENT = "baby-care.play-event.create",
   UPDATE_PLAY_EVENT = "baby-care.play-event.update",
   REMOVE_PLAY_EVENT = "baby-care.play-event.remove",
+}
+
+export enum BabyCareServerEvent {
+  PROFILE_DATA_CHANGE = "baby-care.profile-data-change",
 }

@@ -17,7 +17,7 @@ import {
   type BabyCareProfile,
   Gender,
   BabyCareAction,
-} from "../../data/baby-care";
+} from "../../data/BabyCare";
 import {
   DEFAULT_FEEDING_VOLUME,
   DEFAULT_FEEDING_INTERVAL,
@@ -42,7 +42,7 @@ import { HttpMethod } from "../../shared/NetworkUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
 import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
 import { getNonNullableEntry } from "../../shared/CommonUtils";
-import { generateHourText } from "./BabyCareUtils";
+import { generateHourText } from "../../data/BabyCareUtils";
 
 const HourRangeSlider = (props: {
   label: string;

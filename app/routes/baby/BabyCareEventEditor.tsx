@@ -17,7 +17,7 @@ import {
   type PumpingEvent,
   type NursingEvent,
   type DiaperChangeEvent,
-} from "../../data/baby-care";
+} from "../../data/BabyCare";
 import { useSubmit } from "@remix-run/react";
 import { useState } from "react";
 import { NumberInput } from "../../shared/NumberInput";

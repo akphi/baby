@@ -6,7 +6,7 @@ import {
   type DiaperChangeEvent,
   type BottleFeedEvent,
   type PumpingEvent,
-} from "../../data/baby-care";
+} from "../../data/BabyCare";
 import { groupBy, merge } from "lodash-es";
 import {
   differenceInCalendarDays,
@@ -23,7 +23,7 @@ import {
 } from "../../shared/Icons";
 import { mlToOz } from "../../shared/UnitUtils";
 import { Divider } from "@mui/material";
-import { isDuringDaytime } from "./BabyCareUtils";
+import { isDuringDaytime } from "../../data/BabyCareUtils";
 
 export const BabyCareSummary = (props: {
   currentEvents: SerializeFrom<BabyCareEvent>[];

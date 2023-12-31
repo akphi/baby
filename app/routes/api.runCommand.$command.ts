@@ -12,59 +12,10 @@ import {
   PlayEvent,
   BathEvent,
   BabyCareAction,
-} from "../data/baby-care";
+  BabyCareServerEvent,
+} from "../data/BabyCare";
 import { HttpStatus } from "../shared/NetworkUtils";
 import { DEFAULT_NURSING_DURATION_FOR_EACH_SIDE } from "../data/constants";
-
-export const action = async ({ request, params }: ActionFunctionArgs) => {
-  const payload = await request.json();
-  const command = params.command;
-
-  switch (command) {
-    case BabyCareAction.CREATE_BOTTLE_FEED_EVENT:
-    case BabyCareAction.CREATE_NURSING_EVENT:
-    case BabyCareAction.CREATE_PUMPING_EVENT:
-    case BabyCareAction.CREATE_DIAPER_CHANGE_POOP_EVENT:
-    case BabyCareAction.CREATE_DIAPER_CHANGE_PEE_EVENT:
-    case BabyCareAction.CREATE_SLEEP_EVENT:
-    case BabyCareAction.CREATE_BATH_EVENT:
-    case BabyCareAction.CREATE_PLAY_EVENT: {
-      const entityManager = await BabyCareDataRegistry.getEntityManager();
-      const id = payload.profileId?.trim();
-      if (!id) {
-        return json(
-          { error: "'profileId' is missing or empty" },
-          HttpStatus.BAD_REQUEST
-        );
-      }
-
-      let profile: BabyCareProfile;
-      try {
-        profile = await entityManager.findOneOrFail(BabyCareProfile, {
-          $or: [{ id }, { handle: id }],
-        });
-      } catch {
-        return json(
-          { error: `Baby care profile (id/handle = ${id}) not found` },
-          HttpStatus.NOT_FOUND
-        );
-      }
-
-      const event = generateBabyCareEvent(command, profile);
-      if (!event) {
-        return json(
-          { error: `Unsupported event generation for command '${command}'` },
-          HttpStatus.NOT_IMPLEMENTED
-        );
-      }
-
-      entityManager.persistAndFlush(event);
-      return json({ eventId: event.id }, HttpStatus.OK);
-    }
-    default:
-      return null;
-  }
-};
 
 export function generateBabyCareEvent(
   command: string,
@@ -112,5 +63,60 @@ export function generateBabyCareEvent(
     }
     default:
       return undefined;
+  }
+}
+
+export async function action({ request, params }: ActionFunctionArgs) {
+  const payload = await request.json();
+  const command = params.command;
+
+  switch (command) {
+    case BabyCareAction.CREATE_BOTTLE_FEED_EVENT:
+    case BabyCareAction.CREATE_NURSING_EVENT:
+    case BabyCareAction.CREATE_PUMPING_EVENT:
+    case BabyCareAction.CREATE_DIAPER_CHANGE_POOP_EVENT:
+    case BabyCareAction.CREATE_DIAPER_CHANGE_PEE_EVENT:
+    case BabyCareAction.CREATE_SLEEP_EVENT:
+    case BabyCareAction.CREATE_BATH_EVENT:
+    case BabyCareAction.CREATE_PLAY_EVENT: {
+      const entityManager = await BabyCareDataRegistry.getEntityManager();
+      const id = payload.profileId?.trim();
+      if (!id) {
+        return json(
+          { error: "'profileId' is missing or empty" },
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      let profile: BabyCareProfile;
+      try {
+        profile = await entityManager.findOneOrFail(BabyCareProfile, {
+          $or: [{ id }, { handle: id }],
+        });
+      } catch {
+        return json(
+          { error: `Baby care profile (id/handle = ${id}) not found` },
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      const event = generateBabyCareEvent(command, profile);
+      if (!event) {
+        return json(
+          { error: `Unsupported event generation for command '${command}'` },
+          HttpStatus.NOT_IMPLEMENTED
+        );
+      }
+
+      entityManager.persistAndFlush(event);
+      BabyCareDataRegistry.getEventEmitter().emit(
+        BabyCareServerEvent.PROFILE_DATA_CHANGE,
+        profile.id
+      );
+
+      return json({ eventId: event.id }, HttpStatus.OK);
+    }
+    default:
+      return null;
   }
 }

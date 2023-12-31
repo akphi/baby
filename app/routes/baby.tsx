@@ -10,8 +10,9 @@ import {
   BabyCareAction,
   BabyCareDataRegistry,
   BabyCareProfile,
+  BabyCareServerEvent,
   Gender,
-} from "../data/baby-care";
+} from "../data/BabyCare";
 import {
   AddCircleIcon,
   FemaleIcon,
@@ -19,8 +20,8 @@ import {
   MoreVertIcon,
 } from "../shared/Icons";
 import { Button } from "@mui/material";
-import { Link, useLoaderData } from "@remix-run/react";
-import { useState } from "react";
+import { Link, useLoaderData, useRevalidator } from "@remix-run/react";
+import { useEffect, useState } from "react";
 import { BabyCareProfileEditor } from "./baby/BabyCareProfileEditor";
 import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
 import {
@@ -28,7 +29,8 @@ import {
   extractRequiredNumber,
   extractRequiredString,
 } from "../shared/FormDataUtils";
-import { generateBabyAgeText } from "./baby/BabyCareUtils";
+import { generateBabyAgeText } from "../data/BabyCareUtils";
+import { useBabyCareProfileSyncPulse } from "./baby/BabyCareDataSync";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Home: Baby Care" }];
@@ -39,81 +41,6 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   const profiles = await entityManager.getRepository(BabyCareProfile).findAll();
   return json({ profiles });
 };
-
-export default function BabyCareProfileManager() {
-  const { profiles } = useLoaderData<typeof loader>();
-  const [showCreateProfileForm, setShowCreateProfileForm] = useState(false);
-  const [profileToEdit, setProfileToEdit] = useState<
-    SerializeFrom<BabyCareProfile> | undefined
-  >(undefined);
-
-  return (
-    <div className="h-full w-full flex justify-center items-center px-4">
-      <div className="flex py-16 px-10 bg-white rounded-xl shadow-md flex-col">
-        {profiles.map((profile) => (
-          <div key={profile.id} className="flex">
-            <Link
-              to={`/baby/${profile.handle ?? profile.id}`}
-              className="w-full"
-            >
-              <Button
-                variant="outlined"
-                startIcon={
-                  profile.genderAtBirth === Gender.MALE ? (
-                    <MaleIcon />
-                  ) : (
-                    <FemaleIcon />
-                  )
-                }
-                className="w-full h-10 my-1 flex items-center justify-between pr-0 pl-4"
-              >
-                <div className="h-full flex items-center">
-                  <div className="text-sm">
-                    {profile.nickname ?? profile.name}
-                  </div>
-                  <div className="flex items-center text-2xs font-semibold h-5 px-1.5 rounded bg-blue-500 bg-blend-darken ml-1.5 text-slate-50">
-                    {generateBabyAgeText(profile.dob) + " old"}
-                  </div>
-                </div>
-                <div
-                  className="w-7 h-full flex items-center justify-center"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    event.preventDefault();
-                    setProfileToEdit(profile);
-                  }}
-                >
-                  <MoreVertIcon className="text-lg text-blue-300 hover:text-blue-500" />
-                </div>
-              </Button>
-            </Link>
-          </div>
-        ))}
-        {profileToEdit && (
-          <BabyCareProfileEditor
-            open={Boolean(profileToEdit)}
-            onClose={() => setProfileToEdit(undefined)}
-            profile={profileToEdit}
-          />
-        )}
-        <Button
-          variant="contained"
-          startIcon={<AddCircleIcon />}
-          className="w-full h-10 my-2"
-          onClick={() => setShowCreateProfileForm(true)}
-        >
-          New Baby
-        </Button>
-        {showCreateProfileForm && (
-          <BabyCareProfileEditor
-            open={showCreateProfileForm}
-            onClose={() => setShowCreateProfileForm(false)}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
 
 export async function action({ request }: ActionFunctionArgs) {
   const entityManager = await BabyCareDataRegistry.getEntityManager();
@@ -190,6 +117,10 @@ export async function action({ request }: ActionFunctionArgs) {
       );
 
       await entityManager.persistAndFlush(profile);
+      BabyCareDataRegistry.getEventEmitter().emit(
+        BabyCareServerEvent.PROFILE_DATA_CHANGE,
+        profile.id
+      );
 
       if (id) {
         return null;
@@ -202,9 +133,97 @@ export async function action({ request }: ActionFunctionArgs) {
         id: guaranteeNonEmptyString(formData.get("id")),
       });
       await entityManager.removeAndFlush(profile);
+      BabyCareDataRegistry.getEventEmitter().emit(
+        BabyCareServerEvent.PROFILE_DATA_CHANGE,
+        profile.id
+      );
       return null;
     }
     default:
       return null;
   }
+}
+
+export default function BabyCareProfileManager() {
+  const { profiles } = useLoaderData<typeof loader>();
+  const [showCreateProfileForm, setShowCreateProfileForm] = useState(false);
+  const [profileToEdit, setProfileToEdit] = useState<
+    SerializeFrom<BabyCareProfile> | undefined
+  >(undefined);
+  const [syncPulseData, clearDataSyncPulse] = useBabyCareProfileSyncPulse();
+  const revalidater = useRevalidator();
+
+  useEffect(() => {
+    if (syncPulseData && revalidater.state === "idle") {
+      revalidater.revalidate();
+      clearDataSyncPulse();
+    }
+  }, [syncPulseData, revalidater, clearDataSyncPulse]);
+
+  return (
+    <div className="h-full w-full flex justify-center items-center px-4">
+      <div className="flex py-16 px-10 bg-white rounded-xl shadow-md flex-col">
+        {profiles.map((profile) => (
+          <div key={profile.id} className="flex">
+            <Link
+              to={`/baby/${profile.handle ?? profile.id}`}
+              className="w-full"
+            >
+              <Button
+                variant="outlined"
+                startIcon={
+                  profile.genderAtBirth === Gender.MALE ? (
+                    <MaleIcon />
+                  ) : (
+                    <FemaleIcon />
+                  )
+                }
+                className="w-full h-10 my-1 flex items-center justify-between pr-0 pl-4"
+              >
+                <div className="h-full flex items-center">
+                  <div className="text-sm">
+                    {profile.nickname ?? profile.name}
+                  </div>
+                  <div className="flex items-center text-2xs font-semibold h-5 px-1.5 rounded bg-blue-500 bg-blend-darken ml-1.5 text-slate-50">
+                    {generateBabyAgeText(profile.dob) + " old"}
+                  </div>
+                </div>
+                <div
+                  className="w-7 h-full flex items-center justify-center"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    setProfileToEdit(profile);
+                  }}
+                >
+                  <MoreVertIcon className="text-lg text-blue-300 hover:text-blue-500" />
+                </div>
+              </Button>
+            </Link>
+          </div>
+        ))}
+        {profileToEdit && (
+          <BabyCareProfileEditor
+            open={Boolean(profileToEdit)}
+            onClose={() => setProfileToEdit(undefined)}
+            profile={profileToEdit}
+          />
+        )}
+        <Button
+          variant="contained"
+          startIcon={<AddCircleIcon />}
+          className="w-full h-10 my-2"
+          onClick={() => setShowCreateProfileForm(true)}
+        >
+          New Baby
+        </Button>
+        {showCreateProfileForm && (
+          <BabyCareProfileEditor
+            open={showCreateProfileForm}
+            onClose={() => setShowCreateProfileForm(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
 }

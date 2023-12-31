@@ -7,7 +7,7 @@ import {
   type BottleFeedEvent,
   type PumpingEvent,
   type NursingEvent,
-} from "../../data/baby-care";
+} from "../../data/BabyCare";
 import { useFetcher, useSubmit } from "@remix-run/react";
 import {
   AddIcon,
