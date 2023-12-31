@@ -4,39 +4,32 @@ import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
   type MetaFunction,
+  type SerializeFrom,
 } from "@remix-run/node";
 import {
   BabyCareAction,
   BabyCareDataRegistry,
-  BabyCareProfile,
-  BottleFeedEvent,
-  NursingEvent,
-  PumpingEvent,
-  DiaperChangeEvent,
-  PlayEvent,
-  BathEvent,
-  SleepEvent,
-  BabyCareServerEvent,
+  type BabyCareProfile,
 } from "../data/BabyCare";
 import { guaranteeNonNullable } from "../shared/AssertionUtils";
 import { Link, useLoaderData, useRevalidator } from "@remix-run/react";
 import { HttpStatus } from "../shared/NetworkUtils";
-import { generateBabyCareEvent } from "./api.runCommand.$command";
 import { BabyCareDashboard } from "./baby/BabyCareDashboard";
 import { BabyCareEventGrid } from "./baby/BabyCareEventGrid";
 import { parseISO } from "date-fns";
-import {
-  extractOptionalNumber,
-  extractOptionalString,
-  extractRequiredBoolean,
-  extractRequiredNumber,
-  extractRequiredString,
-} from "../shared/FormDataUtils";
+import { extractRequiredString } from "../shared/FormDataUtils";
 import { BabyCareSummary } from "./baby/BabyCareSummary";
-import { ControllerIcon, ClockIcon, HomeIcon } from "../shared/Icons";
+import {
+  ControllerIcon,
+  ClockIcon,
+  SwitchProfileIcon,
+  SyncIcon,
+  ChildCareIcon,
+} from "../shared/Icons";
 import { cn } from "../shared/StyleUtils";
 import { useEffect, useState } from "react";
 import { useBabyCareProfileSyncPulse } from "./baby/BabyCareDataSync";
+import { BabyCareProfileEditor } from "./baby/BabyCareProfileEditor";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data) {
@@ -46,14 +39,12 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 };
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
+  const profile = await BabyCareDataRegistry.fetchProfile(
+    guaranteeNonNullable(params.id)
+  );
+
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date");
-
-  const id = guaranteeNonNullable(params.id);
-  const entityManager = await BabyCareDataRegistry.getEntityManager();
-  const profile = await entityManager.findOneOrFail(BabyCareProfile, {
-    $or: [{ id }, { handle: id }],
-  });
   const events = await BabyCareDataRegistry.fetchEvents(
     profile,
     // NOTE: `date-fns` parseISO will return time in local timezone, which is what we pass in
@@ -68,7 +59,6 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
         // if we use `new Date()` instead, it will be in UTC timezone and therefore, throw off the result
         new Date()
       );
-
   return json({ profile, events, currentEvents });
 };
 
@@ -85,148 +75,22 @@ export async function action({ request }: ActionFunctionArgs) {
     case BabyCareAction.CREATE_SLEEP_EVENT:
     case BabyCareAction.CREATE_BATH_EVENT:
     case BabyCareAction.CREATE_PLAY_EVENT: {
-      const entityManager = await BabyCareDataRegistry.getEntityManager();
-      const id = extractRequiredString(formData, "id");
-
-      let profile: BabyCareProfile;
-      try {
-        profile = await entityManager.findOneOrFail(BabyCareProfile, {
-          $or: [{ id }, { handle: id }],
-        });
-      } catch {
-        return json(
-          { error: `Baby care profile (id/handle = ${id}) not found` },
-          HttpStatus.NOT_FOUND
-        );
-      }
-
-      const event = generateBabyCareEvent(action, profile);
-      if (!event) {
-        return json(
-          { error: `Unsupported event generation for command '${action}'` },
-          HttpStatus.NOT_IMPLEMENTED
-        );
-      }
-
-      entityManager.persistAndFlush(event);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        profile.id
+      const profileIdOrHandle = extractRequiredString(formData, "id");
+      const event = await BabyCareDataRegistry.quickCreateEvent(
+        action,
+        profileIdOrHandle
       );
-
-      event.TYPE = event.eventType;
-      event.HASH = event.hashCode;
-
       return json({ event }, HttpStatus.OK);
     }
-    case BabyCareAction.UPDATE_BOTTLE_FEED_EVENT: {
-      const entityManager = await BabyCareDataRegistry.getEntityManager();
-      const id = extractRequiredString(formData, "id");
-      const event = await entityManager.findOneOrFail(BottleFeedEvent, { id });
-
-      event.time = new Date(extractRequiredString(formData, "time"));
-      event.comment = extractOptionalString(formData, "comment")?.trim();
-      event.duration = extractOptionalNumber(formData, "duration");
-      event.volume = extractRequiredNumber(formData, "volume");
-      event.formulaMilkVolume = extractOptionalNumber(
-        formData,
-        "formulaMilkVolume"
-      );
-
-      entityManager.persistAndFlush(event);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        event.profile.id
-      );
-
-      return json({ event }, HttpStatus.OK);
-    }
-    case BabyCareAction.UPDATE_PUMPING_EVENT: {
-      const entityManager = await BabyCareDataRegistry.getEntityManager();
-      const id = extractRequiredString(formData, "id");
-      const event = await entityManager.findOneOrFail(PumpingEvent, { id });
-
-      event.time = new Date(extractRequiredString(formData, "time"));
-      event.comment = extractOptionalString(formData, "comment")?.trim();
-      event.duration = extractOptionalNumber(formData, "duration");
-      event.volume = extractRequiredNumber(formData, "volume");
-
-      entityManager.persistAndFlush(event);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        event.profile.id
-      );
-
-      return json({ event }, HttpStatus.OK);
-    }
-    case BabyCareAction.UPDATE_NURSING_EVENT: {
-      const entityManager = await BabyCareDataRegistry.getEntityManager();
-      const id = extractRequiredString(formData, "id");
-      const event = await entityManager.findOneOrFail(NursingEvent, { id });
-
-      event.time = new Date(extractRequiredString(formData, "time"));
-      event.comment = extractOptionalString(formData, "comment")?.trim();
-      event.duration = extractOptionalNumber(formData, "duration");
-      event.leftDuration = extractRequiredNumber(formData, "leftDuration");
-      event.rightDuration = extractRequiredNumber(formData, "rightDuration");
-
-      entityManager.persistAndFlush(event);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        event.profile.id
-      );
-
-      return json({ event }, HttpStatus.OK);
-    }
-    case BabyCareAction.UPDATE_DIAPER_CHANGE_EVENT: {
-      const entityManager = await BabyCareDataRegistry.getEntityManager();
-      const id = extractRequiredString(formData, "id");
-      const event = await entityManager.findOneOrFail(DiaperChangeEvent, {
-        id,
-      });
-
-      event.time = new Date(extractRequiredString(formData, "time"));
-      event.comment = extractOptionalString(formData, "comment")?.trim();
-      event.duration = extractOptionalNumber(formData, "duration");
-      event.poop = extractRequiredBoolean(formData, "poop");
-      event.pee = extractRequiredBoolean(formData, "pee");
-
-      entityManager.persistAndFlush(event);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        event.profile.id
-      );
-
-      return json({ event }, HttpStatus.OK);
-    }
+    case BabyCareAction.UPDATE_BOTTLE_FEED_EVENT:
+    case BabyCareAction.UPDATE_PUMPING_EVENT:
+    case BabyCareAction.UPDATE_NURSING_EVENT:
+    case BabyCareAction.UPDATE_DIAPER_CHANGE_EVENT:
     case BabyCareAction.UPDATE_SLEEP_EVENT:
     case BabyCareAction.UPDATE_BATH_EVENT:
     case BabyCareAction.UPDATE_PLAY_EVENT: {
-      const entityManager = await BabyCareDataRegistry.getEntityManager();
-      const id = extractRequiredString(formData, "id");
-      const clazz =
-        action === BabyCareAction.UPDATE_PLAY_EVENT
-          ? PlayEvent
-          : action === BabyCareAction.UPDATE_BATH_EVENT
-          ? BathEvent
-          : action === BabyCareAction.UPDATE_SLEEP_EVENT
-          ? SleepEvent
-          : undefined;
-      const event = await entityManager.findOneOrFail(
-        guaranteeNonNullable(clazz),
-        { id }
-      );
-
-      event.time = new Date(extractRequiredString(formData, "time"));
-      event.comment = extractOptionalString(formData, "comment")?.trim();
-      event.duration = extractOptionalNumber(formData, "duration");
-
-      entityManager.persistAndFlush(event);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        event.profile.id
-      );
-
+      const eventId = extractRequiredString(formData, "id");
+      const event = await BabyCareDataRegistry.updateEvent(formData, eventId);
       return json({ event }, HttpStatus.OK);
     }
     case BabyCareAction.REMOVE_BOTTLE_FEED_EVENT:
@@ -236,38 +100,15 @@ export async function action({ request }: ActionFunctionArgs) {
     case BabyCareAction.REMOVE_PLAY_EVENT:
     case BabyCareAction.REMOVE_BATH_EVENT:
     case BabyCareAction.REMOVE_SLEEP_EVENT: {
-      const entityManager = await BabyCareDataRegistry.getEntityManager();
-      const id = extractRequiredString(formData, "id");
-      const clazz =
-        action === BabyCareAction.REMOVE_BOTTLE_FEED_EVENT
-          ? BottleFeedEvent
-          : action === BabyCareAction.REMOVE_PUMPING_EVENT
-          ? PumpingEvent
-          : action === BabyCareAction.REMOVE_NURSING_EVENT
-          ? NursingEvent
-          : action === BabyCareAction.REMOVE_DIAPER_CHANGE_EVENT
-          ? DiaperChangeEvent
-          : action === BabyCareAction.REMOVE_PLAY_EVENT
-          ? PlayEvent
-          : action === BabyCareAction.REMOVE_BATH_EVENT
-          ? BathEvent
-          : action === BabyCareAction.REMOVE_SLEEP_EVENT
-          ? SleepEvent
-          : undefined;
-      const event = await entityManager.findOneOrFail(
-        guaranteeNonNullable(clazz),
-        {
-          id,
-        }
-      );
-
-      await entityManager.removeAndFlush(event);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        event.profile.id
-      );
-
+      const eventId = extractRequiredString(formData, "id");
+      const event = await BabyCareDataRegistry.removeEvent(action, eventId);
       return json({ event }, HttpStatus.OK);
+    }
+    case BabyCareAction.UPDATE_PROFILE: {
+      const { profile } = await BabyCareDataRegistry.createOrUpdateProfile(
+        formData
+      );
+      return json({ profile }, HttpStatus.OK);
     }
     default:
       return null;
@@ -284,6 +125,9 @@ export default function BabyCare() {
   const [currentActivity, setCurrentActivity] = useState<Activity>(
     Activity.DASHBOARD
   );
+  const [profileToEdit, setProfileToEdit] = useState<
+    SerializeFrom<BabyCareProfile> | undefined
+  >(undefined);
   const [syncPulseData, clearDataSyncPulse] = useBabyCareProfileSyncPulse(
     profile.id
   );
@@ -313,13 +157,30 @@ export default function BabyCare() {
       </main>
       <footer className="h-20 w-full flex justify-center items-end">
         <div className="flex h-14 items-center rounded-t-lg shadow-lg bg-white px-4">
+          <button
+            className={cn(
+              "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white"
+            )}
+            onClick={() => revalidater.revalidate()}
+          >
+            {/* TODO?: should we show some indicator when syncing fails or when it's deemed undesirable */}
+            <SyncIcon
+              className={cn("text-4xl", {
+                "animate-spin": revalidater.state === "loading",
+              })}
+            />
+          </button>
+          <Divider
+            orientation="vertical"
+            className="bg-slate-50 h-8 opacity-50 mx-2"
+          />
           <Link to={`/baby`} className="h-full">
             <button
               className={cn(
-                "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white hover:border-blue-200"
+                "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white"
               )}
             >
-              <HomeIcon className="text-4xl" />
+              <SwitchProfileIcon className="text-4xl" />
             </button>
           </Link>
           <Divider
@@ -358,7 +219,27 @@ export default function BabyCare() {
           >
             <ClockIcon className="text-4xl" />
           </button>
+          <Divider
+            orientation="vertical"
+            className="bg-slate-50 h-8 opacity-50 mx-2"
+          />
+          <button
+            className={cn(
+              "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white"
+            )}
+            onClick={() => setProfileToEdit(profile)}
+          >
+            <ChildCareIcon className="text-4xl" />
+          </button>
         </div>
+        {profileToEdit && (
+          <BabyCareProfileEditor
+            open={Boolean(profileToEdit)}
+            onClose={() => setProfileToEdit(undefined)}
+            profile={profileToEdit}
+            simple
+          />
+        )}
       </footer>
     </div>
   );

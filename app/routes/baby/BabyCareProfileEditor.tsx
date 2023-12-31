@@ -171,8 +171,9 @@ export const BabyCareProfileEditor = (props: {
   open: boolean;
   onClose: () => void;
   profile?: SerializeFrom<BabyCareProfile>;
+  simple?: boolean;
 }) => {
-  const { open, onClose, profile } = props;
+  const { open, onClose, profile, simple } = props;
   const [showDeleteConfirmationDialog, setShowDeleteConfirmationDialog] =
     useState(false);
   const submit = useSubmit();
@@ -287,14 +288,16 @@ export const BabyCareProfileEditor = (props: {
               autoFocus
               variant="outlined"
               error={Boolean(errors.name)}
-              className="w-full"
               helperText={errors.name ? "Name is required" : undefined}
               {...register("name", {
                 required: true,
                 onChange: (event) => {
                   setName(event.target.value);
                 },
+                disabled: Boolean(simple),
               })}
+              disabled={Boolean(simple)}
+              className="w-full"
             />
           </div>
           <div className="w-full py-2">
@@ -306,6 +309,7 @@ export const BabyCareProfileEditor = (props: {
                 setNickname(event.target.value);
               }}
               variant="outlined"
+              disabled={Boolean(simple)}
               className="w-full"
             />
           </div>
@@ -319,6 +323,7 @@ export const BabyCareProfileEditor = (props: {
                 onChange={(event: SelectChangeEvent) => {
                   setGender(event.target.value as Gender);
                 }}
+                disabled={Boolean(simple)}
               >
                 <MenuItem value={Gender.MALE}>Male</MenuItem>
                 <MenuItem value={Gender.FEMALE}>Female</MenuItem>
@@ -332,6 +337,7 @@ export const BabyCareProfileEditor = (props: {
               onChange={(value: Date | null) => {
                 setDob(value ?? new Date());
               }}
+              disabled={Boolean(simple)}
               className="w-full"
             />
           </div>
@@ -343,6 +349,7 @@ export const BabyCareProfileEditor = (props: {
                 setHandle(event.target.value);
               }}
               variant="outlined"
+              disabled={Boolean(simple)}
               className="w-full"
             />
           </div>
@@ -462,13 +469,15 @@ export const BabyCareProfileEditor = (props: {
         <Button variant="outlined" onClick={onClose}>
           Cancel
         </Button>
-        <Button
-          variant="outlined"
-          color="error"
-          onClick={() => setShowDeleteConfirmationDialog(true)}
-        >
-          Remove
-        </Button>
+        {!simple && (
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => setShowDeleteConfirmationDialog(true)}
+          >
+            Remove
+          </Button>
+        )}
         <Button variant="contained" onClick={onSubmit}>
           {profile ? "Update" : "Create"}
         </Button>

@@ -16,6 +16,9 @@ import {
   Home,
   LightMode,
   DarkMode,
+  SwitchAccount,
+  Sync,
+  ChildCare,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -83,3 +86,6 @@ export const ClockIcon = WatchLater;
 export const HomeIcon = Home;
 export const LightModeIcon = LightMode;
 export const DarkModeIcon = DarkMode;
+export const SwitchProfileIcon = SwitchAccount;
+export const SyncIcon = Sync;
+export const ChildCareIcon = ChildCare;

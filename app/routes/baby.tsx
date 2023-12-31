@@ -9,9 +9,8 @@ import {
 import {
   BabyCareAction,
   BabyCareDataRegistry,
-  BabyCareProfile,
-  BabyCareServerEvent,
   Gender,
+  type BabyCareProfile,
 } from "../data/BabyCare";
 import {
   AddCircleIcon,
@@ -23,12 +22,6 @@ import { Button } from "@mui/material";
 import { Link, useLoaderData, useRevalidator } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { BabyCareProfileEditor } from "./baby/BabyCareProfileEditor";
-import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
-import {
-  extractOptionalString,
-  extractRequiredNumber,
-  extractRequiredString,
-} from "../shared/FormDataUtils";
 import { generateBabyAgeText } from "../data/BabyCareUtils";
 import { useBabyCareProfileSyncPulse } from "./baby/BabyCareDataSync";
 
@@ -37,106 +30,27 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
-  const entityManager = await BabyCareDataRegistry.getEntityManager();
-  const profiles = await entityManager.getRepository(BabyCareProfile).findAll();
+  const profiles = await BabyCareDataRegistry.fetchProfiles();
   return json({ profiles });
 };
 
 export async function action({ request }: ActionFunctionArgs) {
-  const entityManager = await BabyCareDataRegistry.getEntityManager();
   const formData = await request.formData();
   const action = formData.get("__action");
 
   switch (action) {
     case BabyCareAction.CREATE_PROFILE:
     case BabyCareAction.UPDATE_PROFILE: {
-      const id = formData.get("id");
-
-      let profile: BabyCareProfile;
-
-      const name = extractRequiredString(formData, "name");
-      const dob = new Date(extractRequiredString(formData, "dob"));
-      const gender =
-        Gender[extractRequiredString(formData, "gender") as Gender];
-
-      if (id) {
-        profile = await entityManager.findOneOrFail(BabyCareProfile, {
-          id: id as string,
-        });
-        profile.name = name;
-        profile.dob = dob;
-        profile.genderAtBirth = gender;
-      } else {
-        profile = new BabyCareProfile(name, gender, dob);
-      }
-
-      profile.nickname = extractOptionalString(formData, "nickname")?.trim();
-      profile.handle = extractOptionalString(formData, "handle")?.trim();
-
-      profile.defaultFeedingVolume = extractRequiredNumber(
-        formData,
-        "defaultFeedingVolume"
-      );
-      profile.defaultFeedingInterval = extractRequiredNumber(
-        formData,
-        "defaultFeedingInterval"
-      );
-      profile.defaultNightFeedingInterval = extractRequiredNumber(
-        formData,
-        "defaultNightFeedingInterval"
-      );
-
-      profile.defaultPumpingDuration = extractRequiredNumber(
-        formData,
-        "defaultPumpingDuration"
-      );
-      profile.defaultPumpingInterval = extractRequiredNumber(
-        formData,
-        "defaultPumpingInterval"
-      );
-      profile.defaultNightPumpingInterval = extractRequiredNumber(
-        formData,
-        "defaultNightPumpingInterval"
-      );
-
-      profile.babyDaytimeStart = extractRequiredNumber(
-        formData,
-        "babyDaytimeStart"
-      );
-      profile.babyDaytimeEnd = extractRequiredNumber(
-        formData,
-        "babyDaytimeEnd"
-      );
-      profile.parentDaytimeStart = extractRequiredNumber(
-        formData,
-        "parentDaytimeStart"
-      );
-      profile.parentDaytimeEnd = extractRequiredNumber(
-        formData,
-        "parentDaytimeEnd"
-      );
-
-      await entityManager.persistAndFlush(profile);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        profile.id
-      );
-
-      if (id) {
+      const { profile, created } =
+        await BabyCareDataRegistry.createOrUpdateProfile(formData);
+      if (!created) {
         return null;
       } else {
         return redirect(`/baby/${profile.handle ?? profile.id}`);
       }
     }
     case BabyCareAction.REMOVE_PROFILE: {
-      const profile = await entityManager.findOneOrFail(BabyCareProfile, {
-        id: guaranteeNonEmptyString(formData.get("id")),
-      });
-      await entityManager.removeAndFlush(profile);
-      BabyCareDataRegistry.getEventEmitter().emit(
-        BabyCareServerEvent.PROFILE_DATA_CHANGE,
-        profile.id
-      );
+      await BabyCareDataRegistry.removeProfile(formData);
       return null;
     }
     default:
