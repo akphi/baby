@@ -33,6 +33,7 @@ import {
   DEFAULT_PARENT_DAYTIME_START_HOUR,
   DEFAULT_PARENT_DAYTIME_END_HOUR,
   DEFAULT_NURSING_DURATION_FOR_EACH_SIDE,
+  DEFAULT_ENABLE_NOTIFICATION,
 } from "./constants";
 import EventEmitter from "node:events";
 import {
@@ -102,6 +103,22 @@ export class BabyCareProfile {
 
   @Property({ type: "number" })
   parentDaytimeEnd = DEFAULT_PARENT_DAYTIME_END_HOUR;
+
+  // notification
+  @Property({ type: "boolean" })
+  enableFeedingNotification = DEFAULT_ENABLE_NOTIFICATION;
+
+  @Property({ type: "boolean" })
+  enableFeedingReminder = DEFAULT_ENABLE_NOTIFICATION;
+
+  @Property({ type: "boolean" })
+  enablePumpingNotification = DEFAULT_ENABLE_NOTIFICATION;
+
+  @Property({ type: "boolean" })
+  enablePumpingReminder = DEFAULT_ENABLE_NOTIFICATION;
+
+  @Property({ type: "boolean" })
+  enableOtherActivitiesNotification = false; // this would be too noisy so disabled by default
 
   constructor(name: string, genderAtBirth: Gender, dob: Date) {
     this.name = name;
@@ -575,6 +592,7 @@ export class BabyCareDataRegistry {
     profile.nickname = extractOptionalString(formData, "nickname")?.trim();
     profile.handle = extractOptionalString(formData, "handle")?.trim();
 
+    // feeding
     profile.defaultFeedingVolume = extractRequiredNumber(
       formData,
       "defaultFeedingVolume"
@@ -588,6 +606,7 @@ export class BabyCareDataRegistry {
       "defaultNightFeedingInterval"
     );
 
+    // pumping
     profile.defaultPumpingDuration = extractRequiredNumber(
       formData,
       "defaultPumpingDuration"
@@ -601,6 +620,7 @@ export class BabyCareDataRegistry {
       "defaultNightPumpingInterval"
     );
 
+    // daytime
     profile.babyDaytimeStart = extractRequiredNumber(
       formData,
       "babyDaytimeStart"
@@ -613,6 +633,28 @@ export class BabyCareDataRegistry {
     profile.parentDaytimeEnd = extractRequiredNumber(
       formData,
       "parentDaytimeEnd"
+    );
+
+    // notification
+    profile.enableFeedingNotification = extractRequiredBoolean(
+      formData,
+      "enableFeedingNotification"
+    );
+    profile.enableFeedingReminder = extractRequiredBoolean(
+      formData,
+      "enableFeedingReminder"
+    );
+    profile.enablePumpingNotification = extractRequiredBoolean(
+      formData,
+      "enablePumpingNotification"
+    );
+    profile.enablePumpingReminder = extractRequiredBoolean(
+      formData,
+      "enablePumpingReminder"
+    );
+    profile.enableOtherActivitiesNotification = extractRequiredBoolean(
+      formData,
+      "enableOtherActivitiesNotification"
     );
 
     await entityManager.persistAndFlush(profile);

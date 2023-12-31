@@ -12,6 +12,8 @@ import {
   type SelectChangeEvent,
   Divider,
   Slider,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import {
   type BabyCareProfile,
@@ -29,7 +31,8 @@ import {
   DEFAULT_BABY_DAYTIME_END_HOUR,
   DEFAULT_PARENT_DAYTIME_START_HOUR,
   DEFAULT_PARENT_DAYTIME_END_HOUR,
-  DAYTIME_MINUNIMUM_DURATION,
+  DAYTIME_MINIMUM_DURATION,
+  DEFAULT_ENABLE_NOTIFICATION,
 } from "../../data/constants";
 import { useSubmit } from "@remix-run/react";
 import { useState } from "react";
@@ -41,7 +44,7 @@ import { useForm } from "react-hook-form";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
 import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
-import { getNonNullableEntry } from "../../shared/CommonUtils";
+import { getNonNullableEntry, uniq } from "../../shared/CommonUtils";
 import { generateHourText } from "../../data/BabyCareUtils";
 
 const HourRangeSlider = (props: {
@@ -68,7 +71,7 @@ const HourRangeSlider = (props: {
     if (!Array.isArray(newValues)) {
       return;
     }
-    const DIFF = DAYTIME_MINUNIMUM_DURATION;
+    const DIFF = DAYTIME_MINIMUM_DURATION;
     const MIN = 0;
     const MAX = 24;
 
@@ -221,13 +224,30 @@ export const BabyCareProfileEditor = (props: {
   const [babyDaytimeEnd, setBabyDaytimeEnd] = useState(
     profile?.babyDaytimeEnd ?? DEFAULT_BABY_DAYTIME_END_HOUR
   );
-
   const [parentDaytimeStart, setParentDaytimeStart] = useState(
     profile?.parentDaytimeStart ?? DEFAULT_PARENT_DAYTIME_START_HOUR
   );
   const [parentDaytimeEnd, setParentDaytimeEnd] = useState(
     profile?.parentDaytimeEnd ?? DEFAULT_PARENT_DAYTIME_END_HOUR
   );
+
+  // notification
+  const [enableFeedingNotification, setEnableFeedingNotification] = useState(
+    profile?.enableFeedingNotification ?? DEFAULT_ENABLE_NOTIFICATION
+  );
+  const [enableFeedingReminder, setEnableFeedingReminder] = useState(
+    profile?.enableFeedingReminder ?? DEFAULT_ENABLE_NOTIFICATION
+  );
+  const [enablePumpingNotification, setEnablePumpingNotification] = useState(
+    profile?.enablePumpingNotification ?? DEFAULT_ENABLE_NOTIFICATION
+  );
+  const [enablePumpingReminder, setEnablePumpingReminder] = useState(
+    profile?.enablePumpingReminder ?? DEFAULT_ENABLE_NOTIFICATION
+  );
+  const [
+    enableOtherActivitiesNotification,
+    setEnableOtherActivitiesNotification,
+  ] = useState(profile?.enableOtherActivitiesNotification ?? false);
 
   const onSubmit = handleSubmit((data, event) => {
     submit(
@@ -255,6 +275,12 @@ export const BabyCareProfileEditor = (props: {
         babyDaytimeEnd,
         parentDaytimeStart,
         parentDaytimeEnd,
+
+        enableFeedingNotification,
+        enablePumpingNotification,
+        enableOtherActivitiesNotification,
+        enableFeedingReminder,
+        enablePumpingReminder,
       }),
       { method: HttpMethod.POST }
     );
@@ -462,6 +488,109 @@ export const BabyCareProfileEditor = (props: {
               setLowerValue={(value) => setParentDaytimeStart(value)}
               setUpperValue={(value) => setParentDaytimeEnd(value)}
             />
+          </div>
+          <Divider className="my-2" />
+          <div className="w-full flex flex-col py-2">
+            <FormControlLabel
+              label="Enable All Notifications"
+              className="h-7 select-none"
+              classes={{ label: "text-slate-700" }}
+              control={
+                <Checkbox
+                  checked={[
+                    enableFeedingNotification,
+                    enableFeedingReminder,
+                    enablePumpingNotification,
+                    enablePumpingReminder,
+                    enableOtherActivitiesNotification,
+                  ].every(Boolean)}
+                  indeterminate={
+                    uniq([
+                      enableFeedingNotification,
+                      enableFeedingReminder,
+                      enablePumpingNotification,
+                      enablePumpingReminder,
+                      enableOtherActivitiesNotification,
+                    ]).length !== 1
+                  }
+                  onChange={(event) => {
+                    const value = event.target.checked;
+                    setEnableFeedingNotification(value);
+                    setEnableFeedingReminder(value);
+                    setEnablePumpingNotification(value);
+                    setEnablePumpingReminder(value);
+                    setEnableOtherActivitiesNotification(value);
+                  }}
+                />
+              }
+            />
+            <div className="w-full flex flex-col pt-1.5 pb-2 pl-4">
+              <FormControlLabel
+                label="Feeding"
+                className="h-7 select-none"
+                classes={{ label: "text-slate-700" }}
+                control={
+                  <Checkbox
+                    checked={enableFeedingNotification}
+                    onChange={(event) =>
+                      setEnableFeedingNotification(event.target.checked)
+                    }
+                  />
+                }
+              />
+              <FormControlLabel
+                label="Feeding Reminder"
+                className="h-7 select-none"
+                classes={{ label: "text-slate-700" }}
+                control={
+                  <Checkbox
+                    checked={enableFeedingReminder}
+                    onChange={(event) =>
+                      setEnableFeedingReminder(event.target.checked)
+                    }
+                  />
+                }
+              />
+              <FormControlLabel
+                label="Pumping"
+                className="h-7 select-none"
+                classes={{ label: "text-slate-700" }}
+                control={
+                  <Checkbox
+                    checked={enablePumpingNotification}
+                    onChange={(event) =>
+                      setEnablePumpingNotification(event.target.checked)
+                    }
+                  />
+                }
+              />
+              <FormControlLabel
+                label="Pumping Reminder"
+                className="h-7 select-none"
+                classes={{ label: "text-slate-700" }}
+                control={
+                  <Checkbox
+                    checked={enablePumpingReminder}
+                    onChange={(event) =>
+                      setEnablePumpingReminder(event.target.checked)
+                    }
+                  />
+                }
+              />
+              <FormControlLabel
+                label="Other Activities (Sleep, Bath, etc.)"
+                className="h-7 select-none"
+                classes={{ label: "text-slate-700" }}
+                control={
+                  <Checkbox
+                    checked={enableOtherActivitiesNotification}
+                    onChange={(event) =>
+                      setEnableOtherActivitiesNotification(event.target.checked)
+                    }
+                  />
+                }
+              />
+            </div>
           </div>
         </form>
       </DialogContent>
