@@ -1074,9 +1074,7 @@ const serializeProfile = (profile: BabyCareProfile) => {
 };
 
 class BabyCareEventNotificationService {
-  uuid = uuid();
-  private static readonly REMINDER_INTERVAL = 2 * 1000; // 2s
-  // private static readonly REMINDER_EXPIRATION_WINDOW = 30 * 1000; // 30s
+  private static readonly REMINDER_INTERVAL = 5 * 1000; // 5s
   private static readonly REMINDER_STEPS = [
     0,
     5 * 60 * 1000,
@@ -1104,9 +1102,17 @@ class BabyCareEventNotificationService {
     this.reminderMentionRoleID = returnUndefOnError(() =>
       guaranteeNonEmptyString(config.babyCare.reminderMentionRoleID)
     );
+
+    // This is the reminder loop which run with a specified interval. Every cycle, it checks for all reminders
+    // it examines each reminder and attempt to notify the same reminder at different time steps (5 mins 15 mins, 30 mins before)
+    // checking one step at a time in receding order (5 mins, then 15 mins, etc.), if the time step is in the future, moves on to the
+    // next step
+    // when a step is in the past, it will notify this step: record the timestamp of notification and skip all earlier steps
+    // of course whether or not the notification is actually sent is determined by the profile
+    // note that we will set this timestamp, regardless if the notification was fired or not, as it will be used to indicate the
+    // reminder has been sent at that point in time so that if we update the profile/event, we don't send the same reminder again
     this._reminderLoop = setInterval(() => {
       const now = Date.now();
-      // console.log(this.uuid, Array.from(this._reminderEventMap.values()));
       this._reminderEventMap.forEach((reminder, eventId) => {
         const profile = this._reminderProfileMap.get(reminder.profileId);
         if (!profile) {
@@ -1142,7 +1148,6 @@ class BabyCareEventNotificationService {
             );
           }
 
-          // console.log("aha", reminder, new Date(reminderTime));
           // even if reminder is not enabled, we still want to update the last notified timestamp
           reminder.lastNotifiedTimestamp = now;
           break;
@@ -1150,13 +1155,6 @@ class BabyCareEventNotificationService {
       });
     }, BabyCareEventNotificationService.REMINDER_INTERVAL);
   }
-
-  // the loop
-  // store profile settings to double check before firing reminders
-  // for all events, have 4 time frames: 15mins, 5mins, 1min, 0min (do -5s) before event, fire the most current that has pased
-  // double check these frames against the interval (base off the type of event) and time of the day -- if frame is less than interval, skip it
-  // if somehow events are too old --> > 30s from current time, kill them, after event firing the last frame, also remove it from the map
-  //   // - [ ] Create a separate bot for Chopchop, message starts with `[Reminder] ChopChop,
 
   private async notify(sender: string, message: string) {
     if (!this.notificationWebhookUrl) {
