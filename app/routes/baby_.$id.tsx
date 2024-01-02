@@ -39,7 +39,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 };
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
-  const profile = await BabyCareDataRegistry.fetchProfile(
+  const profile = await BabyCareDataRegistry.fetchProfileByIdOrHandle(
     guaranteeNonNullable(params.id)
   );
 

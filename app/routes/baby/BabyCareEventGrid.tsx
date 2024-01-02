@@ -393,7 +393,7 @@ export const BabyCareEventGrid = (props: {
                 InputProps: {
                   classes: {
                     input:
-                      "py-0 px-2 w-16 h-7 text-slate-600 cursor-pointer text-sm",
+                      "py-0 px-2 w-24 h-7 text-slate-600 cursor-pointer text-sm",
                     notchedOutline:
                       "border-2 border-slate-200 hover:border-slate-300",
                   },
@@ -404,7 +404,7 @@ export const BabyCareEventGrid = (props: {
             onAccept={(value: Date | null) => {
               setSelectedDate(startOfDay(value ?? new Date()));
             }}
-            format="MMM dd"
+            format="MMM dd, EEE"
           />
           <button
             className="text-slate-500 hover:text-slate-600"

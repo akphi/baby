@@ -8,6 +8,7 @@ import {
   TableExistsException,
   DateType,
   wrap,
+  type EntityDTO,
 } from "@mikro-orm/core";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
 import { add, startOfDay } from "date-fns";
@@ -43,6 +44,7 @@ import {
   extractRequiredNumber,
   extractRequiredString,
 } from "../shared/FormDataUtils";
+import { isDuringDaytime } from "./BabyCareUtils";
 
 const HASHER = initHasher({});
 
@@ -53,6 +55,13 @@ export enum Gender {
 
 @Entity()
 export class BabyCareProfile {
+  // Keep track of hash of event for change detection
+  //
+  // Shadowed field that should not be persisted to the DB
+  // See https://mikro-orm.io/docs/serializing#shadow-properties
+  @Property({ type: "string", persist: false })
+  HASH!: string;
+
   @PrimaryKey({ type: "string" })
   readonly id = uuid();
 
@@ -125,6 +134,36 @@ export class BabyCareProfile {
     this.genderAtBirth = genderAtBirth;
     this.dob = dob;
   }
+
+  get hashCode() {
+    return HASHER.hash({
+      id: this.id,
+      name: this.name,
+      genderAtBirth: this.genderAtBirth,
+      dob: this.dob,
+      handle: this.handle,
+      nickname: this.nickname,
+
+      defaultFeedingVolume: this.defaultFeedingVolume,
+      defaultFeedingInterval: this.defaultFeedingInterval,
+      defaultNightFeedingInterval: this.defaultNightFeedingInterval,
+
+      defaultPumpingDuration: this.defaultPumpingDuration,
+      defaultPumpingInterval: this.defaultPumpingInterval,
+      defaultNightPumpingInterval: this.defaultNightPumpingInterval,
+
+      babyDaytimeStart: this.babyDaytimeStart,
+      babyDaytimeEnd: this.babyDaytimeEnd,
+      parentDaytimeStart: this.parentDaytimeStart,
+      parentDaytimeEnd: this.parentDaytimeEnd,
+
+      enableFeedingNotification: this.enableFeedingNotification,
+      enableFeedingReminder: this.enableFeedingReminder,
+      enablePumpingNotification: this.enablePumpingNotification,
+      enablePumpingReminder: this.enablePumpingReminder,
+      enableOtherActivitiesNotification: this.enableOtherActivitiesNotification,
+    });
+  }
 }
 
 export enum BabyCareEventType {
@@ -138,13 +177,11 @@ export enum BabyCareEventType {
 
   __POOP = "Poop",
   __PEE = "Pee",
+  __FEEDING = "Feeding",
 }
 
 export abstract class BabyCareEvent {
   // Keep track of type of event during serialization
-  //
-  // Shadowed field that should not be persisted to the DB
-  // See https://mikro-orm.io/docs/serializing#shadow-properties
   @Property({ type: "string", persist: false })
   TYPE!: string;
 
@@ -181,6 +218,7 @@ export abstract class BabyCareEvent {
   }
 
   abstract get eventType(): string;
+  abstract get notificationSummary(): string;
 
   get hashContent() {
     return {
@@ -215,6 +253,10 @@ export class BottleFeedEvent extends BabyCareEvent {
     return BabyCareEventType.BOTTLE_FEED;
   }
 
+  override get notificationSummary() {
+    return `Bottlefeed baby ${this.volume}ml`; // TODO: account for unit
+  }
+
   override get hashCode() {
     return HASHER.hash({
       ...this.hashContent,
@@ -236,6 +278,12 @@ export class NursingEvent extends BabyCareEvent {
     return BabyCareEventType.NURSING;
   }
 
+  override get notificationSummary() {
+    return `Breastfeed baby for ${
+      (this.leftDuration + this.rightDuration) / (60 * 1000)
+    } mins`;
+  }
+
   override get hashCode() {
     return HASHER.hash({
       ...this.hashContent,
@@ -252,6 +300,10 @@ export class PumpingEvent extends BabyCareEvent {
 
   override get eventType() {
     return BabyCareEventType.PUMPING;
+  }
+
+  override get notificationSummary() {
+    return `Mom pumped ${this.volume}ml`; // TODO: account for unit
   }
 
   override get hashCode() {
@@ -276,6 +328,10 @@ export class DiaperChangeEvent extends BabyCareEvent {
     return BabyCareEventType.DIAPER_CHANGE;
   }
 
+  override get notificationSummary() {
+    return this.poop ? `Poopy diaper` : `Wet diaper`;
+  }
+
   override get hashCode() {
     return HASHER.hash({
       ...this.hashContent,
@@ -290,6 +346,10 @@ export class SleepEvent extends BabyCareEvent {
   override get eventType() {
     return BabyCareEventType.SLEEP;
   }
+
+  override get notificationSummary() {
+    return `Baby sleeping`;
+  }
 }
 
 @Entity()
@@ -297,12 +357,20 @@ export class PlayEvent extends BabyCareEvent {
   override get eventType() {
     return BabyCareEventType.PLAY;
   }
+
+  override get notificationSummary() {
+    return `Baby playing`;
+  }
 }
 
 @Entity()
 export class BathEvent extends BabyCareEvent {
   override get eventType() {
     return BabyCareEventType.BATH;
+  }
+
+  override get notificationSummary() {
+    return `Bathing baby`;
   }
 }
 
@@ -360,47 +428,8 @@ export enum BabyCareAction {
 export enum BabyCareServerEvent {
   PROFILE_DATA_CHANGE = "baby-care.profile-data-change",
 }
-
 export class BabyCareDataRegistry {
-  private static _instance: BabyCareDataRegistry;
   private static _orm: MikroORM<IDatabaseDriver<Connection>>;
-  private static _eventEmitter = new EventEmitter();
-
-  // eslint-disable-next-line no-useless-constructor
-  private constructor() {}
-
-  static getInstance(): BabyCareDataRegistry {
-    if (!BabyCareDataRegistry._instance) {
-      BabyCareDataRegistry._instance = new BabyCareDataRegistry();
-    }
-    return BabyCareDataRegistry._instance;
-  }
-
-  static getEventEmitter() {
-    return BabyCareDataRegistry._eventEmitter;
-  }
-
-  static async message(sender: string, message: string) {
-    const config = JSON.parse(
-      readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
-    );
-    const url = returnUndefOnError(() =>
-      guaranteeNonEmptyString(config.babyCare.reminderWebhookUrl)
-    );
-    if (!url) {
-      return;
-    }
-    await fetch(url, {
-      method: HttpMethod.POST,
-      headers: {
-        [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
-      },
-      body: JSON.stringify({
-        username: sender,
-        content: message,
-      }),
-    });
-  }
 
   static async getORM() {
     if (!BabyCareDataRegistry._orm) {
@@ -433,16 +462,6 @@ export class BabyCareDataRegistry {
       .getRepository(BabyCareProfile)
       .findAll();
     return profiles;
-  }
-
-  static async fetchProfile(
-    profileIdOrHandle: string
-  ): Promise<BabyCareProfile> {
-    const entityManager = await BabyCareDataRegistry.getEntityManager();
-    const profile = await entityManager.findOneOrFail(BabyCareProfile, {
-      $or: [{ id: profileIdOrHandle }, { handle: profileIdOrHandle }],
-    });
-    return profile;
   }
 
   static async fetchEvents(profile: BabyCareProfile, date: Date) {
@@ -573,6 +592,7 @@ export class BabyCareDataRegistry {
 
     let profile: BabyCareProfile;
 
+    let newProfile = false;
     const id = formData.get("id");
     const name = extractRequiredString(formData, "name");
     const dob = new Date(extractRequiredString(formData, "dob"));
@@ -587,6 +607,7 @@ export class BabyCareDataRegistry {
       profile.genderAtBirth = gender;
     } else {
       profile = new BabyCareProfile(name, gender, dob);
+      newProfile = true;
     }
 
     profile.nickname = extractOptionalString(formData, "nickname")?.trim();
@@ -658,12 +679,15 @@ export class BabyCareDataRegistry {
     );
 
     await entityManager.persistAndFlush(profile);
-    BabyCareDataRegistry.getEventEmitter().emit(
+    BabyCareEventManager.getServerEventEmitter().emit(
       BabyCareServerEvent.PROFILE_DATA_CHANGE,
       profile.id
     );
+    if (!newProfile) {
+      BabyCareEventManager.notificationService.profileUpdated(profile);
+    }
 
-    return { profile, created: !id };
+    return { profile, created: newProfile };
   }
 
   static async removeProfile(formData: FormData) {
@@ -675,11 +699,14 @@ export class BabyCareDataRegistry {
     const profile = await entityManager.findOneOrFail(BabyCareProfile, {
       id: guaranteeNonEmptyString(formData.get("id")),
     });
+
     await entityManager.removeAndFlush(profile);
-    BabyCareDataRegistry.getEventEmitter().emit(
+    BabyCareEventManager.getServerEventEmitter().emit(
       BabyCareServerEvent.PROFILE_DATA_CHANGE,
       profile.id
     );
+    BabyCareEventManager.notificationService.profileRemoved(profile);
+
     return profile;
   }
 
@@ -743,10 +770,11 @@ export class BabyCareDataRegistry {
     }
 
     entityManager.persistAndFlush(event);
-    BabyCareDataRegistry.getEventEmitter().emit(
+    BabyCareEventManager.getServerEventEmitter().emit(
       BabyCareServerEvent.PROFILE_DATA_CHANGE,
       profile.id
     );
+    BabyCareEventManager.notificationService.eventCreated(event);
 
     event.TYPE = event.eventType;
     event.HASH = event.hashCode;
@@ -757,12 +785,17 @@ export class BabyCareDataRegistry {
   static async updateEvent(formData: FormData, eventId: string) {
     const entityManager = await BabyCareDataRegistry.getEntityManager();
     const action = formData.get("__action");
+    let updatedEvent: BabyCareEvent;
 
     switch (action) {
       case BabyCareAction.UPDATE_BOTTLE_FEED_EVENT: {
-        const event = await entityManager.findOneOrFail(BottleFeedEvent, {
-          id: eventId,
-        });
+        const event = await entityManager.findOneOrFail(
+          BottleFeedEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
 
         event.time = new Date(extractRequiredString(formData, "time"));
         event.comment = extractOptionalString(formData, "comment")?.trim();
@@ -773,36 +806,34 @@ export class BabyCareDataRegistry {
           "formulaMilkVolume"
         );
 
-        entityManager.persistAndFlush(event);
-        BabyCareDataRegistry.getEventEmitter().emit(
-          BabyCareServerEvent.PROFILE_DATA_CHANGE,
-          event.profile.id
-        );
-
-        return event;
+        updatedEvent = event;
+        break;
       }
       case BabyCareAction.UPDATE_PUMPING_EVENT: {
-        const event = await entityManager.findOneOrFail(PumpingEvent, {
-          id: eventId,
-        });
+        const event = await entityManager.findOneOrFail(
+          PumpingEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
 
         event.time = new Date(extractRequiredString(formData, "time"));
         event.comment = extractOptionalString(formData, "comment")?.trim();
         event.duration = extractOptionalNumber(formData, "duration");
         event.volume = extractRequiredNumber(formData, "volume");
 
-        entityManager.persistAndFlush(event);
-        BabyCareDataRegistry.getEventEmitter().emit(
-          BabyCareServerEvent.PROFILE_DATA_CHANGE,
-          event.profile.id
-        );
-
-        return event;
+        updatedEvent = event;
+        break;
       }
       case BabyCareAction.UPDATE_NURSING_EVENT: {
-        const event = await entityManager.findOneOrFail(NursingEvent, {
-          id: eventId,
-        });
+        const event = await entityManager.findOneOrFail(
+          NursingEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
 
         event.time = new Date(extractRequiredString(formData, "time"));
         event.comment = extractOptionalString(formData, "comment")?.trim();
@@ -810,18 +841,17 @@ export class BabyCareDataRegistry {
         event.leftDuration = extractRequiredNumber(formData, "leftDuration");
         event.rightDuration = extractRequiredNumber(formData, "rightDuration");
 
-        entityManager.persistAndFlush(event);
-        BabyCareDataRegistry.getEventEmitter().emit(
-          BabyCareServerEvent.PROFILE_DATA_CHANGE,
-          event.profile.id
-        );
-
-        return event;
+        updatedEvent = event;
+        break;
       }
       case BabyCareAction.UPDATE_DIAPER_CHANGE_EVENT: {
-        const event = await entityManager.findOneOrFail(DiaperChangeEvent, {
-          id: eventId,
-        });
+        const event = await entityManager.findOneOrFail(
+          DiaperChangeEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
 
         event.time = new Date(extractRequiredString(formData, "time"));
         event.comment = extractOptionalString(formData, "comment")?.trim();
@@ -829,13 +859,8 @@ export class BabyCareDataRegistry {
         event.poop = extractRequiredBoolean(formData, "poop");
         event.pee = extractRequiredBoolean(formData, "pee");
 
-        entityManager.persistAndFlush(event);
-        BabyCareDataRegistry.getEventEmitter().emit(
-          BabyCareServerEvent.PROFILE_DATA_CHANGE,
-          event.profile.id
-        );
-
-        return event;
+        updatedEvent = event;
+        break;
       }
       case BabyCareAction.UPDATE_SLEEP_EVENT:
       case BabyCareAction.UPDATE_BATH_EVENT:
@@ -850,7 +875,8 @@ export class BabyCareDataRegistry {
             : undefined;
         const event = await entityManager.findOneOrFail(
           guaranteeNonNullable(clazz),
-          { id: eventId }
+          { id: eventId },
+          { populate: ["profile"] }
         );
 
         event.time = new Date(extractRequiredString(formData, "time"));
@@ -858,16 +884,26 @@ export class BabyCareDataRegistry {
         event.duration = extractOptionalNumber(formData, "duration");
 
         entityManager.persistAndFlush(event);
-        BabyCareDataRegistry.getEventEmitter().emit(
+        BabyCareEventManager.getServerEventEmitter().emit(
           BabyCareServerEvent.PROFILE_DATA_CHANGE,
           event.profile.id
         );
 
-        return event;
+        updatedEvent = event;
+        break;
       }
       default:
         throw new Error(`Unsupported event update action '${action}'`);
     }
+
+    entityManager.persistAndFlush(updatedEvent);
+    BabyCareEventManager.getServerEventEmitter().emit(
+      BabyCareServerEvent.PROFILE_DATA_CHANGE,
+      updatedEvent.profile.id
+    );
+    BabyCareEventManager.notificationService.eventUpdated(updatedEvent);
+
+    return updatedEvent;
   }
 
   static async removeEvent(action: string, eventId: string) {
@@ -900,19 +936,386 @@ export class BabyCareDataRegistry {
           guaranteeNonNullable(clazz),
           {
             id: eventId,
-          }
+          },
+          { populate: ["profile"] }
         );
 
         await entityManager.removeAndFlush(event);
-        BabyCareDataRegistry.getEventEmitter().emit(
+        BabyCareEventManager.getServerEventEmitter().emit(
           BabyCareServerEvent.PROFILE_DATA_CHANGE,
           event.profile.id
         );
+        BabyCareEventManager.notificationService.eventRemoved(event);
 
         return event;
       }
       default:
         throw new Error(`Unsupported event delete action '${action}'`);
     }
+  }
+}
+
+abstract class BabyCareEventReminder {
+  readonly eventId: string;
+  readonly eventTimestamp: number;
+  abstract readonly eventType: string;
+  readonly profileId: string;
+
+  lastNotifiedTimestamp?: number | undefined;
+
+  constructor(event: BabyCareEvent) {
+    this.eventId = event.id;
+    this.eventTimestamp = event.time.valueOf();
+    this.profileId = event.profile.id;
+  }
+
+  abstract generateMessage(durationInAdvance: number): string;
+  abstract shouldNotify(profile: EntityDTO<BabyCareProfile>): boolean;
+  abstract getNextEventTimestamp(profile: EntityDTO<BabyCareProfile>): number;
+}
+
+class FeedingEventReminder extends BabyCareEventReminder {
+  override eventType = BabyCareEventType.__FEEDING;
+  override generateMessage(durationInAdvance: number) {
+    return `Feed baby ${
+      durationInAdvance
+        ? `in ${durationInAdvance / (60 * 1000)} minutes`
+        : "now"
+    }`;
+  }
+
+  override shouldNotify(profile: EntityDTO<BabyCareProfile>) {
+    return profile.enableFeedingReminder;
+  }
+
+  override getNextEventTimestamp(profile: EntityDTO<BabyCareProfile>) {
+    let nextEventTimestamp =
+      this.eventTimestamp + profile.defaultFeedingInterval;
+    if (
+      isDuringDaytime(
+        new Date(nextEventTimestamp),
+        profile.babyDaytimeStart,
+        profile.babyDaytimeEnd
+      )
+    ) {
+      return nextEventTimestamp;
+    }
+
+    nextEventTimestamp =
+      this.eventTimestamp + profile.defaultNightFeedingInterval;
+    if (
+      !isDuringDaytime(
+        new Date(nextEventTimestamp),
+        profile.babyDaytimeStart,
+        profile.babyDaytimeEnd
+      )
+    ) {
+      return nextEventTimestamp;
+    }
+
+    // when both daytime and nighttime reminders timing are not valid,
+    // potentially due to the profile being configured inappropriately,
+    // we simply return a very big number so it will never be fired
+    return Number.MAX_SAFE_INTEGER;
+  }
+}
+
+class PumpingEventReminder extends BabyCareEventReminder {
+  override eventType = BabyCareEventType.PUMPING;
+
+  override generateMessage(durationInAdvance: number) {
+    return `Pump ${
+      durationInAdvance
+        ? `in ${durationInAdvance / (60 * 1000)} minutes`
+        : "now"
+    }`;
+  }
+
+  override shouldNotify(profile: EntityDTO<BabyCareProfile>) {
+    return profile.enablePumpingReminder;
+  }
+
+  override getNextEventTimestamp(profile: EntityDTO<BabyCareProfile>) {
+    let nextEventTimestamp =
+      this.eventTimestamp + profile.defaultPumpingInterval;
+    if (
+      isDuringDaytime(
+        new Date(nextEventTimestamp),
+        profile.parentDaytimeStart,
+        profile.parentDaytimeEnd
+      )
+    ) {
+      return nextEventTimestamp;
+    }
+
+    nextEventTimestamp =
+      this.eventTimestamp + profile.defaultNightPumpingInterval;
+    if (
+      !isDuringDaytime(
+        new Date(nextEventTimestamp),
+        profile.parentDaytimeStart,
+        profile.parentDaytimeEnd
+      )
+    ) {
+      return nextEventTimestamp;
+    }
+
+    // when both daytime and nighttime reminders timing are not valid,
+    // potentially due to the profile being configured inappropriately,
+    // we simply return a very big number so it will never be fired
+    return Number.MAX_SAFE_INTEGER;
+  }
+}
+
+const serializeProfile = (profile: BabyCareProfile) => {
+  const object = wrap(profile).toObject();
+  object.HASH = profile.hashCode;
+  return object;
+};
+
+class BabyCareEventNotificationService {
+  uuid = uuid();
+  private static readonly REMINDER_INTERVAL = 2 * 1000; // 2s
+  // private static readonly REMINDER_EXPIRATION_WINDOW = 30 * 1000; // 30s
+  private static readonly REMINDER_STEPS = [
+    0,
+    5 * 60 * 1000,
+    15 * 60 * 1000,
+    30 * 60 * 1000,
+  ]; // 30mins, 15mins, 5mins before next event (by interval)
+
+  private readonly notificationWebhookUrl: string | undefined;
+  private readonly reminderMentionRoleID: string | undefined;
+
+  private readonly _reminderProfileMap = new Map<
+    string,
+    EntityDTO<BabyCareProfile>
+  >();
+  private readonly _reminderEventMap = new Map<string, BabyCareEventReminder>();
+  private readonly _reminderLoop: NodeJS.Timeout;
+
+  constructor() {
+    const config = JSON.parse(
+      readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
+    );
+    this.notificationWebhookUrl = returnUndefOnError(() =>
+      guaranteeNonEmptyString(config.babyCare.reminderWebhookUrl)
+    );
+    this.reminderMentionRoleID = returnUndefOnError(() =>
+      guaranteeNonEmptyString(config.babyCare.reminderMentionRoleID)
+    );
+    this._reminderLoop = setInterval(() => {
+      const now = Date.now();
+      // console.log(this.uuid, Array.from(this._reminderEventMap.values()));
+      this._reminderEventMap.forEach((reminder, eventId) => {
+        const profile = this._reminderProfileMap.get(reminder.profileId);
+        if (!profile) {
+          return;
+        }
+
+        for (const step of BabyCareEventNotificationService.REMINDER_STEPS) {
+          const reminderTime = reminder.getNextEventTimestamp(profile) - step;
+
+          // if the step is prior to the original event timestamp, it doesn't make
+          // sense to send this reminder at all
+          if (reminderTime <= reminder.eventTimestamp) {
+            return;
+          }
+
+          // if this reminder already notified to the last step, skip this reminder
+          if (
+            reminder.lastNotifiedTimestamp &&
+            reminder.lastNotifiedTimestamp >= reminderTime
+          ) {
+            return;
+          }
+
+          // if reminder time for this step is in the future, skip to the next step
+          if (reminderTime > now) {
+            continue;
+          }
+
+          if (reminder.shouldNotify(profile)) {
+            this.notify(
+              `[Reminder] ${profile.nickname ?? profile.name}`,
+              reminder.generateMessage(step)
+            );
+          }
+
+          // console.log("aha", reminder, new Date(reminderTime));
+          // even if reminder is not enabled, we still want to update the last notified timestamp
+          reminder.lastNotifiedTimestamp = now;
+          break;
+        }
+      });
+    }, BabyCareEventNotificationService.REMINDER_INTERVAL);
+  }
+
+  // the loop
+  // store profile settings to double check before firing reminders
+  // for all events, have 4 time frames: 15mins, 5mins, 1min, 0min (do -5s) before event, fire the most current that has pased
+  // double check these frames against the interval (base off the type of event) and time of the day -- if frame is less than interval, skip it
+  // if somehow events are too old --> > 30s from current time, kill them, after event firing the last frame, also remove it from the map
+  //   // - [ ] Create a separate bot for Chopchop, message starts with `[Reminder] ChopChop,
+
+  private async notify(sender: string, message: string) {
+    if (!this.notificationWebhookUrl) {
+      return;
+    }
+    await fetch(this.notificationWebhookUrl, {
+      method: HttpMethod.POST,
+      headers: {
+        [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
+      },
+      body: JSON.stringify({
+        username: sender,
+        // NOTE: Discord has a weird issue that I didn't have time to investigate where
+        // webhook bots seem to not be able to raise more than 3 push notifications on IOS
+        // e.g. after sending 3 notifications, the 4th will not be shown as push nofication
+        // the workaround is to mention roles like @everyone or @here, or some custom role like this
+        content: `${
+          this.reminderMentionRoleID ? `<@&${this.reminderMentionRoleID}> ` : ""
+        }${message}`,
+      }),
+    });
+  }
+
+  private shouldNotifyEvent(event: BabyCareEvent) {
+    if (event instanceof BottleFeedEvent || event instanceof NursingEvent) {
+      return event.profile.enableFeedingNotification;
+    } else if (event instanceof PumpingEvent) {
+      return event.profile.enablePumpingNotification;
+    }
+    return event.profile.enableOtherActivitiesNotification;
+  }
+
+  // when a profile is updated, update the profile cache
+  // also update the associated event reminders
+  async profileUpdated(profile: BabyCareProfile) {
+    BabyCareEventManager.notificationService.notify(
+      `[Profile] ${profile.nickname ?? profile.name}`,
+      `Profile updated`
+    );
+
+    this._reminderProfileMap.set(profile.id, serializeProfile(profile));
+  }
+
+  // when a profile is removed, remove it from the profile cache
+  // and remove all associated event reminders
+  async profileRemoved(profile: BabyCareProfile) {
+    BabyCareEventManager.notificationService.notify(
+      `[Profile] ${profile.nickname ?? profile.name}`,
+      `Profile removed! All associated data are also removed.`
+    );
+
+    this._reminderProfileMap.delete(profile.id);
+    this._reminderEventMap.forEach((reminder) => {
+      if (reminder.profileId === profile.id) {
+        this._reminderEventMap.delete(reminder.eventId);
+      }
+    });
+  }
+
+  private updateReminderForEvent(event: BabyCareEvent) {
+    let reminder: BabyCareEventReminder;
+    if (event instanceof BottleFeedEvent || event instanceof NursingEvent) {
+      reminder = new FeedingEventReminder(event);
+    } else if (event instanceof PumpingEvent) {
+      reminder = new PumpingEventReminder(event);
+    } else {
+      return;
+    }
+
+    let currentReminder: BabyCareEventReminder | undefined;
+    this._reminderEventMap.forEach((value) => {
+      if (value.eventType === reminder.eventType) {
+        if (!currentReminder) {
+          currentReminder = value;
+        } else {
+          currentReminder =
+            currentReminder.eventTimestamp > value.eventTimestamp
+              ? currentReminder
+              : value;
+        }
+        this._reminderEventMap.delete(value.eventId);
+      }
+    });
+
+    if (!currentReminder) {
+      this._reminderEventMap.set(reminder.eventId, reminder);
+    } else if (reminder.eventTimestamp > currentReminder.eventTimestamp) {
+      if (currentReminder.eventId === reminder.eventId) {
+        reminder.lastNotifiedTimestamp = currentReminder.lastNotifiedTimestamp;
+      }
+      this._reminderEventMap.set(reminder.eventId, reminder);
+    }
+  }
+
+  // when an event created, add a corresponding reminder if needed
+  // also update/cache the associated profile if its notification settings have changed
+  // remove events of the same type that are in the past
+  async eventCreated(event: BabyCareEvent) {
+    if (this.shouldNotifyEvent(event)) {
+      BabyCareEventManager.notificationService.notify(
+        `[Log] ${event.profile.nickname ?? event.profile.name}`,
+        `${event.notificationSummary}`
+      );
+    }
+
+    // if the event's associated profile has not been cached before or differs
+    // from the cache, update the profile cache
+    const newProfile = serializeProfile(event.profile);
+    if (
+      !this._reminderProfileMap.has(event.profile.id) ||
+      this._reminderProfileMap.get(event.profile.id)?.HASH !== newProfile.HASH
+    ) {
+      this._reminderProfileMap.set(event.profile.id, newProfile);
+    }
+
+    // add corresponding reminder
+    this.updateReminderForEvent(event);
+  }
+
+  // when an event is updated, if it's not already registered, it means it's not the latest
+  // events of the type that we want to remind, so we'll skip it
+  // NOTE: the more thorough check is to check if event of the same type is already registered
+  // or not, if not, we will
+  async eventUpdated(event: BabyCareEvent) {
+    if (this.shouldNotifyEvent(event)) {
+      BabyCareEventManager.notificationService.notify(
+        `[Update] ${event.profile.nickname ?? event.profile.name}`,
+        `${event.notificationSummary}`
+      );
+    }
+
+    // if the event's associated profile has not been cached before or differs
+    // from the cache, update the profile cache
+    const newProfile = serializeProfile(event.profile);
+    if (
+      !this._reminderProfileMap.has(event.profile.id) ||
+      this._reminderProfileMap.get(event.profile.id)?.HASH !== newProfile.HASH
+    ) {
+      this._reminderProfileMap.set(event.profile.id, newProfile);
+    }
+
+    // add corresponding reminder
+    this.updateReminderForEvent(event);
+  }
+
+  // when an event is removed, remove its associated reminder
+  async eventRemoved(event: BabyCareEvent) {
+    this._reminderEventMap.delete(event.id);
+  }
+}
+
+export class BabyCareEventManager {
+  private static readonly _serverEventEmitter = new EventEmitter();
+  public static readonly notificationService =
+    new BabyCareEventNotificationService();
+
+  // Facilitate server-sent events (SSE)
+  // See https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events
+  static getServerEventEmitter() {
+    return BabyCareEventManager._serverEventEmitter;
   }
 }
