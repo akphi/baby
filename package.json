@@ -12,9 +12,12 @@
     "check:update": "npm-check-updates --interactive",
     "build": "npm-run-all build:home",
     "build:home": "remix build",
+    "build:home-fix": "touch ./build/index.js.map && echo \"{\\\"version\\\": 3, \\\"sources\\\": [], \\\"sourcesContent\\\": [], \\\"mappings\\\": \\\"\\\", \\\"names\\\": []}\" > ./build/index.js.map",
+    "bundle:docker": "docker build -t home:local .",
     "dev": "remix dev",
     "dev:ui": "remix dev --manual",
     "start": "npm-run-all --parallel start:home start:zigbee",
+    "start:docker": "docker run -d -p 3000:3000 -p 3001:3001 -p 1880:1880 -v `pwd`/../home-storage:/app/home-storage home:local",
     "start:home": "remix-serve ./build/index.js",
     "start:zigbee": "node-red --settings node-red.config.cjs",
     "typecheck": "tsc"
