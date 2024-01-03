@@ -375,7 +375,7 @@ export class BathEvent extends BabyCareEvent {
 }
 
 const BABY_CARE_DB_CONFIG: Options = {
-  dbName: "../home-storage/baby-care/db.test.sqlite",
+  dbName: "../home-storage/baby-care/db.sqlite",
   type: "sqlite",
   entities: [
     BabyCareProfile,
