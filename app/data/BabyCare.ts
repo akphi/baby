@@ -62,7 +62,7 @@ export class BabyCareProfile {
   @Property({ type: "string", persist: false })
   HASH!: string;
 
-  @PrimaryKey({ type: "string" })
+  @PrimaryKey({ type: "string", unique: true })
   readonly id = uuid();
 
   @Property({ type: "string" })
@@ -189,7 +189,7 @@ export abstract class BabyCareEvent {
   @Property({ type: "string", persist: false })
   HASH!: string;
 
-  @PrimaryKey({ type: "string" })
+  @PrimaryKey({ type: "string", unique: true })
   readonly id = uuid();
 
   @ManyToOne(() => BabyCareProfile, { onDelete: "cascade" })
@@ -375,7 +375,7 @@ export class BathEvent extends BabyCareEvent {
 }
 
 const BABY_CARE_DB_CONFIG: Options = {
-  dbName: "../home-storage/baby-care.sqlite",
+  dbName: "../home-storage/baby-care/db.test.sqlite",
   type: "sqlite",
   entities: [
     BabyCareProfile,
