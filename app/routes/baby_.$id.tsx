@@ -161,14 +161,9 @@ export default function BabyCare() {
             className={cn(
               "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white"
             )}
-            onClick={() => revalidater.revalidate()}
+            onClick={() => setProfileToEdit(profile)}
           >
-            {/* TODO?: should we show some indicator when syncing fails or when it's deemed undesirable */}
-            <SyncIcon
-              className={cn("text-4xl", {
-                "animate-spin": revalidater.state === "loading",
-              })}
-            />
+            <ChildCareIcon className="text-4xl" />
           </button>
           <Divider
             orientation="vertical"
@@ -227,9 +222,14 @@ export default function BabyCare() {
             className={cn(
               "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white"
             )}
-            onClick={() => setProfileToEdit(profile)}
+            onClick={() => revalidater.revalidate()}
           >
-            <ChildCareIcon className="text-4xl" />
+            {/* TODO?: should we show some indicator when syncing fails or when it's deemed undesirable */}
+            <SyncIcon
+              className={cn("text-4xl", {
+                "animate-spin": revalidater.state === "loading",
+              })}
+            />
           </button>
         </div>
         {profileToEdit && (
