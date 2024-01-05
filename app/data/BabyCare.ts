@@ -15,7 +15,7 @@ import { add, formatDistanceToNowStrict, startOfDay } from "date-fns";
 import { v4 as uuid } from "uuid";
 import { hasher as initHasher } from "node-object-hash";
 import { readFileSync } from "node:fs";
-import { returnUndefOnError } from "../shared/CommonUtils";
+import { getNullableEntry, returnUndefOnError } from "../shared/CommonUtils";
 import {
   assertTrue,
   guaranteeNonEmptyString,
@@ -1413,7 +1413,7 @@ class BabyCareEventNotificationService {
       },
       body: JSON.stringify({
         username:
-          process.env.NODE_ENV === "development" ? `{TEST} ${sender}` : sender,
+          process.env.NODE_ENV === "development" ? `{DEV} ${sender}` : sender,
         // NOTE: Discord has a weird issue that I didn't have time to investigate where
         // webhook bots seem to not be able to raise more than 3 push notifications on IOS
         // e.g. after sending 3 notifications, the 4th will not be shown as push nofication
@@ -1471,26 +1471,28 @@ class BabyCareEventNotificationService {
       return;
     }
 
-    let currentReminder: BabyCareEventReminder | undefined;
-    this._reminderEventMap.forEach((value) => {
-      if (value.eventType === reminder.eventType) {
-        if (!currentReminder) {
-          currentReminder = value;
-        } else {
-          currentReminder =
-            currentReminder.eventTimestamp > value.eventTimestamp
-              ? currentReminder
-              : value;
-        }
-        this._reminderEventMap.delete(value.eventId);
+    // find all reminder for the same event type
+    const reminders = Array.from(this._reminderEventMap.values())
+      .filter((_reminder) => _reminder.eventType === reminder.eventType)
+      // sort descending by event timestamp
+      .sort((a, b) => b.eventTimestamp - a.eventTimestamp);
+    const latestReminder = getNullableEntry(reminders, 0);
+    // cleanup all stale reminders except for the latest reminder
+    reminders.forEach((_reminder, idx) => {
+      if (idx !== 0) {
+        this._reminderEventMap.delete(_reminder.eventId);
       }
     });
 
-    if (!currentReminder) {
+    // if there is no latest reminder, just simply add the new reminder
+    if (!latestReminder) {
       this._reminderEventMap.set(reminder.eventId, reminder);
-    } else if (reminder.eventTimestamp > currentReminder.eventTimestamp) {
-      if (currentReminder.eventId === reminder.eventId) {
-        reminder.lastNotifiedTimestamp = currentReminder.lastNotifiedTimestamp;
+    } else if (reminder.eventTimestamp > latestReminder.eventTimestamp) {
+      // if the new reminder is more recent than the latest reminder, update the latest reminder
+      if (latestReminder.eventId === reminder.eventId) {
+        reminder.lastNotifiedTimestamp = latestReminder.lastNotifiedTimestamp;
+      } else {
+        this._reminderEventMap.delete(latestReminder.eventId);
       }
       this._reminderEventMap.set(reminder.eventId, reminder);
     }
