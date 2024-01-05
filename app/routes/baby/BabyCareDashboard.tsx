@@ -7,6 +7,7 @@ import {
   type BottleFeedEvent,
   type PumpingEvent,
   type NursingEvent,
+  type MeasurementEvent,
 } from "../../data/BabyCare";
 import { useFetcher, useSubmit } from "@remix-run/react";
 import {
@@ -51,13 +52,17 @@ const InlineNumberInput = (props: {
   const _setValue = (value: number) => {
     const _min = min ?? 0;
     const _max = max ?? Number.MAX_SAFE_INTEGER;
-    setValue(Math.max(_min, Math.min(_max, value)) * (factor ?? 1));
+    const newValue = Math.max(_min, Math.min(_max, value)) * (factor ?? 1);
+    // NOTE: trick to avoid floating point error in JS
+    // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
+    // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
+    setValue((step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue);
   };
 
   return (
     <div
       className={cn(
-        "h-8 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
+        "h-8 w-28 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
         className
       )}
     >
@@ -136,6 +141,10 @@ const EventQuickEditAction = forwardRef(
               action = BabyCareAction.REMOVE_NURSING_EVENT;
               break;
             }
+            case BabyCareEventType.MEASUREMENT: {
+              action = BabyCareAction.REMOVE_MEASUREMENT_EVENT;
+              break;
+            }
             default:
               return;
           }
@@ -184,6 +193,12 @@ const EventQuickEditAction = forwardRef(
     const [rightDuration, setRightDuration] = useState(
       (data as SerializeFrom<NursingEvent>).rightDuration
     );
+    const [height, setHeight] = useState(
+      (data as SerializeFrom<MeasurementEvent>).height
+    );
+    const [weight, setWeight] = useState(
+      (data as SerializeFrom<MeasurementEvent>).weight
+    );
 
     const debouncedUpdate = useMemo(
       () =>
@@ -192,6 +207,8 @@ const EventQuickEditAction = forwardRef(
             volume?: number | undefined;
             leftDuration?: number | undefined;
             rightDuration?: number | undefined;
+            height?: number | undefined;
+            weight?: number | undefined;
           }) => {
             let action: string;
             switch (data.TYPE) {
@@ -207,6 +224,10 @@ const EventQuickEditAction = forwardRef(
                 action = BabyCareAction.UPDATE_NURSING_EVENT;
                 break;
               }
+              case BabyCareEventType.MEASUREMENT: {
+                action = BabyCareAction.UPDATE_MEASUREMENT_EVENT;
+                break;
+              }
               default:
                 return;
             }
@@ -217,6 +238,8 @@ const EventQuickEditAction = forwardRef(
                 volume: formData?.volume,
                 leftDuration: formData?.leftDuration,
                 rightDuration: formData?.rightDuration,
+                height: formData?.height,
+                weight: formData?.weight,
               }),
               { method: HttpMethod.POST }
             );
@@ -236,9 +259,11 @@ const EventQuickEditAction = forwardRef(
             {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
               data.TYPE === BabyCareEventType.PUMPING) && (
               <InlineNumberInput
-                value={volume}
-                unit={"ml"}
+                min={0}
+                max={1000}
                 step={5}
+                unit={"ml"}
+                value={volume}
                 setValue={(value) => {
                   debouncedUpdate.cancel();
                   setVolume(value);
@@ -250,10 +275,12 @@ const EventQuickEditAction = forwardRef(
             {data.TYPE === BabyCareEventType.NURSING && (
               <>
                 <InlineNumberInput
-                  value={leftDuration}
-                  unit={"mn"}
-                  factor={60 * 1000}
+                  min={0}
+                  max={60}
                   step={1}
+                  factor={60 * 1000}
+                  unit={"mn"}
+                  value={leftDuration}
                   setValue={(value) => {
                     debouncedUpdate.cancel();
                     setLeftDuration(value);
@@ -266,10 +293,12 @@ const EventQuickEditAction = forwardRef(
                   </div>
                 </InlineNumberInput>
                 <InlineNumberInput
-                  value={rightDuration}
-                  unit={"mn"}
-                  factor={60 * 1000}
+                  min={0}
+                  max={60}
                   step={1}
+                  factor={60 * 1000}
+                  unit={"mn"}
+                  value={rightDuration}
                   setValue={(value) => {
                     debouncedUpdate.cancel();
                     setRightDuration(value);
@@ -279,6 +308,44 @@ const EventQuickEditAction = forwardRef(
                 >
                   <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
                     R
+                  </div>
+                </InlineNumberInput>
+              </>
+            )}
+            {data.TYPE === BabyCareEventType.MEASUREMENT && (
+              <>
+                <InlineNumberInput
+                  min={0}
+                  max={300}
+                  step={1}
+                  unit="cm"
+                  value={height ?? 0}
+                  setValue={(value) => {
+                    debouncedUpdate.cancel();
+                    setHeight(value);
+                    debouncedUpdate({ height: value, weight });
+                  }}
+                  className="mr-2"
+                >
+                  <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+                    H
+                  </div>
+                </InlineNumberInput>
+                <InlineNumberInput
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  unit="kg"
+                  value={weight ?? 0}
+                  setValue={(value) => {
+                    debouncedUpdate.cancel();
+                    setWeight(value);
+                    debouncedUpdate({ weight: value, height });
+                  }}
+                  className="mr-2"
+                >
+                  <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+                    W
                   </div>
                 </InlineNumberInput>
               </>
@@ -385,6 +452,7 @@ export const BabyCareDashboard = (props: {
           BabyCareEventType.BOTTLE_FEED,
           BabyCareEventType.NURSING,
           BabyCareEventType.PUMPING,
+          BabyCareEventType.MEASUREMENT,
         ] as string[]
       ).includes(fetcher.data.event.TYPE)
     ) {

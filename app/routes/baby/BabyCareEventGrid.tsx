@@ -1,6 +1,7 @@
 import { AgGridReact } from "@ag-grid-community/react";
 import type { SerializeFrom } from "@remix-run/node";
 import {
+  BabyCareAction,
   BabyCareEventType,
   type BabyCareEvent,
   type BabyCareProfile,
@@ -8,7 +9,8 @@ import {
   type DiaperChangeEvent,
   type NursingEvent,
   type PumpingEvent,
-  BabyCareAction,
+  type MeasurementEvent,
+  type MedicineEvent,
 } from "../../data/BabyCare";
 import { ClientSideRowModelModule } from "@ag-grid-community/client-side-row-model";
 import { add, format, isEqual, parseISO, startOfDay, sub } from "date-fns";
@@ -58,13 +60,17 @@ const InlineNumberInput = (props: {
   const _setValue = (value: number) => {
     const _min = min ?? 0;
     const _max = max ?? Number.MAX_SAFE_INTEGER;
-    setValue(Math.max(_min, Math.min(_max, value)) * (factor ?? 1));
+    const newValue = Math.max(_min, Math.min(_max, value)) * (factor ?? 1);
+    // NOTE: trick to avoid floating point error in JS
+    // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
+    // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
+    setValue((step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue);
   };
 
   return (
     <div
       className={cn(
-        "h-6 w-22 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
+        "h-6 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
         className
       )}
     >
@@ -113,157 +119,191 @@ const InlineNumberInput = (props: {
   );
 };
 
-const BottleFeedEventOverview = (props: {
-  data: SerializeFrom<BottleFeedEvent>;
-}) => {
+const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
   const { data } = props;
-  const [volume, setVolume] = useState(data.volume);
+
+  const [volume, setVolume] = useState(
+    (data as SerializeFrom<BottleFeedEvent | PumpingEvent>).volume
+  );
+  const [leftDuration, setLeftDuration] = useState(
+    (data as SerializeFrom<NursingEvent>).leftDuration
+  );
+  const [rightDuration, setRightDuration] = useState(
+    (data as SerializeFrom<NursingEvent>).rightDuration
+  );
+  const [height, setHeight] = useState(
+    (data as SerializeFrom<MeasurementEvent>).height
+  );
+  const [weight, setWeight] = useState(
+    (data as SerializeFrom<MeasurementEvent>).weight
+  );
+
   const submit = useSubmit();
   const debouncedUpdate = useMemo(
     () =>
-      debounce((_volume: number) => {
-        submit(
-          pruneFormData({
-            __action: BabyCareAction.UPDATE_BOTTLE_FEED_EVENT,
-            ...data,
-            volume: _volume,
-          }),
-          { method: HttpMethod.POST }
-        );
-      }, 200),
-    [submit, data]
-  );
-
-  return (
-    <InlineNumberInput
-      value={volume}
-      unit="ml"
-      step={5}
-      setValue={(value) => {
-        debouncedUpdate.cancel();
-        setVolume(value);
-        debouncedUpdate(value);
-      }}
-      className="mr-2"
-    />
-    // TODO?: show formula volume
-  );
-};
-
-const PumpingEventOverview = (props: { data: SerializeFrom<PumpingEvent> }) => {
-  const { data } = props;
-  const [volume, setVolume] = useState(data.volume);
-  const submit = useSubmit();
-  const debouncedUpdate = useMemo(
-    () =>
-      debounce((_volume: number) => {
-        submit(
-          pruneFormData({
-            __action: BabyCareAction.UPDATE_PUMPING_EVENT,
-            ...data,
-            volume: _volume,
-          }),
-          { method: HttpMethod.POST }
-        );
-      }, 200),
-    [submit, data]
-  );
-
-  return (
-    <InlineNumberInput
-      value={volume}
-      unit="ml"
-      step={5}
-      setValue={(value) => {
-        debouncedUpdate.cancel();
-        setVolume(value);
-        debouncedUpdate(value);
-      }}
-      className="mr-2"
-    />
-  );
-};
-
-const NursingEventOverview = (props: { data: SerializeFrom<NursingEvent> }) => {
-  const { data } = props;
-  const [leftDuration, setLeftDuration] = useState(data.leftDuration);
-  const [rightDuration, setRightDuration] = useState(data.rightDuration);
-  const submit = useSubmit();
-  const debouncedUpdate = useMemo(
-    () =>
-      debounce((_leftDuration: number, _rightDuration: number) => {
-        submit(
-          pruneFormData({
-            __action: BabyCareAction.UPDATE_NURSING_EVENT,
-            ...data,
-            leftDuration: _leftDuration,
-            rightDuration: _rightDuration,
-          }),
-          { method: HttpMethod.POST }
-        );
-      }, 200),
+      debounce(
+        (formData: {
+          volume?: number | undefined;
+          leftDuration?: number | undefined;
+          rightDuration?: number | undefined;
+          height?: number | undefined;
+          weight?: number | undefined;
+        }) => {
+          let action: string;
+          switch (data.TYPE) {
+            case BabyCareEventType.BOTTLE_FEED: {
+              action = BabyCareAction.UPDATE_BOTTLE_FEED_EVENT;
+              break;
+            }
+            case BabyCareEventType.PUMPING: {
+              action = BabyCareAction.UPDATE_PUMPING_EVENT;
+              break;
+            }
+            case BabyCareEventType.NURSING: {
+              action = BabyCareAction.UPDATE_NURSING_EVENT;
+              break;
+            }
+            case BabyCareEventType.MEASUREMENT: {
+              action = BabyCareAction.UPDATE_MEASUREMENT_EVENT;
+              break;
+            }
+            default:
+              return;
+          }
+          submit(
+            pruneFormData({
+              __action: action,
+              ...data,
+              volume: formData?.volume,
+              leftDuration: formData?.leftDuration,
+              rightDuration: formData?.rightDuration,
+              height: formData?.height,
+              weight: formData?.weight,
+            }),
+            { method: HttpMethod.POST }
+          );
+        },
+        200
+      ),
     [submit, data]
   );
 
   return (
     <>
-      <InlineNumberInput
-        value={leftDuration}
-        unit={"mn"}
-        factor={60 * 1000}
-        step={1}
-        setValue={(value) => {
-          debouncedUpdate.cancel();
-          setLeftDuration(value);
-          debouncedUpdate(value, rightDuration);
-        }}
-        className="mr-2"
-      >
-        <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
-          L
-        </div>
-      </InlineNumberInput>
-      <InlineNumberInput
-        value={rightDuration}
-        unit={"mn"}
-        factor={60 * 1000}
-        step={1}
-        setValue={(value) => {
-          debouncedUpdate.cancel();
-          setRightDuration(value);
-          debouncedUpdate(leftDuration, value);
-        }}
-        className="mr-2"
-      >
-        <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
-          R
-        </div>
-      </InlineNumberInput>
+      {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
+        data.TYPE === BabyCareEventType.PUMPING) && (
+        <InlineNumberInput
+          min={0}
+          max={1000}
+          step={5}
+          unit={"ml"}
+          value={volume}
+          setValue={(value) => {
+            debouncedUpdate.cancel();
+            setVolume(value);
+            debouncedUpdate({ volume: value });
+          }}
+          className="mr-2"
+        />
+      )}
+      {data.TYPE === BabyCareEventType.BOTTLE_FEED &&
+        (data as SerializeFrom<BottleFeedEvent>).formulaMilkVolume && (
+          <div className="h-6 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative">
+            <div className="w-full h-full flex rounded justify-center items-center">
+              <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+                F
+              </div>
+              <div className="flex items-center font-mono text-xs">
+                {(data as SerializeFrom<BottleFeedEvent>).formulaMilkVolume}
+              </div>
+              <div className="flex items-center font-mono text-2xs ml-0.5">
+                ml
+              </div>
+            </div>
+          </div>
+        )}
+      {data.TYPE === BabyCareEventType.NURSING && (
+        <>
+          <InlineNumberInput
+            value={leftDuration}
+            unit={"mn"}
+            factor={60 * 1000}
+            step={1}
+            setValue={(value) => {
+              debouncedUpdate.cancel();
+              setLeftDuration(value);
+              debouncedUpdate({ leftDuration: value, rightDuration });
+            }}
+            className="mr-2"
+          >
+            <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+              L
+            </div>
+          </InlineNumberInput>
+          <InlineNumberInput
+            value={rightDuration}
+            unit={"mn"}
+            factor={60 * 1000}
+            step={1}
+            setValue={(value) => {
+              debouncedUpdate.cancel();
+              setRightDuration(value);
+              debouncedUpdate({ leftDuration, rightDuration: value });
+            }}
+            className="mr-2"
+          >
+            <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+              R
+            </div>
+          </InlineNumberInput>
+        </>
+      )}
+      {data.TYPE === BabyCareEventType.MEASUREMENT && (
+        <>
+          <InlineNumberInput
+            min={0}
+            max={300}
+            step={1}
+            unit="cm"
+            value={height ?? 0}
+            setValue={(value) => {
+              debouncedUpdate.cancel();
+              setHeight(value);
+              debouncedUpdate({ height: value, weight });
+            }}
+            className="mr-2"
+          >
+            <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+              H
+            </div>
+          </InlineNumberInput>
+          <InlineNumberInput
+            min={0}
+            max={100}
+            step={0.1}
+            unit="kg"
+            value={weight ?? 0}
+            setValue={(value) => {
+              debouncedUpdate.cancel();
+              setWeight(value);
+              debouncedUpdate({ weight: value, height });
+            }}
+            className="mr-2"
+          >
+            <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
+              W
+            </div>
+          </InlineNumberInput>
+        </>
+      )}
+      {data.TYPE === BabyCareEventType.MEDICINE &&
+        (data as SerializeFrom<MedicineEvent>).prescription && (
+          <div className="flex items-center rounded h-6 text-2xs text-slate-600 bg-indigo-100 px-2">
+            {(data as SerializeFrom<MedicineEvent>).prescription}
+          </div>
+        )}
     </>
   );
-};
-
-const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
-  const { data } = props;
-
-  switch (data?.TYPE) {
-    case BabyCareEventType.BOTTLE_FEED:
-      return (
-        <BottleFeedEventOverview
-          data={data as SerializeFrom<BottleFeedEvent>}
-        />
-      );
-    case BabyCareEventType.PUMPING:
-      return (
-        <PumpingEventOverview data={data as SerializeFrom<PumpingEvent>} />
-      );
-    case BabyCareEventType.NURSING:
-      return (
-        <NursingEventOverview data={data as SerializeFrom<NursingEvent>} />
-      );
-    default:
-      return <></>;
-  }
 };
 
 const EventOverviewRenderer = (

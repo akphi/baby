@@ -9,12 +9,6 @@ export default {
         "3xs": "0.5rem",
         "4xs": "0.45rem",
       },
-      width: {
-        "22": "5.5rem",
-      },
-      height: {
-        "half-screen": "50vh",
-      },
     },
   },
   plugins: [],
