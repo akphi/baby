@@ -20,7 +20,10 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChildToyIcon,
+  MeasurementIcon,
+  MedicineIcon,
   MoreVertIcon,
+  NoteIcon,
   NursingIcon,
   PeeIcon,
   PoopIcon,
@@ -333,6 +336,15 @@ const EventTypeRenderer = (
       {data?.TYPE === BabyCareEventType.BATH && (
         <BathIcon className="h-full w-5 flex items-center text-base" />
       )}
+      {data?.TYPE === BabyCareEventType.MEASUREMENT && (
+        <MeasurementIcon className="h-full w-5 flex items-center text-base" />
+      )}
+      {data?.TYPE === BabyCareEventType.MEDICINE && (
+        <MedicineIcon className="h-full w-5 flex items-center text-base" />
+      )}
+      {data?.TYPE === BabyCareEventType.NOTE && (
+        <NoteIcon className="h-full w-5 flex items-center text-base" />
+      )}
       {data && (
         <div className="flex items-center justify-center rounded uppercase ml-1 text-3xs font-medium leading-4 bg-slate-500 px-1 text-slate-100">
           {data.TYPE === BabyCareEventType.DIAPER_CHANGE
@@ -463,6 +475,9 @@ export const BabyCareEventGrid = (props: {
                 [BabyCareEventType.BATH]: [],
                 [BabyCareEventType.PLAY]: [],
                 [BabyCareEventType.NURSING]: [],
+                [BabyCareEventType.MEASUREMENT]: [],
+                [BabyCareEventType.MEDICINE]: [],
+                [BabyCareEventType.NOTE]: [],
               },
               groupBy(events, (event) =>
                 event.TYPE === BabyCareEventType.DIAPER_CHANGE
@@ -509,6 +524,15 @@ export const BabyCareEventGrid = (props: {
                 )}
                 {type === BabyCareEventType.BATH && (
                   <BathIcon className="text-[22px] leading-[22px]" />
+                )}
+                {type === BabyCareEventType.MEASUREMENT && (
+                  <MeasurementIcon className="text-[22px] leading-[22px]" />
+                )}
+                {type === BabyCareEventType.MEDICINE && (
+                  <MedicineIcon className="text-[22px] leading-[22px]" />
+                )}
+                {type === BabyCareEventType.NOTE && (
+                  <NoteIcon className="text-[22px] leading-[22px]" />
                 )}
               </div>
               <div className="rounded  text-slate-100 bg-slate-500 text-2xs font-semibold px-1 h-4 flex items-center justify-center ml-1">

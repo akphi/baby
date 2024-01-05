@@ -17,6 +17,10 @@ import {
   type PumpingEvent,
   type NursingEvent,
   type DiaperChangeEvent,
+  type PlayEvent,
+  type SleepEvent,
+  type MeasurementEvent,
+  type MedicineEvent,
 } from "../../data/BabyCare";
 import { useSubmit } from "@remix-run/react";
 import { useState } from "react";
@@ -42,8 +46,14 @@ export const BabyCareEventEditor = (props: {
 
   const [time, setTime] = useState(parseISO(data.time));
   const [comment, setComment] = useState(data.comment ?? undefined);
-  const [duration, setDuration] = useState(data.duration ?? undefined);
 
+  const [duration, setDuration] = useState(
+    (
+      data as SerializeFrom<
+        BottleFeedEvent | PumpingEvent | PlayEvent | SleepEvent
+      >
+    ).duration ?? undefined
+  );
   const [volume, setVolume] = useState(
     (data as SerializeFrom<BottleFeedEvent | PumpingEvent>).volume
   );
@@ -56,12 +66,20 @@ export const BabyCareEventEditor = (props: {
   const [rightDuration, setRightDuration] = useState(
     (data as SerializeFrom<NursingEvent>).rightDuration
   );
-
   const [pee, setPee] = useState(
     (data as SerializeFrom<DiaperChangeEvent>).pee
   );
   const [poop, setPoop] = useState(
     (data as SerializeFrom<DiaperChangeEvent>).poop
+  );
+  const [height, setHeight] = useState(
+    (data as SerializeFrom<MeasurementEvent>).height
+  );
+  const [weight, setWeight] = useState(
+    (data as SerializeFrom<MeasurementEvent>).weight
+  );
+  const [prescription, setPrescription] = useState(
+    (data as SerializeFrom<MedicineEvent>).prescription
   );
 
   const onSubmit = () => {
@@ -95,6 +113,18 @@ export const BabyCareEventEditor = (props: {
         action = BabyCareAction.UPDATE_SLEEP_EVENT;
         break;
       }
+      case BabyCareEventType.MEASUREMENT: {
+        action = BabyCareAction.UPDATE_MEASUREMENT_EVENT;
+        break;
+      }
+      case BabyCareEventType.MEDICINE: {
+        action = BabyCareAction.UPDATE_MEDICINE_EVENT;
+        break;
+      }
+      case BabyCareEventType.NOTE: {
+        action = BabyCareAction.UPDATE_NOTE_EVENT;
+        break;
+      }
       default:
         return;
     }
@@ -103,16 +133,19 @@ export const BabyCareEventEditor = (props: {
         __action: action,
         ...data,
         time: time.toISOString(),
-        duration,
         comment,
 
         // attributes from specific events
+        duration,
         volume,
         formulaMilkVolume,
         leftDuration,
         rightDuration,
         pee,
         poop,
+        height,
+        weight,
+        prescription,
       }),
       { method: HttpMethod.POST }
     );
@@ -236,21 +269,74 @@ export const BabyCareEventEditor = (props: {
               />
             </div>
           )}
+          {data.TYPE === BabyCareEventType.MEASUREMENT && (
+            <>
+              <div className="w-full py-2">
+                <NumberInput
+                  label="Height"
+                  min={0}
+                  max={300}
+                  step={1}
+                  unit="cm"
+                  value={height}
+                  setValue={(value) => {
+                    setHeight(value);
+                  }}
+                  className="flex-1"
+                />
+              </div>
+              <div className="w-full py-2">
+                <NumberInput
+                  label="Weight"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  unit="kg"
+                  value={weight}
+                  setValue={(value) => {
+                    setWeight(value);
+                  }}
+                  className="flex-1"
+                />
+              </div>
+            </>
+          )}
+          {data.TYPE === BabyCareEventType.MEDICINE && (
+            <div className="w-full py-2">
+              <TextField
+                label="Prescription"
+                value={prescription}
+                multiline
+                rows={3}
+                onChange={(event) => {
+                  setPrescription(event.target.value);
+                }}
+                variant="outlined"
+                className="w-full"
+              />
+            </div>
+          )}
           <Divider className="my-2" />
-          <div className="w-full py-2">
-            <NumberInput
-              label="Duration"
-              min={0}
-              step={5}
-              unit="min"
-              factor={60 * 1000}
-              value={duration}
-              setValue={(value) => {
-                setDuration(value);
-              }}
-              className="flex-1"
-            />
-          </div>
+          {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
+            data.TYPE === BabyCareEventType.PUMPING ||
+            data.TYPE === BabyCareEventType.PLAY ||
+            data.TYPE === BabyCareEventType.SLEEP) && (
+            <div className="w-full py-2">
+              <NumberInput
+                label="Duration"
+                min={0}
+                max={60}
+                step={1}
+                unit="min"
+                factor={60 * 1000}
+                value={duration}
+                setValue={(value) => {
+                  setDuration(value);
+                }}
+                className="flex-1"
+              />
+            </div>
+          )}
           <div className="w-full py-2">
             <TextField
               label="Comment"
@@ -314,6 +400,18 @@ export const BabyCareEventEditor = (props: {
                 }
                 case BabyCareEventType.SLEEP: {
                   action = BabyCareAction.REMOVE_SLEEP_EVENT;
+                  break;
+                }
+                case BabyCareEventType.MEASUREMENT: {
+                  action = BabyCareAction.REMOVE_MEASUREMENT_EVENT;
+                  break;
+                }
+                case BabyCareEventType.MEDICINE: {
+                  action = BabyCareAction.REMOVE_MEDICINE_EVENT;
+                  break;
+                }
+                case BabyCareEventType.NOTE: {
+                  action = BabyCareAction.REMOVE_NOTE_EVENT;
                   break;
                 }
                 default:

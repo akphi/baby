@@ -34,7 +34,11 @@ export const NumberInput = (
   const _setValue = (val: number) => {
     const _min = min ?? 0;
     const _max = max ?? Number.MAX_SAFE_INTEGER;
-    setValue(Math.max(_min, Math.min(_max, val)) * (factor ?? 1));
+    const newValue = Math.max(_min, Math.min(_max, val)) * (factor ?? 1);
+    // NOTE: trick to avoid floating point error in JS
+    // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
+    // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
+    setValue((step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue);
   };
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     let newValue = parseInt(event.target.value);

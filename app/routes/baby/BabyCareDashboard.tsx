@@ -17,6 +17,9 @@ import {
   ChildToyIcon,
   CloseIcon,
   DeleteIcon,
+  MeasurementIcon,
+  MedicineIcon,
+  NoteIcon,
   NursingIcon,
   PeeIcon,
   PoopIcon,
@@ -389,8 +392,9 @@ export const BabyCareDashboard = (props: {
     }
   }, [fetcher.data]);
 
+  // TODO?: customize this view by stage (newborn, infant, toddler, etc.)
   return (
-    <div className="flex justify-center items-center w-full p-6">
+    <div className="flex flex-col justify-center items-center w-full p-6">
       <div className="flex flex-col justify-center items-center p-6 bg-white rounded-xl shadow-md w-fit">
         <div className="flex justify-center items-center">
           <IconButton
@@ -515,6 +519,53 @@ export const BabyCareDashboard = (props: {
             data={eventToQuickEdit}
             onClose={() => setEventToQuickEdit(undefined)}
           />
+        </div>
+      </div>
+
+      <div className="flex flex-col justify-center items-center mt-6 p-6 bg-white rounded-xl shadow-md w-fit">
+        <div className="flex justify-center items-center">
+          <IconButton
+            className="w-24 h-24"
+            onClick={() =>
+              fetcher.submit(
+                {
+                  __action: BabyCareAction.CREATE_MEASUREMENT_EVENT,
+                  id: profile.id,
+                },
+                { method: HttpMethod.POST }
+              )
+            }
+          >
+            <MeasurementIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-5xl text-black" />
+          </IconButton>
+          <IconButton
+            className="w-24 h-24"
+            onClick={() =>
+              fetcher.submit(
+                {
+                  __action: BabyCareAction.CREATE_MEDICINE_EVENT,
+                  id: profile.id,
+                },
+                { method: HttpMethod.POST }
+              )
+            }
+          >
+            <MedicineIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-4xl text-black" />
+          </IconButton>
+          <IconButton
+            className="w-24 h-24"
+            onClick={() =>
+              fetcher.submit(
+                {
+                  __action: BabyCareAction.CREATE_NOTE_EVENT,
+                  id: profile.id,
+                },
+                { method: HttpMethod.POST }
+              )
+            }
+          >
+            <NoteIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-4xl text-black" />
+          </IconButton>
         </div>
       </div>
     </div>

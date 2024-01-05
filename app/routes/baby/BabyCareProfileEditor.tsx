@@ -19,6 +19,7 @@ import {
   type BabyCareProfile,
   Gender,
   BabyCareAction,
+  Stage,
 } from "../../data/BabyCare";
 import {
   DEFAULT_FEEDING_VOLUME,
@@ -190,6 +191,7 @@ export const BabyCareProfileEditor = (props: {
   const [dob, setDob] = useState(
     profile?.dob ? parseISO(profile?.dob) : new Date()
   );
+  const [stage, setStage] = useState(profile?.stage ?? Stage.NEWBORN);
   const [nickname, setNickname] = useState(profile?.nickname); // optional
   const [handle, setHandle] = useState(profile?.handle); // optional
 
@@ -260,6 +262,7 @@ export const BabyCareProfileEditor = (props: {
         name,
         gender,
         dob: dob.toISOString(),
+        stage,
         nickname,
         handle,
 
@@ -329,7 +332,6 @@ export const BabyCareProfileEditor = (props: {
           <div className="w-full py-2">
             <TextField
               label="Nickname"
-              name="nickname"
               value={nickname ?? ""}
               onChange={(event) => {
                 setNickname(event.target.value);
@@ -345,7 +347,6 @@ export const BabyCareProfileEditor = (props: {
               <Select
                 value={gender}
                 label="Gender"
-                name="gender"
                 onChange={(event: SelectChangeEvent) => {
                   setGender(event.target.value as Gender);
                 }}
@@ -366,6 +367,24 @@ export const BabyCareProfileEditor = (props: {
               disabled={Boolean(simple)}
               className="w-full"
             />
+          </div>
+          <div className="w-full py-2">
+            <FormControl className="w-full">
+              <InputLabel>Stage</InputLabel>
+              <Select
+                value={stage}
+                label="Stage"
+                onChange={(event: SelectChangeEvent) => {
+                  setStage(event.target.value as Stage);
+                }}
+                disabled={Boolean(simple)}
+              >
+                <MenuItem value={Stage.NEWBORN}>Newborn</MenuItem>
+                <MenuItem value={Stage.INFANT}>Infant</MenuItem>
+                <MenuItem value={Stage.TODDLER}>Toddler</MenuItem>
+                <MenuItem value={Stage.PRESCHOOLER}>Preschooler</MenuItem>
+              </Select>
+            </FormControl>
           </div>
           <div className="w-full py-2">
             <TextField

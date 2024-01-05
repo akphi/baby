@@ -34,6 +34,9 @@ export enum BabyCareEmoji {
   SNACK = "🍿",
   PEE = "💦",
   POOP = "💩",
+  MEASUREMENT = "🦒",
+  MEDICINE = "💊",
+  NOTE = "📝",
 }
 
 export const NursingIcon = (props: IconProps) => (
@@ -68,6 +71,15 @@ export const SnackIcon = (props: IconProps) => (
 );
 export const BreastPumpIcon = (props: IconProps) => (
   <Icon {...props}>{BabyCareEmoji.BREAST_PUMP}</Icon>
+);
+export const MeasurementIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.MEASUREMENT}</Icon>
+);
+export const MedicineIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.MEDICINE}</Icon>
+);
+export const NoteIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.NOTE}</Icon>
 );
 export const AddIcon = Add;
 export const AddCircleIcon = AddCircle;

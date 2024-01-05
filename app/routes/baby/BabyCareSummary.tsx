@@ -104,6 +104,7 @@ export const BabyCareSummary = (props: {
     (60 * 60 * 1000)
   }hr`;
 
+  // TODO?: customize this view by stage (newborn, infant, toddler, etc.)
   return (
     <div className="h-20 w-full fixed flex items-center justify-center bg-slate-700 z-10 shadow-md select-none">
       <div className="flex flex-col items-center text-slate-300">

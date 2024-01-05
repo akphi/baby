@@ -11,7 +11,7 @@ import {
   type EntityDTO,
 } from "@mikro-orm/core";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
-import { add, startOfDay } from "date-fns";
+import { add, formatDistanceToNowStrict, startOfDay } from "date-fns";
 import { v4 as uuid } from "uuid";
 import { hasher as initHasher } from "node-object-hash";
 import { readFileSync } from "node:fs";
@@ -53,6 +53,13 @@ export enum Gender {
   FEMALE = "FEMALE",
 }
 
+export enum Stage {
+  NEWBORN = "NEWBORN",
+  INFANT = "INFANT",
+  TODDLER = "TODDLER",
+  PRESCHOOLER = "PRESCHOOLER",
+}
+
 @Entity()
 export class BabyCareProfile {
   // Keep track of hash of event for change detection
@@ -73,6 +80,9 @@ export class BabyCareProfile {
 
   @Property({ type: DateType })
   dob: Date;
+
+  @Property({ type: () => Stage })
+  stage = Stage.NEWBORN;
 
   @Property({ type: "string", nullable: true })
   handle?: string | undefined;
@@ -129,10 +139,11 @@ export class BabyCareProfile {
   @Property({ type: "boolean" })
   enableOtherActivitiesNotification = false; // this would be too noisy so disabled by default
 
-  constructor(name: string, genderAtBirth: Gender, dob: Date) {
+  constructor(name: string, genderAtBirth: Gender, dob: Date, stage: Stage) {
     this.name = name;
     this.genderAtBirth = genderAtBirth;
     this.dob = dob;
+    this.stage = stage;
   }
 
   get hashCode() {
@@ -174,6 +185,9 @@ export enum BabyCareEventType {
   SLEEP = "Sleep",
   PLAY = "Play",
   BATH = "Bath",
+  MEASUREMENT = "Measure",
+  MEDICINE = "Medicine",
+  NOTE = "Note",
 
   __POOP = "Poop",
   __PEE = "Pee",
@@ -201,16 +215,8 @@ export abstract class BabyCareEvent {
   @Property({ type: Date })
   time: Date;
 
-  @Property({ type: "number", nullable: true })
-  duration?: number | undefined;
-
   @Property({ type: "string", nullable: true })
   comment?: string | undefined;
-
-  // TODO: if this is useful, we can have a separate table for tags per event type
-  // this would enable a quick way to add extra metadata to events
-  // @Property({ type: "string", nullable: true })
-  // tags?: string[] | undefined;
 
   constructor(time: Date, profile: BabyCareProfile) {
     this.time = time;
@@ -226,7 +232,6 @@ export abstract class BabyCareEvent {
       id: this.id,
       profile: this.profile.id,
       time: this.time,
-      duration: this.duration,
       comment: this.comment,
     };
   }
@@ -238,6 +243,9 @@ export abstract class BabyCareEvent {
 
 @Entity()
 export class BottleFeedEvent extends BabyCareEvent {
+  @Property({ type: "number", nullable: true })
+  duration?: number | undefined;
+
   @Property({ type: "number" })
   volume: number;
 
@@ -260,6 +268,7 @@ export class BottleFeedEvent extends BabyCareEvent {
   override get hashCode() {
     return HASHER.hash({
       ...this.hashContent,
+      duration: this.duration,
       volume: this.volume,
       formulaMilkVolume: this.formulaMilkVolume,
     });
@@ -295,6 +304,9 @@ export class NursingEvent extends BabyCareEvent {
 
 @Entity()
 export class PumpingEvent extends BabyCareEvent {
+  @Property({ type: "number", nullable: true })
+  duration?: number | undefined;
+
   @Property({ type: "number" })
   volume = 0;
 
@@ -309,6 +321,7 @@ export class PumpingEvent extends BabyCareEvent {
   override get hashCode() {
     return HASHER.hash({
       ...this.hashContent,
+      duration: this.duration,
       volume: this.volume,
     });
   }
@@ -343,6 +356,9 @@ export class DiaperChangeEvent extends BabyCareEvent {
 
 @Entity()
 export class SleepEvent extends BabyCareEvent {
+  @Property({ type: "number", nullable: true })
+  duration?: number | undefined;
+
   override get eventType() {
     return BabyCareEventType.SLEEP;
   }
@@ -350,16 +366,33 @@ export class SleepEvent extends BabyCareEvent {
   override get notificationSummary() {
     return `Baby sleeping`;
   }
+
+  override get hashCode() {
+    return HASHER.hash({
+      ...this.hashContent,
+      duration: this.duration,
+    });
+  }
 }
 
 @Entity()
 export class PlayEvent extends BabyCareEvent {
+  @Property({ type: "number", nullable: true })
+  duration?: number | undefined;
+
   override get eventType() {
     return BabyCareEventType.PLAY;
   }
 
   override get notificationSummary() {
     return `Baby playing`;
+  }
+
+  override get hashCode() {
+    return HASHER.hash({
+      ...this.hashContent,
+      duration: this.duration,
+    });
   }
 }
 
@@ -371,6 +404,69 @@ export class BathEvent extends BabyCareEvent {
 
   override get notificationSummary() {
     return `Bathing baby`;
+  }
+}
+
+@Entity()
+export class MeasurementEvent extends BabyCareEvent {
+  @Property({ type: "number", nullable: true })
+  height?: number | undefined;
+
+  @Property({ type: "number", nullable: true })
+  weight?: number | undefined;
+
+  override get eventType() {
+    return BabyCareEventType.MEASUREMENT;
+  }
+
+  override get notificationSummary() {
+    return `Measuring baby`;
+  }
+
+  override get hashCode() {
+    return HASHER.hash({
+      ...this.hashContent,
+      height: this.height,
+      weight: this.weight,
+    });
+  }
+}
+
+@Entity()
+export class MedicineEvent extends BabyCareEvent {
+  @Property({ type: "string" })
+  prescription = "";
+
+  override get eventType() {
+    return BabyCareEventType.MEDICINE;
+  }
+
+  override get notificationSummary() {
+    return `Giving baby medicine`;
+  }
+
+  override get hashCode() {
+    return HASHER.hash({
+      ...this.hashContent,
+      prescription: this.prescription,
+    });
+  }
+}
+
+@Entity()
+export class NoteEvent extends BabyCareEvent {
+  override get eventType() {
+    return BabyCareEventType.NOTE;
+  }
+
+  override get notificationSummary() {
+    return `Making note`;
+  }
+
+  override get hashCode() {
+    return HASHER.hash({
+      ...this.hashContent,
+    });
   }
 }
 
@@ -386,6 +482,9 @@ const BABY_CARE_DB_CONFIG: Options = {
     SleepEvent,
     PlayEvent,
     BathEvent,
+    MeasurementEvent,
+    MedicineEvent,
+    NoteEvent,
   ],
   discovery: { disableDynamicFileAccess: true },
 };
@@ -423,11 +522,24 @@ export enum BabyCareAction {
   CREATE_PLAY_EVENT = "baby-care.play-event.create",
   UPDATE_PLAY_EVENT = "baby-care.play-event.update",
   REMOVE_PLAY_EVENT = "baby-care.play-event.remove",
+
+  CREATE_MEASUREMENT_EVENT = "baby-care.measurement-event.create",
+  UPDATE_MEASUREMENT_EVENT = "baby-care.measurement-event.update",
+  REMOVE_MEASUREMENT_EVENT = "baby-care.measurement-event.remove",
+
+  CREATE_MEDICINE_EVENT = "baby-care.medicine-event.create",
+  UPDATE_MEDICINE_EVENT = "baby-care.medicine-event.update",
+  REMOVE_MEDICINE_EVENT = "baby-care.medicine-event.remove",
+
+  CREATE_NOTE_EVENT = "baby-care.note-event.create",
+  UPDATE_NOTE_EVENT = "baby-care.note-event.update",
+  REMOVE_NOTE_EVENT = "baby-care.note-event.remove",
 }
 
 export enum BabyCareServerEvent {
   PROFILE_DATA_CHANGE = "baby-care.profile-data-change",
 }
+
 export class BabyCareDataRegistry {
   private static _orm: MikroORM<IDatabaseDriver<Connection>>;
 
@@ -523,6 +635,17 @@ export class BabyCareDataRegistry {
             },
           ],
         }),
+        entityManager.find(BathEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
+              },
+            },
+          ],
+        }),
         entityManager.find(PlayEvent, {
           $and: [
             { profile },
@@ -534,7 +657,29 @@ export class BabyCareDataRegistry {
             },
           ],
         }),
-        entityManager.find(BathEvent, {
+        entityManager.find(MeasurementEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
+              },
+            },
+          ],
+        }),
+        entityManager.find(MedicineEvent, {
+          $and: [
+            { profile },
+            {
+              time: {
+                $gte: startOfDay(date),
+                $lt: startOfDay(add(date, { days: 1 })),
+              },
+            },
+          ],
+        }),
+        entityManager.find(NoteEvent, {
           $and: [
             { profile },
             {
@@ -597,6 +742,7 @@ export class BabyCareDataRegistry {
     const name = extractRequiredString(formData, "name");
     const dob = new Date(extractRequiredString(formData, "dob"));
     const gender = Gender[extractRequiredString(formData, "gender") as Gender];
+    const stage = Stage[extractRequiredString(formData, "stage") as Stage];
 
     if (id) {
       profile = await entityManager.findOneOrFail(BabyCareProfile, {
@@ -605,8 +751,9 @@ export class BabyCareDataRegistry {
       profile.name = name;
       profile.dob = dob;
       profile.genderAtBirth = gender;
+      profile.stage = stage;
     } else {
-      profile = new BabyCareProfile(name, gender, dob);
+      profile = new BabyCareProfile(name, gender, dob, stage);
       newProfile = true;
     }
 
@@ -765,6 +912,31 @@ export class BabyCareDataRegistry {
         event = new BathEvent(new Date(), profile);
         break;
       }
+      case BabyCareAction.CREATE_MEASUREMENT_EVENT: {
+        const quickEvent = new MeasurementEvent(new Date(), profile);
+        const lastMeasurementWithHeight = await entityManager.findOne(
+          MeasurementEvent,
+          { profile, height: { $ne: null } },
+          { orderBy: { time: "DESC" } }
+        );
+        quickEvent.height = lastMeasurementWithHeight?.height;
+        const lastMeasurementWithWeight = await entityManager.findOne(
+          MeasurementEvent,
+          { profile, weight: { $ne: null } },
+          { orderBy: { time: "DESC" } }
+        );
+        quickEvent.weight = lastMeasurementWithWeight?.weight;
+        event = quickEvent;
+        break;
+      }
+      case BabyCareAction.CREATE_MEDICINE_EVENT: {
+        event = new MedicineEvent(new Date(), profile);
+        break;
+      }
+      case BabyCareAction.CREATE_NOTE_EVENT: {
+        event = new NoteEvent(new Date(), profile);
+        break;
+      }
       default:
         throw new Error(`Unsupported quick event creation action '${action}'`);
     }
@@ -837,7 +1009,6 @@ export class BabyCareDataRegistry {
 
         event.time = new Date(extractRequiredString(formData, "time"));
         event.comment = extractOptionalString(formData, "comment")?.trim();
-        event.duration = extractOptionalNumber(formData, "duration");
         event.leftDuration = extractRequiredNumber(formData, "leftDuration");
         event.rightDuration = extractRequiredNumber(formData, "rightDuration");
 
@@ -855,27 +1026,18 @@ export class BabyCareDataRegistry {
 
         event.time = new Date(extractRequiredString(formData, "time"));
         event.comment = extractOptionalString(formData, "comment")?.trim();
-        event.duration = extractOptionalNumber(formData, "duration");
         event.poop = extractRequiredBoolean(formData, "poop");
         event.pee = extractRequiredBoolean(formData, "pee");
 
         updatedEvent = event;
         break;
       }
-      case BabyCareAction.UPDATE_SLEEP_EVENT:
-      case BabyCareAction.UPDATE_BATH_EVENT:
-      case BabyCareAction.UPDATE_PLAY_EVENT: {
-        const clazz =
-          action === BabyCareAction.UPDATE_PLAY_EVENT
-            ? PlayEvent
-            : action === BabyCareAction.UPDATE_BATH_EVENT
-            ? BathEvent
-            : action === BabyCareAction.UPDATE_SLEEP_EVENT
-            ? SleepEvent
-            : undefined;
+      case BabyCareAction.UPDATE_SLEEP_EVENT: {
         const event = await entityManager.findOneOrFail(
-          guaranteeNonNullable(clazz),
-          { id: eventId },
+          SleepEvent,
+          {
+            id: eventId,
+          },
           { populate: ["profile"] }
         );
 
@@ -883,11 +1045,86 @@ export class BabyCareDataRegistry {
         event.comment = extractOptionalString(formData, "comment")?.trim();
         event.duration = extractOptionalNumber(formData, "duration");
 
-        entityManager.persistAndFlush(event);
-        BabyCareEventManager.getServerEventEmitter().emit(
-          BabyCareServerEvent.PROFILE_DATA_CHANGE,
-          event.profile.id
+        updatedEvent = event;
+        break;
+      }
+      case BabyCareAction.UPDATE_BATH_EVENT: {
+        const event = await entityManager.findOneOrFail(
+          BathEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
         );
+
+        event.time = new Date(extractRequiredString(formData, "time"));
+        event.comment = extractOptionalString(formData, "comment")?.trim();
+
+        updatedEvent = event;
+        break;
+      }
+      case BabyCareAction.UPDATE_PLAY_EVENT: {
+        const event = await entityManager.findOneOrFail(
+          PlayEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
+
+        event.time = new Date(extractRequiredString(formData, "time"));
+        event.comment = extractOptionalString(formData, "comment")?.trim();
+        event.duration = extractOptionalNumber(formData, "duration");
+
+        updatedEvent = event;
+        break;
+      }
+      case BabyCareAction.UPDATE_MEASUREMENT_EVENT: {
+        const event = await entityManager.findOneOrFail(
+          MeasurementEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
+
+        event.time = new Date(extractRequiredString(formData, "time"));
+        event.comment = extractOptionalString(formData, "comment")?.trim();
+        event.height = extractOptionalNumber(formData, "height");
+        event.weight = extractOptionalNumber(formData, "weight");
+
+        updatedEvent = event;
+        break;
+      }
+      case BabyCareAction.UPDATE_MEDICINE_EVENT: {
+        const event = await entityManager.findOneOrFail(
+          MedicineEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
+
+        event.time = new Date(extractRequiredString(formData, "time"));
+        event.comment = extractOptionalString(formData, "comment")?.trim();
+        event.prescription = extractRequiredString(
+          formData,
+          "prescription"
+        ).trim();
+
+        updatedEvent = event;
+        break;
+      }
+      case BabyCareAction.UPDATE_NOTE_EVENT: {
+        const event = await entityManager.findOneOrFail(
+          NoteEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
+
+        event.comment = extractOptionalString(formData, "comment")?.trim();
 
         updatedEvent = event;
         break;
@@ -914,7 +1151,10 @@ export class BabyCareDataRegistry {
       case BabyCareAction.REMOVE_DIAPER_CHANGE_EVENT:
       case BabyCareAction.REMOVE_PLAY_EVENT:
       case BabyCareAction.REMOVE_BATH_EVENT:
-      case BabyCareAction.REMOVE_SLEEP_EVENT: {
+      case BabyCareAction.REMOVE_SLEEP_EVENT:
+      case BabyCareAction.REMOVE_MEASUREMENT_EVENT:
+      case BabyCareAction.REMOVE_MEDICINE_EVENT:
+      case BabyCareAction.REMOVE_NOTE_EVENT: {
         const entityManager = await BabyCareDataRegistry.getEntityManager();
         const clazz =
           action === BabyCareAction.REMOVE_BOTTLE_FEED_EVENT
@@ -931,6 +1171,12 @@ export class BabyCareDataRegistry {
             ? BathEvent
             : action === BabyCareAction.REMOVE_SLEEP_EVENT
             ? SleepEvent
+            : action === BabyCareAction.REMOVE_MEASUREMENT_EVENT
+            ? MeasurementEvent
+            : action === BabyCareAction.REMOVE_MEDICINE_EVENT
+            ? MedicineEvent
+            : action === BabyCareAction.REMOVE_NOTE_EVENT
+            ? NoteEvent
             : undefined;
         const event = await entityManager.findOneOrFail(
           guaranteeNonNullable(clazz),
@@ -981,7 +1227,7 @@ class FeedingEventReminder extends BabyCareEventReminder {
       durationInAdvance
         ? `in ${durationInAdvance / (60 * 1000)} minutes`
         : "now"
-    }`;
+    } (last fed ${formatDistanceToNowStrict(this.eventTimestamp)} ago)`;
   }
 
   override shouldNotify(profile: EntityDTO<BabyCareProfile>) {
@@ -1028,7 +1274,7 @@ class PumpingEventReminder extends BabyCareEventReminder {
       durationInAdvance
         ? `in ${durationInAdvance / (60 * 1000)} minutes`
         : "now"
-    }`;
+    } (last pumped ${formatDistanceToNowStrict(this.eventTimestamp)} ago)`;
   }
 
   override shouldNotify(profile: EntityDTO<BabyCareProfile>) {
@@ -1166,7 +1412,8 @@ class BabyCareEventNotificationService {
         [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
       },
       body: JSON.stringify({
-        username: sender,
+        username:
+          process.env.NODE_ENV === "development" ? `{TEST} ${sender}` : sender,
         // NOTE: Discord has a weird issue that I didn't have time to investigate where
         // webhook bots seem to not be able to raise more than 3 push notifications on IOS
         // e.g. after sending 3 notifications, the 4th will not be shown as push nofication
