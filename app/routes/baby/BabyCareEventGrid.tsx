@@ -750,6 +750,7 @@ export const BabyCareEventGrid = (props: {
             open={Boolean(eventToEdit)}
             onClose={() => setEventToEdit(undefined)}
             data={eventToEdit}
+            profile={profile}
           />
         )}
       </div>

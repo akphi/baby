@@ -417,7 +417,7 @@ export const BabyCareProfileEditor = (props: {
             <NumberInput
               label="Feeding Interval"
               min={0}
-              max={12}
+              max={24}
               step={0.5}
               unit="hr"
               factor={60 * 60 * 1000}
@@ -432,7 +432,7 @@ export const BabyCareProfileEditor = (props: {
             <NumberInput
               label="Feeding Interval (Night)"
               min={0}
-              max={12}
+              max={24}
               step={0.5}
               unit="hr"
               factor={60 * 60 * 1000}
@@ -463,7 +463,7 @@ export const BabyCareProfileEditor = (props: {
             <NumberInput
               label="Pumping Interval"
               min={0}
-              max={12}
+              max={24}
               step={0.5}
               unit="hr"
               factor={60 * 60 * 1000}
@@ -478,7 +478,7 @@ export const BabyCareProfileEditor = (props: {
             <NumberInput
               label="Pumping Interval (Night)"
               min={0}
-              max={12}
+              max={24}
               step={0.5}
               unit="hr"
               factor={60 * 60 * 1000}

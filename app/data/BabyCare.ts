@@ -35,6 +35,7 @@ import {
   DEFAULT_PARENT_DAYTIME_END_HOUR,
   DEFAULT_NURSING_DURATION_FOR_EACH_SIDE,
   DEFAULT_ENABLE_NOTIFICATION,
+  MINIMUM_AUTOCOMPLETE_SEARCH_TEXT_LENGTH,
 } from "./constants";
 import EventEmitter from "node:events";
 import {
@@ -534,6 +535,8 @@ export enum BabyCareAction {
   CREATE_NOTE_EVENT = "baby-care.note-event.create",
   UPDATE_NOTE_EVENT = "baby-care.note-event.update",
   REMOVE_NOTE_EVENT = "baby-care.note-event.remove",
+
+  FETCH_TOP_PRESCRIPTIONS = "baby-care.fetch-top-prescriptions",
 }
 
 export enum BabyCareServerEvent {
@@ -1198,6 +1201,31 @@ export class BabyCareDataRegistry {
       default:
         throw new Error(`Unsupported event delete action '${action}'`);
     }
+  }
+
+  static async fetchTopPrescriptions(
+    profileId: string,
+    searchText: string | undefined
+  ): Promise<string[]> {
+    const entityManager = await BabyCareDataRegistry.getEntityManager();
+    const events = await entityManager.find(
+      MedicineEvent,
+      searchText?.length &&
+        searchText.length >= MINIMUM_AUTOCOMPLETE_SEARCH_TEXT_LENGTH
+        ? {
+            profile: profileId,
+            prescription: { $like: `%${searchText}%` },
+          }
+        : {
+            profile: profileId,
+          },
+      {
+        limit: 10,
+        groupBy: ["prescription"],
+      }
+    );
+
+    return events.map((event) => event.prescription);
   }
 }
 

@@ -1,5 +1,7 @@
 import {
+  Autocomplete,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -8,6 +10,7 @@ import {
   FormControlLabel,
   Switch,
   TextField,
+  createFilterOptions,
 } from "@mui/material";
 import {
   BabyCareAction,
@@ -21,9 +24,10 @@ import {
   type SleepEvent,
   type MeasurementEvent,
   type MedicineEvent,
+  type BabyCareProfile,
 } from "../../data/BabyCare";
-import { useSubmit } from "@remix-run/react";
-import { useState } from "react";
+import { useFetcher, useSubmit } from "@remix-run/react";
+import { useMemo, useState } from "react";
 import { NumberInput } from "../../shared/NumberInput";
 import { DateTimeField } from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
@@ -31,6 +35,13 @@ import { parseISO } from "date-fns";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
 import { pruneFormData } from "../../shared/FormDataUtils";
+import { isString } from "../../shared/AssertionUtils";
+import { debounce } from "lodash-es";
+
+interface PrescriptionOption {
+  inputValue?: string;
+  prescription: string;
+}
 
 // NOTE: we made this overly complex as it's an all-in-one editor for all types of events since we don't
 // want to duplicate code, we might want to revisit this in the future and think of a better way to reuse code here
@@ -38,11 +49,35 @@ export const BabyCareEventEditor = (props: {
   open: boolean;
   onClose: () => void;
   data: SerializeFrom<BabyCareEvent>;
+  profile: SerializeFrom<BabyCareProfile>;
 }) => {
-  const { open, onClose, data } = props;
+  const { open, onClose, data, profile } = props;
   const [showDeleteConfirmationDialog, setShowDeleteConfirmationDialog] =
     useState(false);
   const submit = useSubmit();
+  const fetcher = useFetcher<{ prescriptions: string[] }>();
+  const prescriptionSuggestions: PrescriptionOption[] = (
+    fetcher.data?.prescriptions ?? []
+  ).map((prescription) => ({
+    prescription,
+  }));
+  const [prescriptionOption, setPrescriptionOption] =
+    useState<PrescriptionOption | null>(
+      (data as SerializeFrom<MedicineEvent>).prescription
+        ? { prescription: (data as SerializeFrom<MedicineEvent>).prescription }
+        : null
+    );
+  const isLoadingPrescriptionSuggestions = fetcher.state === "loading";
+
+  const debouncedFetchPrescriptionSuggestions = useMemo(
+    () =>
+      debounce((input: string): void => {
+        fetcher.load(
+          `/api/runCommand/${BabyCareAction.FETCH_TOP_PRESCRIPTIONS}?profileId=${profile.id}&searchText=${input}`
+        );
+      }, 500),
+    [profile, fetcher]
+  );
 
   const [time, setTime] = useState(parseISO(data.time));
   const [comment, setComment] = useState(data.comment ?? undefined);
@@ -77,9 +112,6 @@ export const BabyCareEventEditor = (props: {
   );
   const [weight, setWeight] = useState(
     (data as SerializeFrom<MeasurementEvent>).weight
-  );
-  const [prescription, setPrescription] = useState(
-    (data as SerializeFrom<MedicineEvent>).prescription
   );
 
   const onSubmit = () => {
@@ -145,7 +177,7 @@ export const BabyCareEventEditor = (props: {
         poop,
         height,
         weight,
-        prescription,
+        prescription: prescriptionOption?.prescription ?? "",
       }),
       { method: HttpMethod.POST }
     );
@@ -303,16 +335,79 @@ export const BabyCareEventEditor = (props: {
           )}
           {data.TYPE === BabyCareEventType.MEDICINE && (
             <div className="w-full py-2">
-              <TextField
-                label="Prescription"
-                value={prescription}
-                multiline
-                rows={3}
-                onChange={(event) => {
-                  setPrescription(event.target.value);
+              <Autocomplete
+                value={prescriptionOption}
+                getOptionLabel={(option) => {
+                  // Value selected with enter, right from the input
+                  if (isString(option)) {
+                    return option;
+                  }
+                  return option.prescription;
                 }}
-                variant="outlined"
-                className="w-full"
+                onInputChange={(event, newInputValue, reason) => {
+                  if (reason === "reset" || reason === "clear") {
+                    return;
+                  }
+                  debouncedFetchPrescriptionSuggestions.cancel();
+                  debouncedFetchPrescriptionSuggestions(newInputValue);
+                }}
+                onChange={(event, newValue) => {
+                  if (isString(newValue)) {
+                    setPrescriptionOption({
+                      prescription: newValue,
+                    });
+                  } else if (newValue && newValue.inputValue) {
+                    // Create a new value from the user input
+                    setPrescriptionOption({
+                      prescription: newValue.inputValue,
+                    });
+                  } else {
+                    setPrescriptionOption(newValue);
+                  }
+                }}
+                filterOptions={(options, params) => {
+                  const filtered = createFilterOptions<PrescriptionOption>()(
+                    options,
+                    params
+                  );
+
+                  const { inputValue } = params;
+                  // Suggest the creation of a new value
+                  const isExisting = options.some(
+                    (option) => inputValue === option.prescription
+                  );
+                  if (inputValue !== "" && !isExisting) {
+                    filtered.push({
+                      inputValue,
+                      prescription: `Add "${inputValue}"`,
+                    });
+                  }
+                  return filtered;
+                }}
+                options={prescriptionSuggestions}
+                selectOnFocus
+                clearOnBlur
+                handleHomeEndKeys
+                loading={isLoadingPrescriptionSuggestions}
+                freeSolo
+                renderInput={(params: any) => (
+                  <TextField
+                    {...params}
+                    className="w-full"
+                    label="Prescription"
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {isLoadingPrescriptionSuggestions ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
               />
             </div>
           )}

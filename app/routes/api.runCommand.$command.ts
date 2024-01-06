@@ -1,8 +1,30 @@
-import type { ActionFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { BabyCareDataRegistry, BabyCareAction } from "../data/BabyCare";
 import { HttpStatus } from "../shared/NetworkUtils";
 import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
+
+export async function loader({ params, request }: LoaderFunctionArgs) {
+  const command = params.command;
+  const { searchParams } = new URL(request.url);
+
+  switch (command) {
+    case BabyCareAction.FETCH_TOP_PRESCRIPTIONS: {
+      const profileId = guaranteeNonEmptyString(
+        searchParams.get("profileId"),
+        "'profileId' is missing or empty"
+      );
+      const searchText = searchParams.get("searchText")?.trim();
+      const prescriptions = await BabyCareDataRegistry.fetchTopPrescriptions(
+        profileId,
+        searchText
+      );
+      return json({ prescriptions }, HttpStatus.OK);
+    }
+    default:
+      return null;
+  }
+}
 
 export async function action({ request, params }: ActionFunctionArgs) {
   const payload = await request.json();
