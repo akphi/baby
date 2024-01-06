@@ -29,7 +29,12 @@ import {
 import { useFetcher, useSubmit } from "@remix-run/react";
 import { useMemo, useState } from "react";
 import { NumberInput } from "../../shared/NumberInput";
-import { DateTimeField } from "@mui/x-date-pickers";
+import {
+  DateTimeField,
+  DateTimePicker,
+  DesktopDateTimePicker,
+  MobileDateTimePicker,
+} from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
 import { parseISO } from "date-fns";
 import { HttpMethod } from "../../shared/NetworkUtils";
@@ -202,13 +207,13 @@ export const BabyCareEventEditor = (props: {
           noValidate
         >
           <div className="w-full py-2">
-            <DateTimeField
+            <DesktopDateTimePicker
               label="Time"
               value={time}
               onChange={(value: Date | null) => {
                 setTime(value ?? new Date());
               }}
-              format="MMM dd - HH:mm"
+              format="MMM dd yyyy - HH:mm"
               className="w-full"
             />
           </div>

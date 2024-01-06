@@ -4,10 +4,12 @@ import {
   TextField,
   type TextFieldProps,
 } from "@mui/material";
+import { Unstable_NumberInput as BaseNumberInput } from "@mui/base/Unstable_NumberInput";
 import { AddCircleIcon, RemoveCircleIcon } from "./Icons";
 import { isNonNullable } from "./AssertionUtils";
+import { forwardRef } from "react";
 
-export const NumberInput = (
+export const NumberInput = forwardRef(function NumberInput(
   props: TextFieldProps & {
     label: string;
     min?: number;
@@ -17,8 +19,9 @@ export const NumberInput = (
     factor?: number;
     value: number | undefined;
     setValue: (value: number) => void;
-  }
-) => {
+  },
+  ref
+) {
   const {
     label,
     min,
@@ -28,7 +31,7 @@ export const NumberInput = (
     factor,
     value,
     setValue,
-    ...otherProps
+    // ...otherProps
   } = props;
   const _value = isNonNullable(value) ? value / (factor ?? 1) : undefined;
   const _setValue = (val: number) => {
@@ -40,30 +43,37 @@ export const NumberInput = (
     // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
     setValue((step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue);
   };
-  const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    let newValue = parseInt(event.target.value);
-    newValue = isNaN(newValue) ? 0 : newValue;
-    _setValue(newValue);
-  };
 
   return (
     <div className="flex">
-      <TextField
-        label={label}
-        type="number"
-        inputMode="numeric"
-        value={_value ?? ""}
-        onChange={onChange}
-        InputProps={
-          unit
-            ? {
-                startAdornment: (
-                  <InputAdornment position="start">{unit}</InputAdornment>
-                ),
-              }
-            : {}
-        }
-        {...otherProps}
+      <BaseNumberInput
+        value={_value as number}
+        onChange={(event, value) => {
+          _setValue(value ?? 0);
+        }}
+        slots={{
+          input: forwardRef(function NumberInputInput(_props, _ref) {
+            return (
+              <TextField
+                ref={_ref}
+                {..._props}
+                variant="outlined"
+                label={label}
+                InputProps={
+                  unit
+                    ? {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            {unit}
+                          </InputAdornment>
+                        ),
+                      }
+                    : {}
+                }
+              />
+            );
+          }),
+        }}
       />
       <div className="flex justify-center items-center ml-2">
         <IconButton
@@ -83,4 +93,4 @@ export const NumberInput = (
       </div>
     </div>
   );
-};
+});

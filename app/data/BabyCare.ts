@@ -1370,9 +1370,11 @@ class BabyCareEventNotificationService {
     const config = JSON.parse(
       readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
     );
-    this.notificationWebhookUrl = returnUndefOnError(() =>
-      guaranteeNonEmptyString(config.babyCare.reminderWebhookUrl)
-    );
+    this.notificationWebhookUrl =
+      process.env.REMINDER_WEBHOOK_URL ??
+      returnUndefOnError(() =>
+        guaranteeNonEmptyString(config.babyCare.reminderWebhookUrl)
+      );
     this.reminderMentionRoleID = returnUndefOnError(() =>
       guaranteeNonEmptyString(config.babyCare.reminderMentionRoleID)
     );
