@@ -209,7 +209,7 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
         />
       )}
       {data.TYPE === BabyCareEventType.BOTTLE_FEED &&
-        (data as SerializeFrom<BottleFeedEvent>).formulaMilkVolume && (
+        Boolean((data as SerializeFrom<BottleFeedEvent>).formulaMilkVolume) && (
           <div className="h-6 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative">
             <div className="w-full h-full flex rounded justify-center items-center">
               <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">

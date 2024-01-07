@@ -1251,6 +1251,7 @@ abstract class BabyCareEventReminder {
     daytimeStart: number;
     daytimeEnd: number;
   };
+
   getNextEventTimestamp(
     profile: EntityDTO<BabyCareProfile>
   ): number | undefined {
@@ -1389,9 +1390,10 @@ class BabyCareEventNotificationService {
           return;
         }
 
-        // if the next event timestamp cannot be computed, skip reminder
         const nextEventTimestamp = reminder.getNextEventTimestamp(profile);
-        if (!nextEventTimestamp) {
+
+        // if the next event timestamp cannot be computed, or the next event timestamp is in the past, skip this reminder
+        if (!nextEventTimestamp || nextEventTimestamp < now) {
           return;
         }
 
@@ -1399,7 +1401,8 @@ class BabyCareEventNotificationService {
           const reminderTime = nextEventTimestamp - step;
 
           // if the step is prior to the original event timestamp, it doesn't make
-          // sense to send this reminder at all
+          // sense to send this reminder at all, this could happen when the interval
+          // used to construct the next event timestamp is too little
           if (reminderTime <= reminder.eventTimestamp) {
             return;
           }
