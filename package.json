@@ -10,6 +10,7 @@
   "type": "module",
   "scripts": {
     "check:update": "npm-check-updates --interactive",
+    "clean": "rimraf ./build ./public/build",
     "build": "npm-run-all build:home",
     "build:home": "remix build",
     "build:home-fix": "touch ./build/index.js.map && echo \"{\\\"version\\\": 3, \\\"sources\\\": [], \\\"sourcesContent\\\": [], \\\"mappings\\\": \\\"\\\", \\\"names\\\": []}\" > ./build/index.js.map",
@@ -68,7 +69,6 @@
     "@remix-run/eslint-config": "2.4.1",
     "@types/node": "20.10.6",
     "@types/node-red": "1.3.4",
-    "bcryptjs": "2.4.3",
     "chalk": "5.3.0",
     "dotenv": "16.3.1",
     "eslint": "8.56.0",
@@ -78,6 +78,7 @@
     "node-red-contrib-huemagic-fork": "4.2.8",
     "npm-check-updates": "16.14.12",
     "npm-run-all": "4.1.5",
+    "rimraf": "5.0.5",
     "tailwindcss": "3.4.1",
     "typescript": "5.3.3"
   }
