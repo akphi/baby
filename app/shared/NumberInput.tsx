@@ -4,11 +4,9 @@ import {
   TextField,
   type TextFieldProps,
 } from "@mui/material";
-import { Unstable_NumberInput as BaseNumberInput } from "@mui/base/Unstable_NumberInput";
 import { AddCircleIcon, RemoveCircleIcon } from "./Icons";
 import { isNonNullable } from "./AssertionUtils";
 import { forwardRef, useCallback, useEffect, useState } from "react";
-import { parseNumber } from "./CommonUtils";
 import { toNumber } from "lodash-es";
 
 // const getValue = (val: number)
@@ -36,7 +34,7 @@ export const NumberInput = forwardRef(function NumberInput(
     setValue,
     // ...otherProps
   } = props;
-  // const _value = isNonNullable(value) ? value / (factor ?? 1) : undefined;
+  const currentValue = isNonNullable(value) ? value / (factor ?? 1) : undefined;
   const [inputValue, setInputValue] = useState<string | number | undefined>(
     isNonNullable(value) ? value / (factor ?? 1) : undefined
   );
@@ -54,6 +52,18 @@ export const NumberInput = forwardRef(function NumberInput(
     },
     [setValue, factor, min, max, step]
   );
+  const knobSetInputValue = (val: number) => {
+    const _min = min ?? 0;
+    const _max = max ?? Number.MAX_SAFE_INTEGER;
+    let newValue = Math.max(_min, Math.min(_max, val));
+    // NOTE: trick to avoid floating point error in JS
+    // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
+    // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
+    newValue =
+      (step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue;
+    setValue(newValue * (factor ?? 1));
+    setInputValue(newValue);
+  };
   useEffect(() => {
     const numericValue = toNumber(inputValue);
     if (isNaN(numericValue)) {
@@ -88,14 +98,14 @@ export const NumberInput = forwardRef(function NumberInput(
         <IconButton
           className="w-10 h-10"
           color="primary"
-          onClick={() => _setValue((_value ?? 0) - (step ?? 1))}
+          onClick={() => knobSetInputValue((currentValue ?? 0) - (step ?? 1))}
         >
           <RemoveCircleIcon fontSize="large" className="text-blue-500" />
         </IconButton>
         <IconButton
           className="w-10 h-10"
           color="primary"
-          onClick={() => _setValue((_value ?? 0) + (step ?? 1))}
+          onClick={() => knobSetInputValue((currentValue ?? 0) + (step ?? 1))}
         >
           <AddCircleIcon fontSize="large" className="text-blue-500" />
         </IconButton>

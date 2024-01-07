@@ -1245,7 +1245,45 @@ abstract class BabyCareEventReminder {
 
   abstract generateMessage(durationInAdvance: number): string;
   abstract shouldNotify(profile: EntityDTO<BabyCareProfile>): boolean;
-  abstract getNextEventTimestamp(profile: EntityDTO<BabyCareProfile>): number;
+  abstract getTimingConfiguration(profile: EntityDTO<BabyCareProfile>): {
+    daytimeInterval: number;
+    nighttimeInterval: number;
+    daytimeStart: number;
+    daytimeEnd: number;
+  };
+  getNextEventTimestamp(
+    profile: EntityDTO<BabyCareProfile>
+  ): number | undefined {
+    const { daytimeInterval, nighttimeInterval, daytimeStart, daytimeEnd } =
+      this.getTimingConfiguration(profile);
+    if (
+      isDuringDaytime(new Date(this.eventTimestamp), daytimeStart, daytimeEnd)
+    ) {
+      if (!daytimeInterval) {
+        return undefined;
+      }
+    } else {
+      if (!nighttimeInterval) {
+        return undefined;
+      }
+    }
+
+    let nextEventTimestamp = this.eventTimestamp + daytimeInterval;
+    if (
+      isDuringDaytime(new Date(nextEventTimestamp), daytimeStart, daytimeEnd)
+    ) {
+      return nextEventTimestamp;
+    }
+
+    nextEventTimestamp = this.eventTimestamp + nighttimeInterval;
+    if (
+      !isDuringDaytime(new Date(nextEventTimestamp), daytimeStart, daytimeEnd)
+    ) {
+      return nextEventTimestamp;
+    }
+
+    return undefined;
+  }
 }
 
 class FeedingEventReminder extends BabyCareEventReminder {
@@ -1262,35 +1300,13 @@ class FeedingEventReminder extends BabyCareEventReminder {
     return profile.enableFeedingReminder;
   }
 
-  override getNextEventTimestamp(profile: EntityDTO<BabyCareProfile>) {
-    let nextEventTimestamp =
-      this.eventTimestamp + profile.defaultFeedingInterval;
-    if (
-      isDuringDaytime(
-        new Date(nextEventTimestamp),
-        profile.babyDaytimeStart,
-        profile.babyDaytimeEnd
-      )
-    ) {
-      return nextEventTimestamp;
-    }
-
-    nextEventTimestamp =
-      this.eventTimestamp + profile.defaultNightFeedingInterval;
-    if (
-      !isDuringDaytime(
-        new Date(nextEventTimestamp),
-        profile.babyDaytimeStart,
-        profile.babyDaytimeEnd
-      )
-    ) {
-      return nextEventTimestamp;
-    }
-
-    // when both daytime and nighttime reminders timing are not valid,
-    // potentially due to the profile being configured inappropriately,
-    // we simply return a very big number so it will never be fired
-    return Number.MAX_SAFE_INTEGER;
+  override getTimingConfiguration(profile: EntityDTO<BabyCareProfile>) {
+    return {
+      daytimeInterval: profile.defaultFeedingInterval,
+      nighttimeInterval: profile.defaultNightFeedingInterval,
+      daytimeStart: profile.babyDaytimeStart,
+      daytimeEnd: profile.babyDaytimeEnd,
+    };
   }
 }
 
@@ -1309,35 +1325,13 @@ class PumpingEventReminder extends BabyCareEventReminder {
     return profile.enablePumpingReminder;
   }
 
-  override getNextEventTimestamp(profile: EntityDTO<BabyCareProfile>) {
-    let nextEventTimestamp =
-      this.eventTimestamp + profile.defaultPumpingInterval;
-    if (
-      isDuringDaytime(
-        new Date(nextEventTimestamp),
-        profile.parentDaytimeStart,
-        profile.parentDaytimeEnd
-      )
-    ) {
-      return nextEventTimestamp;
-    }
-
-    nextEventTimestamp =
-      this.eventTimestamp + profile.defaultNightPumpingInterval;
-    if (
-      !isDuringDaytime(
-        new Date(nextEventTimestamp),
-        profile.parentDaytimeStart,
-        profile.parentDaytimeEnd
-      )
-    ) {
-      return nextEventTimestamp;
-    }
-
-    // when both daytime and nighttime reminders timing are not valid,
-    // potentially due to the profile being configured inappropriately,
-    // we simply return a very big number so it will never be fired
-    return Number.MAX_SAFE_INTEGER;
+  override getTimingConfiguration(profile: EntityDTO<BabyCareProfile>) {
+    return {
+      daytimeInterval: profile.defaultPumpingInterval,
+      nighttimeInterval: profile.defaultNightPumpingInterval,
+      daytimeStart: profile.parentDaytimeStart,
+      daytimeEnd: profile.parentDaytimeEnd,
+    };
   }
 }
 
@@ -1395,8 +1389,14 @@ class BabyCareEventNotificationService {
           return;
         }
 
+        // if the next event timestamp cannot be computed, skip reminder
+        const nextEventTimestamp = reminder.getNextEventTimestamp(profile);
+        if (!nextEventTimestamp) {
+          return;
+        }
+
         for (const step of BabyCareEventNotificationService.REMINDER_STEPS) {
-          const reminderTime = reminder.getNextEventTimestamp(profile) - step;
+          const reminderTime = nextEventTimestamp - step;
 
           // if the step is prior to the original event timestamp, it doesn't make
           // sense to send this reminder at all
