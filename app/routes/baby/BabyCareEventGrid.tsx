@@ -31,6 +31,7 @@ import {
   PoopIcon,
   RemoveIcon,
   SleepIcon,
+  WarningIcon,
 } from "../../shared/Icons";
 import type { ICellRendererParams } from "@ag-grid-community/core";
 import { useMemo, useState } from "react";
@@ -44,6 +45,7 @@ import { isNonNullable } from "../../shared/AssertionUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
 import { Divider } from "@mui/material";
 import { mlToOz } from "../../shared/UnitUtils";
+import { UNSPECIFIED_PRESCRIPTION_TAG } from "../../data/constants";
 
 const InlineNumberInput = (props: {
   value: number;
@@ -301,7 +303,17 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
       {data.TYPE === BabyCareEventType.MEDICINE &&
         (data as SerializeFrom<MedicineEvent>).prescription && (
           <div className="flex items-center rounded h-6 text-2xs text-slate-600 bg-indigo-100 px-2">
-            {(data as SerializeFrom<MedicineEvent>).prescription}
+            {(data as SerializeFrom<MedicineEvent>).prescription ===
+            UNSPECIFIED_PRESCRIPTION_TAG ? (
+              <div className="flex h-full">
+                <div className="flex h-full items-center justify-center">
+                  <WarningIcon className="flex text-lg text-indigo-300" />
+                </div>
+                <div className="flex h-full items-center ml-1 text-indigo-400">[unspecified]</div>
+              </div>
+            ) : (
+              (data as SerializeFrom<MedicineEvent>).prescription
+            )}
           </div>
         )}
     </>

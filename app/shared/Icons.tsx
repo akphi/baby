@@ -19,6 +19,7 @@ import {
   SwitchAccount,
   Sync,
   ChildCare,
+  Warning,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -101,3 +102,4 @@ export const DarkModeIcon = DarkMode;
 export const SwitchProfileIcon = SwitchAccount;
 export const SyncIcon = Sync;
 export const ChildCareIcon = ChildCare;
+export const WarningIcon = Warning;

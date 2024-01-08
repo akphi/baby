@@ -36,6 +36,7 @@ import {
   DEFAULT_NURSING_DURATION_FOR_EACH_SIDE,
   DEFAULT_ENABLE_NOTIFICATION,
   MINIMUM_AUTOCOMPLETE_SEARCH_TEXT_LENGTH,
+  UNSPECIFIED_PRESCRIPTION_TAG,
 } from "./constants";
 import EventEmitter from "node:events";
 import {
@@ -436,7 +437,7 @@ export class MeasurementEvent extends BabyCareEvent {
 @Entity()
 export class MedicineEvent extends BabyCareEvent {
   @Property({ type: "string" })
-  prescription = "";
+  prescription = UNSPECIFIED_PRESCRIPTION_TAG;
 
   override get eventType() {
     return BabyCareEventType.MEDICINE;
@@ -1214,7 +1215,10 @@ export class BabyCareDataRegistry {
         searchText.length >= MINIMUM_AUTOCOMPLETE_SEARCH_TEXT_LENGTH
         ? {
             profile: profileId,
-            prescription: { $like: `%${searchText}%` },
+            prescription: {
+              $like: `%${searchText}%`,
+              $ne: UNSPECIFIED_PRESCRIPTION_TAG,
+            },
           }
         : {
             profile: profileId,
