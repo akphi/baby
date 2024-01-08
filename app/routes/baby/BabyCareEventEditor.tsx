@@ -28,13 +28,8 @@ import {
 } from "../../data/BabyCare";
 import { useFetcher, useSubmit } from "@remix-run/react";
 import { useMemo, useState } from "react";
-import { NumberInput } from "../../shared/NumberInput";
-import {
-  DateTimeField,
-  DateTimePicker,
-  DesktopDateTimePicker,
-  MobileDateTimePicker,
-} from "@mui/x-date-pickers";
+import { NumberInput, OptionalNumberInput } from "../../shared/NumberInput";
+import { DesktopDateTimePicker } from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
 import { parseISO } from "date-fns";
 import { HttpMethod } from "../../shared/NetworkUtils";
@@ -228,7 +223,7 @@ export const BabyCareEventEditor = (props: {
                 unit="ml"
                 value={volume}
                 setValue={(value) => {
-                  setVolume(value);
+                  setVolume(value ?? 0);
                 }}
                 className="flex-1"
               />
@@ -236,7 +231,7 @@ export const BabyCareEventEditor = (props: {
           )}
           {data.TYPE === BabyCareEventType.BOTTLE_FEED && (
             <div className="w-full py-2">
-              <NumberInput
+              <OptionalNumberInput
                 label="Formula Milk Volume"
                 min={0}
                 max={1000}
@@ -262,7 +257,7 @@ export const BabyCareEventEditor = (props: {
                   factor={60 * 1000}
                   value={leftDuration}
                   setValue={(value) => {
-                    setLeftDuration(value);
+                    setLeftDuration(value ?? 0);
                   }}
                   className="flex-1"
                 />
@@ -277,7 +272,7 @@ export const BabyCareEventEditor = (props: {
                   factor={60 * 1000}
                   value={rightDuration}
                   setValue={(value) => {
-                    setRightDuration(value);
+                    setRightDuration(value ?? 0);
                   }}
                   className="flex-1"
                 />
@@ -309,7 +304,7 @@ export const BabyCareEventEditor = (props: {
           {data.TYPE === BabyCareEventType.MEASUREMENT && (
             <>
               <div className="w-full py-2">
-                <NumberInput
+                <OptionalNumberInput
                   label="Height"
                   min={0}
                   max={300}
@@ -323,7 +318,7 @@ export const BabyCareEventEditor = (props: {
                 />
               </div>
               <div className="w-full py-2">
-                <NumberInput
+                <OptionalNumberInput
                   label="Weight"
                   min={0}
                   max={100}
@@ -422,7 +417,7 @@ export const BabyCareEventEditor = (props: {
             data.TYPE === BabyCareEventType.PLAY ||
             data.TYPE === BabyCareEventType.SLEEP) && (
             <div className="w-full py-2">
-              <NumberInput
+              <OptionalNumberInput
                 label="Duration"
                 min={0}
                 max={60}
@@ -440,7 +435,7 @@ export const BabyCareEventEditor = (props: {
           <div className="w-full py-2">
             <TextField
               label="Comment"
-              value={comment}
+              value={comment ?? ""}
               multiline
               rows={3}
               onChange={(event) => {

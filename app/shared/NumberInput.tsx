@@ -4,13 +4,12 @@ import {
   TextField,
   type TextFieldProps,
 } from "@mui/material";
-import { AddCircleIcon, RemoveCircleIcon } from "./Icons";
+import { AddCircleIcon, CloseIcon, RemoveCircleIcon } from "./Icons";
 import { isNonNullable } from "./AssertionUtils";
 import { forwardRef, useCallback, useEffect, useState } from "react";
 import { toNumber } from "lodash-es";
 
-// const getValue = (val: number)
-export const NumberInput = forwardRef(function NumberInput(
+const BaseNumberInput = forwardRef(function NumberInput(
   props: TextFieldProps & {
     label: string;
     min?: number;
@@ -18,25 +17,17 @@ export const NumberInput = forwardRef(function NumberInput(
     step?: number;
     unit?: string;
     factor?: number;
+    optional?: boolean;
     value: number | undefined;
-    setValue: (value: number) => void;
+    setValue: (value: number | undefined) => void;
   },
   ref
 ) {
-  const {
-    label,
-    min,
-    max,
-    step,
-    unit,
-    factor,
-    value,
-    setValue,
-    // ...otherProps
-  } = props;
+  const { label, min, max, step, unit, factor, value, optional, setValue } =
+    props;
   const currentValue = isNonNullable(value) ? value / (factor ?? 1) : undefined;
-  const [inputValue, setInputValue] = useState<string | number | undefined>(
-    isNonNullable(value) ? value / (factor ?? 1) : undefined
+  const [inputValue, setInputValue] = useState<string | number>(
+    isNonNullable(value) ? value / (factor ?? 1) : ""
   );
   const _setValue = useCallback(
     (val: number) => {
@@ -66,12 +57,13 @@ export const NumberInput = forwardRef(function NumberInput(
   };
   useEffect(() => {
     const numericValue = toNumber(inputValue);
-    if (isNaN(numericValue)) {
-      setValue(0);
+    // NOTE: `toNumber` parses `""` as `0`, which is not what we want, so we want to do the explicit check here
+    if (isNaN(numericValue) || !inputValue) {
+      setValue(optional ? undefined : 0);
     } else {
       _setValue(numericValue);
     }
-  }, [inputValue, setValue, _setValue]);
+  }, [inputValue, setValue, _setValue, optional]);
 
   return (
     <div className="flex">
@@ -82,15 +74,19 @@ export const NumberInput = forwardRef(function NumberInput(
         label={label}
         value={inputValue}
         onChange={(event) => setInputValue(event.target.value)}
-        InputProps={
-          unit
-            ? {
-                startAdornment: (
-                  <InputAdornment position="start">{unit}</InputAdornment>
-                ),
-              }
-            : {}
-        }
+        InputProps={{
+          classes: { root: optional ? "pr-1" : "" },
+          startAdornment: unit ? (
+            <InputAdornment position="start">{unit}</InputAdornment>
+          ) : undefined,
+          endAdornment: optional ? (
+            <InputAdornment position="end">
+              <IconButton onClick={() => setInputValue("")}>
+                <CloseIcon />
+              </IconButton>
+            </InputAdornment>
+          ) : undefined,
+        }}
         // probably better to use mui's NumberInput, but it currently does not support demical
         // See https://github.com/mui/material-ui/issues/38518
       />
@@ -112,4 +108,43 @@ export const NumberInput = forwardRef(function NumberInput(
       </div>
     </div>
   );
+});
+
+export const NumberInput = forwardRef(function NumberInput(
+  props: TextFieldProps & {
+    label: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    unit?: string;
+    factor?: number;
+    value: number;
+    setValue: (value: number) => void;
+  },
+  ref
+) {
+  return (
+    <BaseNumberInput
+      ref={ref}
+      {...props}
+      setValue={(value: number | undefined) => props.setValue(value ?? 0)}
+      optional={false}
+    />
+  );
+});
+
+export const OptionalNumberInput = forwardRef(function NumberInput(
+  props: TextFieldProps & {
+    label: string;
+    min?: number;
+    max?: number;
+    step?: number;
+    unit?: string;
+    factor?: number;
+    value: number | undefined;
+    setValue: (value: number | undefined) => void;
+  },
+  ref
+) {
+  return <BaseNumberInput ref={ref} {...props} optional={true} />;
 });
