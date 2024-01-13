@@ -4,10 +4,7 @@ COPY . /app/home
 
 WORKDIR /app/home
 
-RUN apk add --no-cache --virtual .gyp python3 make g++
 RUN npm install
-RUN apk del .gyp
-
 RUN npm run clean
 RUN npm run build
 

@@ -55,15 +55,6 @@
     "uuid": "9.0.1"
   },
   "devDependencies": {
-    "@mikro-orm/better-sqlite": "6.0.3",
-    "@mikro-orm/entity-generator": "6.0.3",
-    "@mikro-orm/mariadb": "6.0.3",
-    "@mikro-orm/migrations": "6.0.3",
-    "@mikro-orm/migrations-mongodb": "6.0.3",
-    "@mikro-orm/mongodb": "6.0.3",
-    "@mikro-orm/mysql": "6.0.3",
-    "@mikro-orm/postgresql": "6.0.3",
-    "@mikro-orm/seeder": "6.0.3",
     "@remix-run/dev": "2.5.0",
     "@remix-run/eslint-config": "2.5.0",
     "@types/node": "20.11.0",
