@@ -21,7 +21,6 @@ import {
   Gender,
   BabyCareAction,
   Stage,
-  BabyCareEventType,
 } from "../../data/BabyCare";
 import {
   DEFAULT_FEEDING_VOLUME,
@@ -636,10 +635,18 @@ export const BabyCareProfileEditor = (props: {
                 <MenuItem value={"None"}>
                   <div className="text-zinc-400">None</div>
                 </MenuItem>
-                <MenuItem value={BabyCareEventType.SLEEP}>Sleep</MenuItem>
-                <MenuItem value={BabyCareEventType.BATH}>Bath</MenuItem>
-                <MenuItem value={BabyCareEventType.PLAY}>Play</MenuItem>
-                <MenuItem value={BabyCareEventType.MEDICINE}>Medicine</MenuItem>
+                <MenuItem value={BabyCareAction.CREATE_SLEEP_EVENT}>
+                  Sleep
+                </MenuItem>
+                <MenuItem value={BabyCareAction.CREATE_BATH_EVENT}>
+                  Bath
+                </MenuItem>
+                <MenuItem value={BabyCareAction.CREATE_PLAY_EVENT}>
+                  Play
+                </MenuItem>
+                <MenuItem value={BabyCareAction.CREATE_MEDICINE_EVENT}>
+                  Medicine
+                </MenuItem>
               </Select>
               <FormHelperText className="select-none">
                 Event created when running dynamic command
