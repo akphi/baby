@@ -31,6 +31,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const command = params.command;
 
   switch (command) {
+    case BabyCareAction.CREATE_DYNAMIC_EVENT:
     case BabyCareAction.CREATE_BOTTLE_FEED_EVENT:
     case BabyCareAction.CREATE_NURSING_EVENT:
     case BabyCareAction.CREATE_PUMPING_EVENT:

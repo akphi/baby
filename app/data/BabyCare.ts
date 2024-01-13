@@ -6,10 +6,11 @@ import {
   Property,
   ManyToOne,
   TableExistsException,
-  DateType,
   wrap,
   type EntityDTO,
+  DateTimeType,
 } from "@mikro-orm/core";
+import { SqliteDriver } from "@mikro-orm/sqlite";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
 import { add, formatDistanceToNowStrict, startOfDay } from "date-fns";
 import { v4 as uuid } from "uuid";
@@ -80,7 +81,7 @@ export class BabyCareProfile {
   @Property({ type: () => Gender })
   genderAtBirth: Gender;
 
-  @Property({ type: DateType })
+  @Property({ type: DateTimeType })
   dob: Date;
 
   @Property({ type: () => Stage })
@@ -140,6 +141,9 @@ export class BabyCareProfile {
 
   @Property({ type: "boolean" })
   enableOtherActivitiesNotification = false; // this would be too noisy so disabled by default
+
+  @Property({ type: "string", nullable: true })
+  dynamicEvent?: string | undefined;
 
   constructor(name: string, genderAtBirth: Gender, dob: Date, stage: Stage) {
     this.name = name;
@@ -208,13 +212,10 @@ export abstract class BabyCareEvent {
   @PrimaryKey({ type: "string", unique: true })
   readonly id = uuid();
 
-  @ManyToOne(() => BabyCareProfile, { onDelete: "cascade" })
+  @ManyToOne(() => BabyCareProfile, { deleteRule: "cascade" })
   readonly profile: BabyCareProfile;
 
-  // NOTE: This should be 'DateTimeType', but there's a bug in v5 where this gets returned as timestamp for SQLite
-  // The workaround is to use `Date` type. This should be fixed in v6
-  // See https://github.com/mikro-orm/mikro-orm/issues/4362
-  @Property({ type: Date })
+  @Property({ type: DateTimeType })
   time: Date;
 
   @Property({ type: "string", nullable: true })
@@ -474,7 +475,7 @@ export class NoteEvent extends BabyCareEvent {
 
 const BABY_CARE_DB_CONFIG: Options = {
   dbName: "../home-storage/baby-care/db.sqlite",
-  type: "sqlite",
+  driver: SqliteDriver,
   entities: [
     BabyCareProfile,
     BottleFeedEvent,
@@ -495,6 +496,8 @@ export enum BabyCareAction {
   CREATE_PROFILE = "baby-care.profile.create",
   UPDATE_PROFILE = "baby-care.profile.update",
   REMOVE_PROFILE = "baby-care.profile.remove",
+
+  CREATE_DYNAMIC_EVENT = "baby-care.dynamic-event.create",
 
   CREATE_BOTTLE_FEED_EVENT = "baby-care.bottle-feed-event.create",
   UPDATE_BOTTLE_FEED_EVENT = "baby-care.bottle-feed-event.update",
@@ -829,6 +832,8 @@ export class BabyCareDataRegistry {
       "enableOtherActivitiesNotification"
     );
 
+    profile.dynamicEvent = extractOptionalString(formData, "dynamicEvent");
+
     await entityManager.persistAndFlush(profile);
     BabyCareEventManager.getServerEventEmitter().emit(
       BabyCareServerEvent.PROFILE_DATA_CHANGE,
@@ -869,6 +874,15 @@ export class BabyCareDataRegistry {
     let event: BabyCareEvent;
 
     switch (action) {
+      case BabyCareAction.CREATE_DYNAMIC_EVENT: {
+        if (profile.dynamicEvent) {
+          event = await BabyCareDataRegistry.quickCreateEvent(
+            profile.dynamicEvent,
+            profile.id
+          );
+          break;
+        }
+      }
       case BabyCareAction.CREATE_BOTTLE_FEED_EVENT: {
         event = new BottleFeedEvent(
           new Date(),
@@ -1356,6 +1370,7 @@ class BabyCareEventNotificationService {
   ]; // 30mins, 15mins, 5mins before next event (by interval)
 
   private readonly notificationWebhookUrl: string | undefined;
+  private readonly notificationWebhookDebugUrl: string | undefined;
   private readonly reminderMentionRoleID: string | undefined;
 
   private readonly _reminderProfileMap = new Map<
@@ -1374,6 +1389,9 @@ class BabyCareEventNotificationService {
       returnUndefOnError(() =>
         guaranteeNonEmptyString(config.babyCare.reminderWebhookUrl)
       );
+    this.notificationWebhookDebugUrl = returnUndefOnError(() =>
+      guaranteeNonEmptyString(config.babyCare.reminderWebhookDebugUrl)
+    );
     this.reminderMentionRoleID = returnUndefOnError(() =>
       guaranteeNonEmptyString(config.babyCare.reminderMentionRoleID)
     );
@@ -1427,7 +1445,8 @@ class BabyCareEventNotificationService {
           if (reminder.shouldNotify(profile)) {
             this.notify(
               `[Reminder] ${profile.nickname ?? profile.name}`,
-              reminder.generateMessage(step)
+              reminder.generateMessage(step),
+              reminder
             );
           }
 
@@ -1439,7 +1458,11 @@ class BabyCareEventNotificationService {
     }, BabyCareEventNotificationService.REMINDER_INTERVAL);
   }
 
-  private async notify(sender: string, message: string) {
+  private async notify(
+    sender: string,
+    message: string,
+    reminder?: BabyCareEventReminder | undefined
+  ) {
     if (!this.notificationWebhookUrl) {
       return;
     }
@@ -1458,6 +1481,29 @@ class BabyCareEventNotificationService {
         content: `${
           this.reminderMentionRoleID ? `<@&${this.reminderMentionRoleID}> ` : ""
         }${message}`,
+      }),
+    });
+    if (!this.notificationWebhookDebugUrl) {
+      return;
+    }
+    const metadata = reminder
+      ? JSON.stringify(
+          {
+            ...reminder,
+            time: new Date(reminder.eventTimestamp),
+          },
+          null,
+          2
+        )
+      : "";
+    await fetch(this.notificationWebhookUrl, {
+      method: HttpMethod.POST,
+      headers: {
+        [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
+      },
+      body: JSON.stringify({
+        username: `{DEBUG} ${sender}`,
+        content: `${message}${metadata ? `\n\n${metadata}` : ""}`,
       }),
     });
   }

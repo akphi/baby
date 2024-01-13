@@ -9,7 +9,7 @@ import {
 import styles from "./style.css";
 import type { LinksFunction } from "@remix-run/node";
 import { LocalizationProvider } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
 import { SettingsProvider } from "./storage";
 import { ThemeProvider } from "@emotion/react";
 import { createTheme } from "@mui/material";

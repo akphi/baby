@@ -14,12 +14,14 @@ import {
   Slider,
   FormControlLabel,
   Checkbox,
+  FormHelperText,
 } from "@mui/material";
 import {
   type BabyCareProfile,
   Gender,
   BabyCareAction,
   Stage,
+  BabyCareEventType,
 } from "../../data/BabyCare";
 import {
   DEFAULT_FEEDING_VOLUME,
@@ -251,6 +253,9 @@ export const BabyCareProfileEditor = (props: {
     setEnableOtherActivitiesNotification,
   ] = useState(profile?.enableOtherActivitiesNotification ?? false);
 
+  // other
+  const [dynamicEvent, setDynamicEvent] = useState(profile?.dynamicEvent);
+
   const onSubmit = handleSubmit((data, event) => {
     submit(
       pruneFormData({
@@ -284,6 +289,8 @@ export const BabyCareProfileEditor = (props: {
         enableOtherActivitiesNotification,
         enableFeedingReminder,
         enablePumpingReminder,
+
+        dynamicEvent,
       }),
       { method: HttpMethod.POST }
     );
@@ -610,6 +617,34 @@ export const BabyCareProfileEditor = (props: {
                 }
               />
             </div>
+          </div>
+          <Divider className="my-2" />
+          <div className="w-full py-2">
+            <FormControl className="w-full">
+              <InputLabel>Dynamic Event</InputLabel>
+              <Select
+                value={dynamicEvent ?? "None"}
+                label="Dynamic Event"
+                onChange={(event: SelectChangeEvent) => {
+                  setDynamicEvent(
+                    event.target.value === "None"
+                      ? undefined
+                      : event.target.value
+                  );
+                }}
+              >
+                <MenuItem value={"None"}>
+                  <div className="text-zinc-400">None</div>
+                </MenuItem>
+                <MenuItem value={BabyCareEventType.SLEEP}>Sleep</MenuItem>
+                <MenuItem value={BabyCareEventType.BATH}>Bath</MenuItem>
+                <MenuItem value={BabyCareEventType.PLAY}>Play</MenuItem>
+                <MenuItem value={BabyCareEventType.MEDICINE}>Medicine</MenuItem>
+              </Select>
+              <FormHelperText className="select-none">
+                Event created when running dynamic command
+              </FormHelperText>
+            </FormControl>
           </div>
         </form>
       </DialogContent>
