@@ -1490,20 +1490,22 @@ class BabyCareEventNotificationService {
       ? JSON.stringify(
           {
             ...reminder,
-            time: new Date(reminder.eventTimestamp),
+            eventTime: new Date(reminder.eventTimestamp),
           },
           null,
           2
         )
       : "";
-    await fetch(this.notificationWebhookUrl, {
+    await fetch(this.notificationWebhookDebugUrl, {
       method: HttpMethod.POST,
       headers: {
         [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
       },
       body: JSON.stringify({
         username:
-          process.env.NODE_ENV === "development" ? `{DEBUG-DEV} ${sender}` : `{DEBUG} ${sender}`,
+          process.env.NODE_ENV === "development"
+            ? `{DEBUG-DEV} ${sender}`
+            : `{DEBUG} ${sender}`,
         content: `${message}${metadata ? `\n\n${metadata}` : ""}`,
       }),
     });
