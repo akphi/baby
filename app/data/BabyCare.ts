@@ -1502,7 +1502,8 @@ class BabyCareEventNotificationService {
         [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
       },
       body: JSON.stringify({
-        username: `{DEBUG} ${sender}`,
+        username:
+          process.env.NODE_ENV === "development" ? `{DEBUG-DEV} ${sender}` : `{DEBUG} ${sender}`,
         content: `${message}${metadata ? `\n\n${metadata}` : ""}`,
       }),
     });
