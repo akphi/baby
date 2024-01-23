@@ -13,7 +13,14 @@ import {
   type MedicineEvent,
 } from "../../data/BabyCare";
 import { ClientSideRowModelModule } from "@ag-grid-community/client-side-row-model";
-import { add, format, isEqual, parseISO, startOfDay, sub } from "date-fns";
+import {
+  add,
+  format,
+  isEqual,
+  parseISO,
+  startOfDay,
+  sub,
+} from "date-fns";
 import {
   AddIcon,
   BathIcon,
@@ -309,7 +316,9 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
                 <div className="flex h-full items-center justify-center">
                   <WarningIcon className="flex text-lg text-indigo-300" />
                 </div>
-                <div className="flex h-full items-center ml-1 text-indigo-400">[unspecified]</div>
+                <div className="flex h-full items-center ml-1 text-indigo-400">
+                  [unspecified]
+                </div>
               </div>
             ) : (
               (data as SerializeFrom<MedicineEvent>).prescription
@@ -415,8 +424,9 @@ const EventTypeRenderer = (
 const BabyCareEventGridSummary = (props: {
   profile: SerializeFrom<BabyCareProfile>;
   events: SerializeFrom<BabyCareEvent>[];
+  selectedDate: Date;
 }) => {
-  const { events } = props;
+  const { events, selectedDate } = props;
   const indexedData = Object.entries(
     merge(
       {
@@ -461,8 +471,10 @@ const BabyCareEventGridSummary = (props: {
   return (
     <div className="flex items-center w-full bg-slate-700 overflow-y-hidden overflow-x-auto select-none">
       <div className="h-10 flex items-center px-3">
-        <div className="text-slate-300 font-semibold text-xs">SUMMARY</div>
-        <div className="flex ml-1.5">
+        <div className="w-16 flex items-center justify-center rounded text-slate-300 bg-slate-800 px-2 py-1 text-xs mono font-medium uppercase">
+          {format(selectedDate, "MMM dd")}
+        </div>
+        <div className="flex">
           <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1.5 mono font-medium">
             <BottleIcon className="text-[15px] leading-[15px] w-[23px]" />
             <div className="ml-0.5">{totalBottleFeedVolume}ml</div>
@@ -608,7 +620,7 @@ export const BabyCareEventGrid = (props: {
             onClick={() => setSelectedEvent(undefined)}
           >
             <div className="font-medium text-slate-600 text-sm">ALL</div>
-            <div className="rounded  text-slate-100 bg-slate-500 text-2xs font-semibold px-1 h-4 flex items-center justify-center ml-1">
+            <div className="rounded text-slate-100 bg-slate-500 text-2xs font-semibold px-1 h-4 flex items-center justify-center ml-1">
               {events.length}
             </div>
           </button>
@@ -766,7 +778,11 @@ export const BabyCareEventGrid = (props: {
           />
         )}
       </div>
-      <BabyCareEventGridSummary profile={profile} events={events} />
+      <BabyCareEventGridSummary
+        profile={profile}
+        events={events}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 };
