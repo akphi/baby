@@ -22,6 +22,7 @@ import {
   Warning,
   Replay30Rounded,
   Forward10Rounded,
+  CheckCircle,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -107,3 +108,4 @@ export const ChildCareIcon = ChildCare;
 export const WarningIcon = Warning;
 export const Replay30Icon = Replay30Rounded;
 export const Forward10Icon = Forward10Rounded;
+export const CheckCircleIcon = CheckCircle;

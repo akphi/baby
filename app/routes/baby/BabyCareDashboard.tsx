@@ -15,6 +15,7 @@ import {
   BathIcon,
   BottleIcon,
   BreastPumpIcon,
+  CheckCircleIcon,
   ChildToyIcon,
   CloseIcon,
   DeleteIcon,
@@ -31,14 +32,7 @@ import {
 } from "../../shared/Icons";
 import { CircularProgress, Fade, IconButton, Snackbar } from "@mui/material";
 import { HttpMethod } from "../../shared/NetworkUtils";
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { debounce, toNumber } from "lodash-es";
 import { isNonNullable } from "../../shared/AssertionUtils";
 import { cn } from "../../shared/StyleUtils";
@@ -65,26 +59,11 @@ const QuickEditInlineNumberInput = (props: {
   const [inputValue, setInputValue] = useState<string | number>(
     isNonNullable(value) ? value / (factor ?? 1) : ""
   );
-  const _setValue = useCallback(
-    (value: number) => {
-      setValue(computeNewValue(value, min, max, step) * (factor ?? 1));
-    },
-    [setValue, factor, min, max, step]
-  );
-  const clickerSetInputValue = (val: number) => {
+  const _setValue = (val: number) => {
     const newValue = computeNewValue(val, min, max, step);
     setValue(newValue * (factor ?? 1));
     setInputValue(newValue);
   };
-  useEffect(() => {
-    const numericValue = toNumber(inputValue);
-    // NOTE: `toNumber` parses `""` as `0`, which is not what we want, so we want to do the explicit check here
-    if (isNaN(numericValue) || !inputValue) {
-      setValue(0);
-    } else {
-      _setValue(numericValue);
-    }
-  }, [inputValue, setValue, _setValue]);
 
   useEffect(() => {
     if (isEditingText) {
@@ -101,7 +80,7 @@ const QuickEditInlineNumberInput = (props: {
     >
       <button
         className="absolute h-full w-[calc(50%_-_15px)] flex justify-start items-center pl-1 left-0"
-        onClick={() => clickerSetInputValue((currentValue ?? 0) - (step ?? 1))}
+        onClick={() => _setValue((currentValue ?? 0) - (step ?? 1))}
       >
         <RemoveIcon className="text-xs" />
       </button>
@@ -117,7 +96,7 @@ const QuickEditInlineNumberInput = (props: {
       </div>
       <button
         className="absolute h-full w-[calc(50%_-_15px)] flex justify-end items-center pr-1 right-0"
-        onClick={() => clickerSetInputValue((currentValue ?? 0) + (step ?? 1))}
+        onClick={() => _setValue((currentValue ?? 0) + (step ?? 1))}
       >
         <AddIcon className="text-xs" />
       </button>
@@ -125,19 +104,32 @@ const QuickEditInlineNumberInput = (props: {
         <div className="absolute h-full w-full flex rounded bg-slate-100">
           <input
             ref={inputRef}
-            className="w-full h-full rounded text-slate-600 bg-transparent font-mono text-sm text-center outline-none"
+            className="w-full h-full rounded text-slate-600 bg-transparent font-mono text-sm text-center outline-none pr-8"
             value={inputValue}
-            onChange={(event) => {
-              setInputValue(event.target.value);
-            }}
+            onChange={(event) => setInputValue(event.target.value)}
           />
+          <button
+            className="absolute right-0 top-0 h-8 w-8 flex justify-start items-center text-slate-300 hover:text-slate-600"
+            onClick={() => {
+              const numericValue = toNumber(inputValue);
+              // NOTE: `toNumber` parses `""` as `0`, which is not what we want, so we want to do the explicit check here
+              if (isNaN(numericValue) || !inputValue) {
+                setValue(0);
+              } else {
+                _setValue(numericValue);
+              }
+              setIsEditingText(false);
+            }}
+          >
+            <CheckCircleIcon className="text-xl" />
+          </button>
         </div>
       )}
     </div>
   );
 };
 
-const QUICK_EDIT_TIMEOUT = 300 * 1000; // 30 seconds
+const QUICK_EDIT_TIMEOUT = 30 * 1000; // 30 seconds
 const QUICK_EDIT_TIMER_INTERVAL = 250; // 250ms
 const QUICK_EDIT_DELETE_BUTTON_HOLD_TIMER_INTERVAL = 1.5 * 1000; // 1.5 second
 
@@ -322,7 +314,7 @@ const EventQuickEditAction = forwardRef(
                 setValue={(value) => {
                   debouncedUpdate.cancel();
                   setVolume(value);
-                  debouncedUpdate({ volume: value });
+                  debouncedUpdate({ volume: value, time });
                 }}
                 className="mr-2"
               />
@@ -339,7 +331,11 @@ const EventQuickEditAction = forwardRef(
                   setValue={(value) => {
                     debouncedUpdate.cancel();
                     setLeftDuration(value);
-                    debouncedUpdate({ leftDuration: value, rightDuration });
+                    debouncedUpdate({
+                      leftDuration: value,
+                      rightDuration,
+                      time,
+                    });
                   }}
                   className="mr-2"
                 >
@@ -357,7 +353,11 @@ const EventQuickEditAction = forwardRef(
                   setValue={(value) => {
                     debouncedUpdate.cancel();
                     setRightDuration(value);
-                    debouncedUpdate({ leftDuration, rightDuration: value });
+                    debouncedUpdate({
+                      leftDuration,
+                      rightDuration: value,
+                      time,
+                    });
                   }}
                   className="mr-2"
                 >
@@ -378,7 +378,7 @@ const EventQuickEditAction = forwardRef(
                   setValue={(value) => {
                     debouncedUpdate.cancel();
                     setHeight(value);
-                    debouncedUpdate({ height: value, weight });
+                    debouncedUpdate({ height: value, weight, time });
                   }}
                   className="mr-2"
                 >
@@ -395,7 +395,7 @@ const EventQuickEditAction = forwardRef(
                   setValue={(value) => {
                     debouncedUpdate.cancel();
                     setWeight(value);
-                    debouncedUpdate({ weight: value, height });
+                    debouncedUpdate({ weight: value, height, time });
                   }}
                   className="mr-2"
                 >
