@@ -9,6 +9,21 @@ import { isNonNullable } from "./AssertionUtils";
 import { forwardRef, useCallback, useEffect, useState } from "react";
 import { toNumber } from "lodash-es";
 
+export const computeNewValue = (
+  val: number,
+  min: number | undefined,
+  max: number | undefined,
+  step: number | undefined
+) => {
+  const _min = min ?? 0;
+  const _max = max ?? Number.MAX_SAFE_INTEGER;
+  let newValue = Math.max(_min, Math.min(_max, val));
+  // NOTE: trick to avoid floating point error in JS
+  // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
+  // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
+  return (step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue;
+};
+
 const BaseNumberInput = forwardRef(function NumberInput(
   props: TextFieldProps & {
     label: string;
@@ -31,27 +46,12 @@ const BaseNumberInput = forwardRef(function NumberInput(
   );
   const _setValue = useCallback(
     (val: number) => {
-      const _min = min ?? 0;
-      const _max = max ?? Number.MAX_SAFE_INTEGER;
-      const newValue = Math.max(_min, Math.min(_max, val)) * (factor ?? 1);
-      // NOTE: trick to avoid floating point error in JS
-      // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
-      // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
-      setValue(
-        (step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue
-      );
+      setValue(computeNewValue(val, min, max, step) * (factor ?? 1));
     },
     [setValue, factor, min, max, step]
   );
   const knobSetInputValue = (val: number) => {
-    const _min = min ?? 0;
-    const _max = max ?? Number.MAX_SAFE_INTEGER;
-    let newValue = Math.max(_min, Math.min(_max, val));
-    // NOTE: trick to avoid floating point error in JS
-    // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
-    // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
-    newValue =
-      (step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue;
+    const newValue = computeNewValue(val, min, max, step);
     setValue(newValue * (factor ?? 1));
     setInputValue(newValue);
   };

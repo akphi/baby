@@ -18,6 +18,7 @@ import {
   ChildToyIcon,
   CloseIcon,
   DeleteIcon,
+  Forward10Icon,
   MeasurementIcon,
   MedicineIcon,
   NoteIcon,
@@ -25,17 +26,27 @@ import {
   PeeIcon,
   PoopIcon,
   RemoveIcon,
+  Replay30Icon,
   SleepIcon,
 } from "../../shared/Icons";
 import { CircularProgress, Fade, IconButton, Snackbar } from "@mui/material";
 import { HttpMethod } from "../../shared/NetworkUtils";
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
-import { debounce } from "lodash-es";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { debounce, toNumber } from "lodash-es";
 import { isNonNullable } from "../../shared/AssertionUtils";
 import { cn } from "../../shared/StyleUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
+import { add, format, parseISO } from "date-fns";
+import { computeNewValue } from "../../shared/NumberInput";
 
-const InlineNumberInput = (props: {
+const QuickEditInlineNumberInput = (props: {
   value: number;
   setValue: (value: number) => void;
   unit: string;
@@ -48,46 +59,85 @@ const InlineNumberInput = (props: {
 }) => {
   const { min, max, step, unit, factor, value, setValue, className, children } =
     props;
-  const _value = isNonNullable(value) ? value / (factor ?? 1) : undefined;
-  const _setValue = (value: number) => {
-    const _min = min ?? 0;
-    const _max = max ?? Number.MAX_SAFE_INTEGER;
-    const newValue = Math.max(_min, Math.min(_max, value)) * (factor ?? 1);
-    // NOTE: trick to avoid floating point error in JS
-    // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
-    // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
-    setValue((step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue);
+  const [isEditingText, setIsEditingText] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const currentValue = isNonNullable(value) ? value / (factor ?? 1) : undefined;
+  const [inputValue, setInputValue] = useState<string | number>(
+    isNonNullable(value) ? value / (factor ?? 1) : ""
+  );
+  const _setValue = useCallback(
+    (value: number) => {
+      setValue(computeNewValue(value, min, max, step) * (factor ?? 1));
+    },
+    [setValue, factor, min, max, step]
+  );
+  const clickerSetInputValue = (val: number) => {
+    const newValue = computeNewValue(val, min, max, step);
+    setValue(newValue * (factor ?? 1));
+    setInputValue(newValue);
   };
+  useEffect(() => {
+    const numericValue = toNumber(inputValue);
+    // NOTE: `toNumber` parses `""` as `0`, which is not what we want, so we want to do the explicit check here
+    if (isNaN(numericValue) || !inputValue) {
+      setValue(0);
+    } else {
+      _setValue(numericValue);
+    }
+  }, [inputValue, setValue, _setValue]);
+
+  useEffect(() => {
+    if (isEditingText) {
+      inputRef.current?.focus();
+    }
+  }, [isEditingText]);
 
   return (
     <div
       className={cn(
-        "h-8 w-28 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
+        "relative h-8 w-28 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded",
         className
       )}
     >
       <button
-        className="absolute h-full w-4 flex justify-start items-center pl-1 left-0"
-        onClick={() => _setValue((_value ?? 0) - (step ?? 1))}
+        className="absolute h-full w-[calc(50%_-_15px)] flex justify-start items-center pl-1 left-0"
+        onClick={() => clickerSetInputValue((currentValue ?? 0) - (step ?? 1))}
       >
         <RemoveIcon className="text-xs" />
       </button>
-      <div className="w-full h-full flex rounded justify-center items-center">
+      <div
+        className="w-full h-full flex rounded justify-center items-center cursor-pointer"
+        onClick={() => {
+          setIsEditingText(true);
+        }}
+      >
         {children}
-        <div className="flex items-center font-mono text-sm">{_value}</div>
+        <div className="flex items-center font-mono text-sm">{inputValue}</div>
         <div className="flex items-center font-mono text-xs ml-0.5">{unit}</div>
       </div>
       <button
-        className="absolute h-full w-1/2 flex justify-end items-center pr-1 right-0"
-        onClick={() => _setValue((_value ?? 0) + (step ?? 1))}
+        className="absolute h-full w-[calc(50%_-_15px)] flex justify-end items-center pr-1 right-0"
+        onClick={() => clickerSetInputValue((currentValue ?? 0) + (step ?? 1))}
       >
         <AddIcon className="text-xs" />
       </button>
+      {isEditingText && (
+        <div className="absolute h-full w-full flex rounded bg-slate-100">
+          <input
+            ref={inputRef}
+            className="w-full h-full rounded text-slate-600 bg-transparent font-mono text-sm text-center outline-none"
+            value={inputValue}
+            onChange={(event) => {
+              setInputValue(event.target.value);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
 
-const QUICK_EDIT_TIMEOUT = 30 * 1000; // 30 seconds
+const QUICK_EDIT_TIMEOUT = 300 * 1000; // 30 seconds
 const QUICK_EDIT_TIMER_INTERVAL = 250; // 250ms
 const QUICK_EDIT_DELETE_BUTTON_HOLD_TIMER_INTERVAL = 1.5 * 1000; // 1.5 second
 
@@ -184,6 +234,7 @@ const EventQuickEditAction = forwardRef(
       clearInterval(deleteButtonHoldTimer.current);
     }
 
+    const [time, setTime] = useState(parseISO(data.time));
     const [volume, setVolume] = useState(
       (data as SerializeFrom<BottleFeedEvent | PumpingEvent>).volume
     );
@@ -209,6 +260,7 @@ const EventQuickEditAction = forwardRef(
             rightDuration?: number | undefined;
             height?: number | undefined;
             weight?: number | undefined;
+            time?: Date | undefined;
           }) => {
             let action: string;
             switch (data.TYPE) {
@@ -232,15 +284,18 @@ const EventQuickEditAction = forwardRef(
                 return;
             }
             submit(
-              pruneFormData({
+              {
                 __action: action,
                 ...data,
-                volume: formData?.volume,
-                leftDuration: formData?.leftDuration,
-                rightDuration: formData?.rightDuration,
-                height: formData?.height,
-                weight: formData?.weight,
-              }),
+                ...pruneFormData({
+                  time: formData?.time?.toISOString(),
+                  volume: formData?.volume,
+                  leftDuration: formData?.leftDuration,
+                  rightDuration: formData?.rightDuration,
+                  height: formData?.height,
+                  weight: formData?.weight,
+                }),
+              },
               { method: HttpMethod.POST }
             );
           },
@@ -254,11 +309,11 @@ const EventQuickEditAction = forwardRef(
         ref={ref as any}
         className="flex items-center justify-between w-full h-full shadow-md shadow-slate-300 rounded bg-slate-700 select-none"
       >
-        <div className="pl-4 md:px-4">
+        <div className="pl-4 md:px-4 overflow-x-auto">
           <div className="w-full h-full flex items-center">
             {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
               data.TYPE === BabyCareEventType.PUMPING) && (
-              <InlineNumberInput
+              <QuickEditInlineNumberInput
                 min={0}
                 max={1000}
                 step={5}
@@ -274,7 +329,7 @@ const EventQuickEditAction = forwardRef(
             )}
             {data.TYPE === BabyCareEventType.NURSING && (
               <>
-                <InlineNumberInput
+                <QuickEditInlineNumberInput
                   min={0}
                   max={60}
                   step={1}
@@ -291,8 +346,8 @@ const EventQuickEditAction = forwardRef(
                   <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
                     L
                   </div>
-                </InlineNumberInput>
-                <InlineNumberInput
+                </QuickEditInlineNumberInput>
+                <QuickEditInlineNumberInput
                   min={0}
                   max={60}
                   step={1}
@@ -309,12 +364,12 @@ const EventQuickEditAction = forwardRef(
                   <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
                     R
                   </div>
-                </InlineNumberInput>
+                </QuickEditInlineNumberInput>
               </>
             )}
             {data.TYPE === BabyCareEventType.MEASUREMENT && (
               <>
-                <InlineNumberInput
+                <QuickEditInlineNumberInput
                   min={0}
                   max={300}
                   step={1}
@@ -330,8 +385,8 @@ const EventQuickEditAction = forwardRef(
                   <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
                     H
                   </div>
-                </InlineNumberInput>
-                <InlineNumberInput
+                </QuickEditInlineNumberInput>
+                <QuickEditInlineNumberInput
                   min={0}
                   max={100}
                   step={0.1}
@@ -347,12 +402,65 @@ const EventQuickEditAction = forwardRef(
                   <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
                     W
                   </div>
-                </InlineNumberInput>
+                </QuickEditInlineNumberInput>
               </>
             )}
+            <div className="relative h-8 w-24 shrink-0 flex justify-center items-center text-slate-300 bg-slate-800 rounded">
+              <button
+                className="absolute h-full w-1/2 flex justify-start items-center pl-1 left-0 text-slate-500 hover:text-slate-300"
+                onClick={() => {
+                  debouncedUpdate.cancel();
+                  const value = add(time, {
+                    minutes: -30,
+                  });
+                  setTime(value);
+                  debouncedUpdate({
+                    time: value,
+
+                    // NOTE: this is a design-limitation, we might miss something and
+                    // it can cause a bug where updating the time will skip updating the rest
+                    volume,
+                    leftDuration,
+                    rightDuration,
+                    weight,
+                    height,
+                  });
+                }}
+              >
+                <Replay30Icon className="text-xl" />
+              </button>
+              <div className="w-full h-full flex rounded justify-center items-center">
+                <div className="flex items-center font-mono text-xs">
+                  {format(time, "HH:mm")}
+                </div>
+              </div>
+              <button
+                className="absolute h-full w-1/2 flex justify-end items-center pr-1 right-0 text-slate-500 hover:text-slate-300"
+                onClick={() => {
+                  debouncedUpdate.cancel();
+                  const value = add(time, {
+                    minutes: 10,
+                  });
+                  setTime(value);
+                  debouncedUpdate({
+                    time: value,
+
+                    // NOTE: this is a design-limitation, we might miss something and
+                    // it can cause a bug where updating the time will skip updating the rest
+                    volume,
+                    leftDuration,
+                    rightDuration,
+                    weight,
+                    height,
+                  });
+                }}
+              >
+                <Forward10Icon className="text-xl" />
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex relative h-14">
+        <div className="relative h-14 flex">
           <div className="h-full w-10 flex items-center justify-center">
             <CircularProgress
               size={36}

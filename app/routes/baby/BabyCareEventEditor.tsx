@@ -8,6 +8,7 @@ import {
   DialogTitle,
   Divider,
   FormControlLabel,
+  IconButton,
   Switch,
   TextField,
   createFilterOptions,
@@ -31,12 +32,13 @@ import { useMemo, useState } from "react";
 import { NumberInput, OptionalNumberInput } from "../../shared/NumberInput";
 import { DesktopDateTimePicker } from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
-import { parseISO } from "date-fns";
+import { add, parseISO } from "date-fns";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
 import { pruneFormData } from "../../shared/FormDataUtils";
 import { isString } from "../../shared/AssertionUtils";
 import { debounce } from "lodash-es";
+import { Forward10, Replay30 } from "@mui/icons-material";
 
 interface PrescriptionOption {
   inputValue?: string;
@@ -201,7 +203,7 @@ export const BabyCareEventEditor = (props: {
           autoComplete="off"
           noValidate
         >
-          <div className="w-full py-2">
+          <div className="w-full py-2 flex">
             <DesktopDateTimePicker
               label="Time"
               value={time}
@@ -211,6 +213,38 @@ export const BabyCareEventEditor = (props: {
               format="MMM dd yyyy - HH:mm"
               className="w-full"
             />
+            <div className="flex justify-center items-center ml-2">
+              <IconButton
+                className="w-10 h-10"
+                onClick={() =>
+                  setTime(
+                    add(time, {
+                      minutes: -30,
+                    })
+                  )
+                }
+              >
+                <Replay30
+                  fontSize="large"
+                  className="text-slate-300 hover:text-slate-400"
+                />
+              </IconButton>
+              <IconButton
+                className="w-10 h-10"
+                onClick={() =>
+                  setTime(
+                    add(time, {
+                      minutes: 10,
+                    })
+                  )
+                }
+              >
+                <Forward10
+                  fontSize="large"
+                  className="text-slate-300 hover:text-slate-400"
+                />
+              </IconButton>
+            </div>
           </div>
           {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
             data.TYPE === BabyCareEventType.PUMPING) && (

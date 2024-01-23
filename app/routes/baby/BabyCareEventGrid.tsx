@@ -13,14 +13,7 @@ import {
   type MedicineEvent,
 } from "../../data/BabyCare";
 import { ClientSideRowModelModule } from "@ag-grid-community/client-side-row-model";
-import {
-  add,
-  format,
-  isEqual,
-  parseISO,
-  startOfDay,
-  sub,
-} from "date-fns";
+import { add, format, isEqual, parseISO, startOfDay, sub } from "date-fns";
 import {
   AddIcon,
   BathIcon,
@@ -53,6 +46,7 @@ import { pruneFormData } from "../../shared/FormDataUtils";
 import { Divider } from "@mui/material";
 import { mlToOz } from "../../shared/UnitUtils";
 import { UNSPECIFIED_PRESCRIPTION_TAG } from "../../data/constants";
+import { computeNewValue } from "../../shared/NumberInput";
 
 const InlineNumberInput = (props: {
   value: number;
@@ -69,19 +63,13 @@ const InlineNumberInput = (props: {
     props;
   const _value = isNonNullable(value) ? value / (factor ?? 1) : undefined;
   const _setValue = (value: number) => {
-    const _min = min ?? 0;
-    const _max = max ?? Number.MAX_SAFE_INTEGER;
-    const newValue = Math.max(_min, Math.min(_max, value)) * (factor ?? 1);
-    // NOTE: trick to avoid floating point error in JS
-    // See https://stackoverflow.com/questions/50778431/why-does-0-1-0-2-return-unpredictable-float-results-in-javascript-while-0-2
-    // See https://stackoverflow.com/questions/11832914/how-to-round-to-at-most-2-decimal-places-if-necessary
-    setValue((step ?? 1) % 1 !== 0 ? Math.round(newValue * 10) / 10 : newValue);
+    setValue(computeNewValue(value, min, max, step) * (factor ?? 1));
   };
 
   return (
     <div
       className={cn(
-        "h-6 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative",
+        "relative h-6 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded",
         className
       )}
     >
@@ -219,7 +207,7 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
       )}
       {data.TYPE === BabyCareEventType.BOTTLE_FEED &&
         Boolean((data as SerializeFrom<BottleFeedEvent>).formulaMilkVolume) && (
-          <div className="h-6 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded relative">
+          <div className="relative h-6 w-24 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded">
             <div className="w-full h-full flex rounded justify-center items-center">
               <div className="flex items-center justify-center h-3 w-3 rounded-full text-4xs bg-slate-500 text-slate-100 font-bold mr-1">
                 F

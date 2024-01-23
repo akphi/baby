@@ -20,6 +20,8 @@ import {
   Sync,
   ChildCare,
   Warning,
+  Replay30Rounded,
+  Forward10Rounded,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -103,3 +105,5 @@ export const SwitchProfileIcon = SwitchAccount;
 export const SyncIcon = Sync;
 export const ChildCareIcon = ChildCare;
 export const WarningIcon = Warning;
+export const Replay30Icon = Replay30Rounded;
+export const Forward10Icon = Forward10Rounded;
