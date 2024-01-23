@@ -210,7 +210,7 @@ export const BabyCareEventEditor = (props: {
               onChange={(value: Date | null) => {
                 setTime(value ?? new Date());
               }}
-              format="MMM dd yyyy - HH:mm"
+              format="MMM dd - HH:mm"
               className="w-full"
             />
             <div className="flex justify-center items-center ml-2">
