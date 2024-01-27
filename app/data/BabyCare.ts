@@ -1249,10 +1249,10 @@ export class BabyCareDataRegistry {
 
 abstract class BabyCareEventReminder {
   readonly eventId: string;
-  readonly eventTimestamp: number;
   abstract readonly eventType: string;
   readonly profileId: string;
 
+  eventTimestamp: number;
   lastNotifiedTimestamp?: number | undefined;
 
   constructor(event: BabyCareEvent) {
@@ -1547,7 +1547,7 @@ class BabyCareEventNotificationService {
     });
   }
 
-  private updateReminderForEvent(event: BabyCareEvent) {
+  private updateReminderForEvent(event: BabyCareEvent, update = false) {
     let reminder: BabyCareEventReminder;
     if (event instanceof BottleFeedEvent || event instanceof NursingEvent) {
       reminder = new FeedingEventReminder(event);
@@ -1555,6 +1555,19 @@ class BabyCareEventNotificationService {
       reminder = new PumpingEventReminder(event);
     } else {
       return;
+    }
+
+    if (update) {
+      const existingReminder = this._reminderEventMap.get(reminder.eventId);
+      if (
+        existingReminder &&
+        existingReminder.eventTimestamp !== reminder.eventTimestamp
+      ) {
+        // if the event timestamp is updated, update the reminder timestamp
+        // also, reset the ``lastNotifiedTimestamp` value
+        existingReminder.eventTimestamp = reminder.eventTimestamp;
+        existingReminder.lastNotifiedTimestamp = undefined;
+      }
     }
 
     // find all reminder for the same event type
@@ -1632,7 +1645,7 @@ class BabyCareEventNotificationService {
     }
 
     // add corresponding reminder
-    this.updateReminderForEvent(event);
+    this.updateReminderForEvent(event, true);
   }
 
   // when an event is removed, remove its associated reminder
