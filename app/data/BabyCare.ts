@@ -9,6 +9,7 @@ import {
   wrap,
   type EntityDTO,
   DateTimeType,
+  JsonType,
 } from "@mikro-orm/core";
 import { SqliteDriver } from "@mikro-orm/sqlite";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
@@ -58,7 +59,9 @@ export enum Gender {
 
 export enum Stage {
   NEWBORN = "NEWBORN",
-  INFANT = "INFANT",
+  NEWBORN_BREAST_FED = "NEWBORN_BREAST_FED",
+  NEWBORN_BOTTLE_FED = "NEWBORN_BOTTLE_FED",
+  INFANT = "INFANT", // > 12m
   TODDLER = "TODDLER",
   PRESCHOOLER = "PRESCHOOLER",
 }
@@ -93,57 +96,31 @@ export class BabyCareProfile {
   @Property({ type: "string", nullable: true })
   nickname?: string | undefined;
 
-  // feeding
-  @Property({ type: "number" })
-  defaultFeedingVolume = DEFAULT_FEEDING_VOLUME;
-
-  @Property({ type: "number" })
-  defaultFeedingInterval = DEFAULT_FEEDING_INTERVAL;
-
-  @Property({ type: "number" })
-  defaultNightFeedingInterval = DEFAULT_NIGHT_FEEDING_INTERVAL;
-
-  // pumping
-  @Property({ type: "number" })
-  defaultPumpingDuration = DEFAULT_PUMPING_DURATION;
-
-  @Property({ type: "number" })
-  defaultPumpingInterval = DEFAULT_PUMPING_INTERNAL;
-
-  @Property({ type: "number" })
-  defaultNightPumpingInterval = DEFAULT_NIGHT_PUMPING_INTERNAL;
-
-  // timing
-  @Property({ type: "number" })
-  babyDaytimeStart = DEFAULT_BABY_DAYTIME_START_HOUR;
-
-  @Property({ type: "number" })
-  babyDaytimeEnd = DEFAULT_BABY_DAYTIME_END_HOUR;
-
-  @Property({ type: "number" })
-  parentDaytimeStart = DEFAULT_PARENT_DAYTIME_START_HOUR;
-
-  @Property({ type: "number" })
-  parentDaytimeEnd = DEFAULT_PARENT_DAYTIME_END_HOUR;
-
-  // notification
-  @Property({ type: "boolean" })
-  enableFeedingNotification = DEFAULT_ENABLE_NOTIFICATION;
-
-  @Property({ type: "boolean" })
-  enableFeedingReminder = DEFAULT_ENABLE_NOTIFICATION;
-
-  @Property({ type: "boolean" })
-  enablePumpingNotification = DEFAULT_ENABLE_NOTIFICATION;
-
-  @Property({ type: "boolean" })
-  enablePumpingReminder = DEFAULT_ENABLE_NOTIFICATION;
-
-  @Property({ type: "boolean" })
-  enableOtherActivitiesNotification = false; // this would be too noisy so disabled by default
-
   @Property({ type: "string", nullable: true })
   dynamicEvent?: string | undefined;
+
+  @Property({ type: JsonType })
+  settings = {
+    // feeding
+    defaultFeedingVolume: DEFAULT_FEEDING_VOLUME,
+    defaultFeedingInterval: DEFAULT_FEEDING_INTERVAL,
+    defaultNightFeedingInterval: DEFAULT_NIGHT_FEEDING_INTERVAL,
+    // pumping
+    defaultPumpingDuration: DEFAULT_PUMPING_DURATION,
+    defaultPumpingInterval: DEFAULT_PUMPING_INTERNAL,
+    defaultNightPumpingInterval: DEFAULT_NIGHT_PUMPING_INTERNAL,
+    // timing
+    babyDaytimeStart: DEFAULT_BABY_DAYTIME_START_HOUR,
+    babyDaytimeEnd: DEFAULT_BABY_DAYTIME_END_HOUR,
+    parentDaytimeStart: DEFAULT_PARENT_DAYTIME_START_HOUR,
+    parentDaytimeEnd: DEFAULT_PARENT_DAYTIME_END_HOUR,
+    // notification
+    enableFeedingNotification: DEFAULT_ENABLE_NOTIFICATION,
+    enableFeedingReminder: DEFAULT_ENABLE_NOTIFICATION,
+    enablePumpingNotification: DEFAULT_ENABLE_NOTIFICATION,
+    enablePumpingReminder: DEFAULT_ENABLE_NOTIFICATION,
+    enableOtherActivitiesNotification: false, // this would be too noisy so disabled by default
+  };
 
   constructor(name: string, genderAtBirth: Gender, dob: Date, stage: Stage) {
     this.name = name;
@@ -160,25 +137,8 @@ export class BabyCareProfile {
       dob: this.dob,
       handle: this.handle,
       nickname: this.nickname,
-
-      defaultFeedingVolume: this.defaultFeedingVolume,
-      defaultFeedingInterval: this.defaultFeedingInterval,
-      defaultNightFeedingInterval: this.defaultNightFeedingInterval,
-
-      defaultPumpingDuration: this.defaultPumpingDuration,
-      defaultPumpingInterval: this.defaultPumpingInterval,
-      defaultNightPumpingInterval: this.defaultNightPumpingInterval,
-
-      babyDaytimeStart: this.babyDaytimeStart,
-      babyDaytimeEnd: this.babyDaytimeEnd,
-      parentDaytimeStart: this.parentDaytimeStart,
-      parentDaytimeEnd: this.parentDaytimeEnd,
-
-      enableFeedingNotification: this.enableFeedingNotification,
-      enableFeedingReminder: this.enableFeedingReminder,
-      enablePumpingNotification: this.enablePumpingNotification,
-      enablePumpingReminder: this.enablePumpingReminder,
-      enableOtherActivitiesNotification: this.enableOtherActivitiesNotification,
+      dynamicEvent: this.dynamicEvent,
+      settings: HASHER.hash(this.settings),
     });
   }
 }
@@ -497,6 +457,8 @@ export enum BabyCareAction {
   UPDATE_PROFILE = "baby-care.profile.update",
   REMOVE_PROFILE = "baby-care.profile.remove",
 
+  REQUEST_ASSISTANT = "baby-care.assistant.request",
+
   CREATE_DYNAMIC_EVENT = "baby-care.dynamic-event.create",
 
   CREATE_BOTTLE_FEED_EVENT = "baby-care.bottle-feed-event.create",
@@ -768,66 +730,69 @@ export class BabyCareDataRegistry {
     profile.handle = extractOptionalString(formData, "handle")?.trim();
 
     // feeding
-    profile.defaultFeedingVolume = extractRequiredNumber(
+    profile.settings.defaultFeedingVolume = extractRequiredNumber(
       formData,
       "defaultFeedingVolume"
     );
-    profile.defaultFeedingInterval = extractRequiredNumber(
+    profile.settings.defaultFeedingInterval = extractRequiredNumber(
       formData,
       "defaultFeedingInterval"
     );
-    profile.defaultNightFeedingInterval = extractRequiredNumber(
+    profile.settings.defaultNightFeedingInterval = extractRequiredNumber(
       formData,
       "defaultNightFeedingInterval"
     );
 
     // pumping
-    profile.defaultPumpingDuration = extractRequiredNumber(
+    profile.settings.defaultPumpingDuration = extractRequiredNumber(
       formData,
       "defaultPumpingDuration"
     );
-    profile.defaultPumpingInterval = extractRequiredNumber(
+    profile.settings.defaultPumpingInterval = extractRequiredNumber(
       formData,
       "defaultPumpingInterval"
     );
-    profile.defaultNightPumpingInterval = extractRequiredNumber(
+    profile.settings.defaultNightPumpingInterval = extractRequiredNumber(
       formData,
       "defaultNightPumpingInterval"
     );
 
     // daytime
-    profile.babyDaytimeStart = extractRequiredNumber(
+    profile.settings.babyDaytimeStart = extractRequiredNumber(
       formData,
       "babyDaytimeStart"
     );
-    profile.babyDaytimeEnd = extractRequiredNumber(formData, "babyDaytimeEnd");
-    profile.parentDaytimeStart = extractRequiredNumber(
+    profile.settings.babyDaytimeEnd = extractRequiredNumber(
+      formData,
+      "babyDaytimeEnd"
+    );
+    profile.settings.parentDaytimeStart = extractRequiredNumber(
       formData,
       "parentDaytimeStart"
     );
-    profile.parentDaytimeEnd = extractRequiredNumber(
+    profile.settings.parentDaytimeEnd = extractRequiredNumber(
       formData,
       "parentDaytimeEnd"
     );
 
     // notification
-    profile.enableFeedingNotification = extractRequiredBoolean(
+    profile.settings.enableFeedingNotification = extractRequiredBoolean(
       formData,
       "enableFeedingNotification"
     );
-    profile.enableFeedingReminder = extractRequiredBoolean(
+    profile.settings.enableFeedingReminder = extractRequiredBoolean(
       formData,
       "enableFeedingReminder"
     );
-    profile.enablePumpingNotification = extractRequiredBoolean(
+    profile.settings.enablePumpingNotification = extractRequiredBoolean(
       formData,
       "enablePumpingNotification"
     );
-    profile.enablePumpingReminder = extractRequiredBoolean(
+    profile.settings.enablePumpingReminder = extractRequiredBoolean(
       formData,
       "enablePumpingReminder"
     );
-    profile.enableOtherActivitiesNotification = extractRequiredBoolean(
+    profile.settings.enableOtherActivitiesNotification = extractRequiredBoolean(
       formData,
       "enableOtherActivitiesNotification"
     );
@@ -887,7 +852,7 @@ export class BabyCareDataRegistry {
         event = new BottleFeedEvent(
           new Date(),
           profile,
-          profile.defaultFeedingVolume
+          profile.settings.defaultFeedingVolume
         );
         break;
       }
@@ -900,8 +865,8 @@ export class BabyCareDataRegistry {
       }
       case BabyCareAction.CREATE_PUMPING_EVENT: {
         const quickEvent = new PumpingEvent(new Date(), profile);
-        quickEvent.duration = profile.defaultPumpingDuration;
-        quickEvent.volume = profile.defaultFeedingVolume;
+        quickEvent.duration = profile.settings.defaultPumpingDuration;
+        quickEvent.volume = profile.settings.defaultFeedingVolume;
         event = quickEvent;
         break;
       }
@@ -1316,15 +1281,15 @@ class FeedingEventReminder extends BabyCareEventReminder {
   }
 
   override shouldNotify(profile: EntityDTO<BabyCareProfile>) {
-    return profile.enableFeedingReminder;
+    return profile.settings.enableFeedingReminder;
   }
 
   override getTimingConfiguration(profile: EntityDTO<BabyCareProfile>) {
     return {
-      daytimeInterval: profile.defaultFeedingInterval,
-      nighttimeInterval: profile.defaultNightFeedingInterval,
-      daytimeStart: profile.babyDaytimeStart,
-      daytimeEnd: profile.babyDaytimeEnd,
+      daytimeInterval: profile.settings.defaultFeedingInterval,
+      nighttimeInterval: profile.settings.defaultNightFeedingInterval,
+      daytimeStart: profile.settings.babyDaytimeStart,
+      daytimeEnd: profile.settings.babyDaytimeEnd,
     };
   }
 }
@@ -1341,15 +1306,15 @@ class PumpingEventReminder extends BabyCareEventReminder {
   }
 
   override shouldNotify(profile: EntityDTO<BabyCareProfile>) {
-    return profile.enablePumpingReminder;
+    return profile.settings.enablePumpingReminder;
   }
 
   override getTimingConfiguration(profile: EntityDTO<BabyCareProfile>) {
     return {
-      daytimeInterval: profile.defaultPumpingInterval,
-      nighttimeInterval: profile.defaultNightPumpingInterval,
-      daytimeStart: profile.parentDaytimeStart,
-      daytimeEnd: profile.parentDaytimeEnd,
+      daytimeInterval: profile.settings.defaultPumpingInterval,
+      nighttimeInterval: profile.settings.defaultNightPumpingInterval,
+      daytimeStart: profile.settings.parentDaytimeStart,
+      daytimeEnd: profile.settings.parentDaytimeEnd,
     };
   }
 }
@@ -1513,11 +1478,11 @@ class BabyCareEventNotificationService {
 
   private shouldNotifyEvent(event: BabyCareEvent) {
     if (event instanceof BottleFeedEvent || event instanceof NursingEvent) {
-      return event.profile.enableFeedingNotification;
+      return event.profile.settings.enableFeedingNotification;
     } else if (event instanceof PumpingEvent) {
-      return event.profile.enablePumpingNotification;
+      return event.profile.settings.enablePumpingNotification;
     }
-    return event.profile.enableOtherActivitiesNotification;
+    return event.profile.settings.enableOtherActivitiesNotification;
   }
 
   // when a profile is updated, update the profile cache
@@ -1651,6 +1616,13 @@ class BabyCareEventNotificationService {
   // when an event is removed, remove its associated reminder
   async eventRemoved(event: BabyCareEvent) {
     this._reminderEventMap.delete(event.id);
+  }
+
+  async requestAssistant(profile: BabyCareProfile) {
+    BabyCareEventManager.notificationService.notify(
+      `[Help] ${profile.nickname ?? profile.name}`,
+      `Needs assistance!`
+    );
   }
 }
 

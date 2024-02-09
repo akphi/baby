@@ -94,13 +94,13 @@ export const BabyCareSummary = (props: {
   // quota
   const isDaytime = isDuringDaytime(
     new Date(),
-    profile.babyDaytimeStart,
-    profile.babyDaytimeEnd
+    profile.settings.babyDaytimeStart,
+    profile.settings.babyDaytimeEnd
   );
-  const quotaText = `${profile.defaultFeedingVolume}ml / ${
+  const quotaText = `${profile.settings.defaultFeedingVolume}ml / ${
     (isDaytime
-      ? profile.defaultFeedingInterval
-      : profile.defaultNightFeedingInterval) /
+      ? profile.settings.defaultFeedingInterval
+      : profile.settings.defaultNightFeedingInterval) /
     (60 * 60 * 1000)
   }hr`;
 

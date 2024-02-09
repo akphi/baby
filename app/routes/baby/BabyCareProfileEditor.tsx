@@ -198,59 +198,61 @@ export const BabyCareProfileEditor = (props: {
 
   // feeding
   const [defaultFeedingVolume, setDefaultFeedingVolume] = useState(
-    profile?.defaultFeedingVolume ?? DEFAULT_FEEDING_VOLUME
+    profile?.settings.defaultFeedingVolume ?? DEFAULT_FEEDING_VOLUME
   );
   const [defaultFeedingInterval, setDefaultFeedingInterval] = useState(
-    profile?.defaultFeedingInterval ?? DEFAULT_FEEDING_INTERVAL
+    profile?.settings.defaultFeedingInterval ?? DEFAULT_FEEDING_INTERVAL
   );
   const [defaultNightFeedingInterval, setDefaultNightFeedingInterval] =
     useState(
-      profile?.defaultNightFeedingInterval ?? DEFAULT_NIGHT_FEEDING_INTERVAL
+      profile?.settings.defaultNightFeedingInterval ??
+        DEFAULT_NIGHT_FEEDING_INTERVAL
     );
 
   // pumping
   const [defaultPumpingDuration, setDefaultPumpingDuration] = useState(
-    profile?.defaultPumpingDuration ?? DEFAULT_PUMPING_DURATION
+    profile?.settings.defaultPumpingDuration ?? DEFAULT_PUMPING_DURATION
   );
   const [defaultPumpingInterval, setDefaultPumpingInterval] = useState(
-    profile?.defaultPumpingInterval ?? DEFAULT_PUMPING_INTERNAL
+    profile?.settings.defaultPumpingInterval ?? DEFAULT_PUMPING_INTERNAL
   );
   const [defaultNightPumpingInterval, setDefaultNightPumpingInterval] =
     useState(
-      profile?.defaultNightPumpingInterval ?? DEFAULT_NIGHT_PUMPING_INTERNAL
+      profile?.settings.defaultNightPumpingInterval ??
+        DEFAULT_NIGHT_PUMPING_INTERNAL
     );
 
   // timing
   const [babyDaytimeStart, setBabyDaytimeStart] = useState(
-    profile?.babyDaytimeStart ?? DEFAULT_BABY_DAYTIME_START_HOUR
+    profile?.settings.babyDaytimeStart ?? DEFAULT_BABY_DAYTIME_START_HOUR
   );
   const [babyDaytimeEnd, setBabyDaytimeEnd] = useState(
-    profile?.babyDaytimeEnd ?? DEFAULT_BABY_DAYTIME_END_HOUR
+    profile?.settings.babyDaytimeEnd ?? DEFAULT_BABY_DAYTIME_END_HOUR
   );
   const [parentDaytimeStart, setParentDaytimeStart] = useState(
-    profile?.parentDaytimeStart ?? DEFAULT_PARENT_DAYTIME_START_HOUR
+    profile?.settings.parentDaytimeStart ?? DEFAULT_PARENT_DAYTIME_START_HOUR
   );
   const [parentDaytimeEnd, setParentDaytimeEnd] = useState(
-    profile?.parentDaytimeEnd ?? DEFAULT_PARENT_DAYTIME_END_HOUR
+    profile?.settings.parentDaytimeEnd ?? DEFAULT_PARENT_DAYTIME_END_HOUR
   );
 
   // notification
   const [enableFeedingNotification, setEnableFeedingNotification] = useState(
-    profile?.enableFeedingNotification ?? DEFAULT_ENABLE_NOTIFICATION
+    profile?.settings.enableFeedingNotification ?? DEFAULT_ENABLE_NOTIFICATION
   );
   const [enableFeedingReminder, setEnableFeedingReminder] = useState(
-    profile?.enableFeedingReminder ?? DEFAULT_ENABLE_NOTIFICATION
+    profile?.settings.enableFeedingReminder ?? DEFAULT_ENABLE_NOTIFICATION
   );
   const [enablePumpingNotification, setEnablePumpingNotification] = useState(
-    profile?.enablePumpingNotification ?? DEFAULT_ENABLE_NOTIFICATION
+    profile?.settings.enablePumpingNotification ?? DEFAULT_ENABLE_NOTIFICATION
   );
   const [enablePumpingReminder, setEnablePumpingReminder] = useState(
-    profile?.enablePumpingReminder ?? DEFAULT_ENABLE_NOTIFICATION
+    profile?.settings.enablePumpingReminder ?? DEFAULT_ENABLE_NOTIFICATION
   );
   const [
     enableOtherActivitiesNotification,
     setEnableOtherActivitiesNotification,
-  ] = useState(profile?.enableOtherActivitiesNotification ?? false);
+  ] = useState(profile?.settings.enableOtherActivitiesNotification ?? false);
 
   // other
   const [dynamicEvent, setDynamicEvent] = useState(profile?.dynamicEvent);
