@@ -41,6 +41,7 @@ export enum BabyCareEmoji {
   MEASUREMENT = "🦒",
   MEDICINE = "💊",
   NOTE = "📝",
+  EMERGENCY = "🚨",
 }
 
 export const NursingIcon = (props: IconProps) => (

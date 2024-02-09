@@ -125,7 +125,7 @@ export const BabyCareSummary = (props: {
           </div>
         </div>
         <div className="flex mt-1.5">
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1.5 mono font-medium">
+          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
             <BottleIcon className="text-[15px] leading-[15px] w-[23px]" />
             <div className="ml-0.5">{totalBottleFeedVolume}ml</div>
             <Divider
@@ -141,7 +141,7 @@ export const BabyCareSummary = (props: {
             />
             <div className="">{bottleEvents.length}</div>
           </div>
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1.5 mono font-medium">
+          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
             <BreastPumpIcon className="text-[15px] leading-[15px] w-[23px]" />
             <div className="ml-0.5">{totalPumpingVolume}ml</div>
             <Divider
@@ -158,7 +158,7 @@ export const BabyCareSummary = (props: {
             />
             <div className="">{pumpingEvents.length}</div>
           </div>
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 px-2 py-1 text-xs ml-1.5 mono font-medium">
+          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
             <PoopIcon className="text-[15px] leading-[15px] w-[23px]" />
             <div className="ml-0.5">{poopEventCount}</div>
           </div>
