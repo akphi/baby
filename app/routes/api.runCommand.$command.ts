@@ -1,6 +1,10 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { BabyCareDataRegistry, BabyCareAction } from "../data/BabyCare";
+import {
+  BabyCareDataRegistry,
+  BabyCareAction,
+  BabyCareEventManager,
+} from "../data/BabyCare";
 import { HttpStatus } from "../shared/NetworkUtils";
 import { guaranteeNonEmptyString } from "../shared/AssertionUtils";
 
@@ -31,6 +35,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const command = params.command;
 
   switch (command) {
+    case BabyCareAction.REQUEST_ASSISTANT: {
+      const profile = await BabyCareDataRegistry.fetchProfileByIdOrHandle(
+        guaranteeNonEmptyString(
+          payload.profileId?.trim(),
+          "'profileId' is missing or empty"
+        )
+      );
+      await BabyCareEventManager.notificationService.requestAssistant(profile);
+      return json({}, HttpStatus.OK);
+    }
     case BabyCareAction.CREATE_DYNAMIC_EVENT:
     case BabyCareAction.CREATE_BOTTLE_FEED_EVENT:
     case BabyCareAction.CREATE_NURSING_EVENT:
