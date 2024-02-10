@@ -4,6 +4,9 @@ COPY . /app/home
 
 WORKDIR /app/home
 
+# For alerting sounds outside of Docker using PulseAudio via TCP
+RUN apk add pulseaudio pulseaudio-utils
+
 RUN npm install
 RUN npm run clean
 RUN npm run build
