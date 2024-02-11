@@ -23,6 +23,8 @@ import {
   Replay30Rounded,
   Forward10Rounded,
   CheckCircle,
+  NotificationsActive,
+  ManageSearch,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -41,7 +43,7 @@ export enum BabyCareEmoji {
   MEASUREMENT = "🦒",
   MEDICINE = "💊",
   NOTE = "📝",
-  EMERGENCY = "🚨",
+  MEMORY = "🌈",
 }
 
 export const NursingIcon = (props: IconProps) => (
@@ -86,6 +88,9 @@ export const MedicineIcon = (props: IconProps) => (
 export const NoteIcon = (props: IconProps) => (
   <Icon {...props}>{BabyCareEmoji.NOTE}</Icon>
 );
+export const MemoryIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.MEMORY}</Icon>
+);
 export const AddIcon = Add;
 export const AddCircleIcon = AddCircle;
 export const RemoveIcon = Remove;
@@ -110,3 +115,5 @@ export const WarningIcon = Warning;
 export const Replay30Icon = Replay30Rounded;
 export const Forward10Icon = Forward10Rounded;
 export const CheckCircleIcon = CheckCircle;
+export const NotifyIcon = NotificationsActive;
+export const HistorySearchIcon = ManageSearch;

@@ -1334,6 +1334,7 @@ class BabyCareEventNotificationService {
     30 * 60 * 1000,
   ]; // 30mins, 15mins, 5mins before next event (by interval)
 
+  private readonly requestAssistantUrl: string | undefined;
   private readonly notificationWebhookUrl: string | undefined;
   private readonly notificationWebhookDebugUrl: string | undefined;
   private readonly reminderMentionRoleID: string | undefined;
@@ -1348,6 +1349,9 @@ class BabyCareEventNotificationService {
   constructor() {
     const config = JSON.parse(
       readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
+    );
+    this.requestAssistantUrl = returnUndefOnError(() =>
+      guaranteeNonEmptyString(config.babyCare.requestAssistantUrl)
     );
     this.notificationWebhookUrl =
       process.env.REMINDER_WEBHOOK_URL ??
@@ -1618,11 +1622,20 @@ class BabyCareEventNotificationService {
     this._reminderEventMap.delete(event.id);
   }
 
-  async requestAssistant(profile: BabyCareProfile) {
+  async requestAssistant(idOrHandle: string) {
+    const profile = await BabyCareDataRegistry.fetchProfileByIdOrHandle(
+      idOrHandle
+    );
     BabyCareEventManager.notificationService.notify(
       `[Help] ${profile.nickname ?? profile.name}`,
       `Needs assistance!`
     );
+    if (!this.requestAssistantUrl) {
+      return;
+    }
+    await fetch(this.requestAssistantUrl, {
+      method: HttpMethod.POST,
+    });
   }
 }
 

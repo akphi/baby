@@ -36,13 +36,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   switch (command) {
     case BabyCareAction.REQUEST_ASSISTANT: {
-      const profile = await BabyCareDataRegistry.fetchProfileByIdOrHandle(
-        guaranteeNonEmptyString(
-          payload.profileId?.trim(),
-          "'profileId' is missing or empty"
-        )
+      const idOrHandle = guaranteeNonEmptyString(
+        payload.profileId?.trim(),
+        "'profileId' is missing or empty"
       );
-      await BabyCareEventManager.notificationService.requestAssistant(profile);
+      await BabyCareEventManager.notificationService.requestAssistant(
+        idOrHandle
+      );
       return json({}, HttpStatus.OK);
     }
     case BabyCareAction.CREATE_DYNAMIC_EVENT:

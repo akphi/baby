@@ -9,11 +9,17 @@ import {
 import {
   BabyCareAction,
   BabyCareDataRegistry,
+  BabyCareEventManager,
   type BabyCareProfile,
 } from "../data/BabyCare";
 import { guaranteeNonNullable } from "../shared/AssertionUtils";
-import { Link, useLoaderData, useRevalidator } from "@remix-run/react";
-import { HttpStatus } from "../shared/NetworkUtils";
+import {
+  Link,
+  useLoaderData,
+  useRevalidator,
+  useSubmit,
+} from "@remix-run/react";
+import { HttpMethod, HttpStatus } from "../shared/NetworkUtils";
 import { BabyCareDashboard } from "./baby/BabyCareDashboard";
 import { BabyCareEventGrid } from "./baby/BabyCareEventGrid";
 import { parseISO } from "date-fns";
@@ -25,6 +31,7 @@ import {
   SwitchProfileIcon,
   SyncIcon,
   ChildCareIcon,
+  NotifyIcon,
 } from "../shared/Icons";
 import { cn } from "../shared/StyleUtils";
 import { useEffect, useState } from "react";
@@ -119,6 +126,12 @@ export async function action({ request }: ActionFunctionArgs) {
       );
       return json({ profile }, HttpStatus.OK);
     }
+    case BabyCareAction.REQUEST_ASSISTANT: {
+      const profileIdOrHandle = extractRequiredString(formData, "id");
+      await BabyCareEventManager.notificationService.requestAssistant(
+        profileIdOrHandle
+      );
+    }
     default:
       return null;
   }
@@ -140,6 +153,7 @@ export default function BabyCare() {
   const [syncPulseData, clearDataSyncPulse] = useBabyCareProfileSyncPulse(
     profile.id
   );
+  const submit = useSubmit();
   const revalidater = useRevalidator();
 
   useEffect(() => {
@@ -164,8 +178,30 @@ export default function BabyCare() {
           )}
         </div>
       </main>
-      <footer className="h-20 w-full flex justify-center items-end">
+      <div className="h-20 w-full flex justify-center items-end">
         <div className="flex h-14 items-center rounded-t-lg shadow-lg bg-white px-4">
+          <button
+            className={cn(
+              "h-full flex items-center justify-center text-slate-200 hover:text-red-200 border-b-2 border-white"
+            )}
+            onClick={() => {
+              submit(
+                {
+                  __action: BabyCareAction.REQUEST_ASSISTANT,
+                  id: profile.id,
+                },
+                {
+                  method: HttpMethod.POST,
+                }
+              );
+            }}
+          >
+            <NotifyIcon className="text-4xl" />
+          </button>
+          <Divider
+            orientation="vertical"
+            className="bg-slate-50 h-8 opacity-50 mx-2"
+          />
           <button
             className={cn(
               "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white"
@@ -249,7 +285,7 @@ export default function BabyCare() {
             simple
           />
         )}
-      </footer>
+      </div>
     </div>
   );
 }

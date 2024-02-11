@@ -22,6 +22,7 @@ import {
   Forward10Icon,
   MeasurementIcon,
   MedicineIcon,
+  MemoryIcon,
   NoteIcon,
   NursingIcon,
   PeeIcon,
@@ -32,7 +33,14 @@ import {
 } from "../../shared/Icons";
 import { CircularProgress, Fade, IconButton, Snackbar } from "@mui/material";
 import { HttpMethod } from "../../shared/NetworkUtils";
-import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { debounce, toNumber } from "lodash-es";
 import { isNonNullable } from "../../shared/AssertionUtils";
 import { cn } from "../../shared/StyleUtils";
@@ -166,46 +174,50 @@ const EventQuickEditAction = forwardRef(
       }
     }, [autoCloseTimerCounter, onClose]);
 
+    const onDelete = useCallback(() => {
+      if (data) {
+        let action: string;
+        switch (data.TYPE) {
+          case BabyCareEventType.BOTTLE_FEED: {
+            action = BabyCareAction.REMOVE_BOTTLE_FEED_EVENT;
+            break;
+          }
+          case BabyCareEventType.PUMPING: {
+            action = BabyCareAction.REMOVE_PUMPING_EVENT;
+            break;
+          }
+          case BabyCareEventType.NURSING: {
+            action = BabyCareAction.REMOVE_NURSING_EVENT;
+            break;
+          }
+          case BabyCareEventType.MEASUREMENT: {
+            action = BabyCareAction.REMOVE_MEASUREMENT_EVENT;
+            break;
+          }
+          default:
+            return;
+        }
+        submit(
+          {
+            __action: action,
+            ...data,
+          },
+          { method: HttpMethod.POST }
+        );
+      }
+      onClose();
+    }, [data, onClose, submit]);
+
     useEffect(() => {
       if (deleteButtonHoldTimerCounter > 100) {
-        if (data) {
-          let action: string;
-          switch (data.TYPE) {
-            case BabyCareEventType.BOTTLE_FEED: {
-              action = BabyCareAction.REMOVE_BOTTLE_FEED_EVENT;
-              break;
-            }
-            case BabyCareEventType.PUMPING: {
-              action = BabyCareAction.REMOVE_PUMPING_EVENT;
-              break;
-            }
-            case BabyCareEventType.NURSING: {
-              action = BabyCareAction.REMOVE_NURSING_EVENT;
-              break;
-            }
-            case BabyCareEventType.MEASUREMENT: {
-              action = BabyCareAction.REMOVE_MEASUREMENT_EVENT;
-              break;
-            }
-            default:
-              return;
-          }
-          submit(
-            {
-              __action: action,
-              ...data,
-            },
-            { method: HttpMethod.POST }
-          );
-        }
-        onClose();
+        onDelete();
 
         return () => {
           setDeleteButtonHoldTimerCounter(0);
           clearInterval(deleteButtonHoldTimer.current);
         };
       }
-    }, [data, deleteButtonHoldTimerCounter, onClose, submit]);
+    }, [deleteButtonHoldTimerCounter, onDelete]);
 
     function holdDelete() {
       const startTime = Date.now();
@@ -487,6 +499,7 @@ const EventQuickEditAction = forwardRef(
               onMouseUp={unholdDelete}
               onTouchStart={holdDelete}
               onTouchEnd={unholdDelete}
+              onDoubleClick={onDelete}
             >
               <DeleteIcon className="text-slate-500 hover:text-slate-200 text-2xl" />
             </button>
@@ -742,6 +755,24 @@ export const BabyCareDashboard = (props: {
           >
             <NoteIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-4xl text-black" />
           </IconButton>
+        </div>
+        <div className="flex justify-center items-center">
+          <IconButton
+            className="w-24 h-24"
+            onClick={() =>
+              fetcher.submit(
+                {
+                  __action: BabyCareAction.CREATE_MEASUREMENT_EVENT,
+                  id: profile.id,
+                },
+                { method: HttpMethod.POST }
+              )
+            }
+          >
+            <MemoryIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-4xl text-black" />
+          </IconButton>
+          <IconButton className="w-24 h-24 invisible" />
+          <IconButton className="w-24 h-24 invisible" />
         </div>
       </div>
     </div>
