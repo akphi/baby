@@ -13,7 +13,7 @@ import {
 } from "@mikro-orm/core";
 import { SqliteDriver } from "@mikro-orm/sqlite";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
-import { add, formatDistanceToNowStrict, startOfDay } from "date-fns";
+import { add, endOfDay, formatDistanceToNowStrict, startOfDay } from "date-fns";
 import { v4 as uuid } from "uuid";
 import { hasher as initHasher } from "node-object-hash";
 import { readFileSync } from "node:fs";
@@ -682,6 +682,112 @@ export class BabyCareDataRegistry {
       .sort((a, b) => b.time.getTime() - a.time.getTime());
 
     return events;
+  }
+
+  static async lookupEvents(
+    profile: BabyCareProfile,
+    eventType: string,
+    pageSize: number,
+    page: number,
+    options: {
+      startDate?: Date | undefined;
+      endDate?: Date | undefined;
+    }
+  ): Promise<{ events: BabyCareEvent[]; totalCount: number }> {
+    const entityManager = await BabyCareDataRegistry.getEntityManager();
+    let result: [BabyCareEvent[], number] = [[], 0];
+    switch (eventType) {
+      case BabyCareEventType.MEASUREMENT: {
+        result = await entityManager.findAndCount(
+          MeasurementEvent,
+          {
+            $and: [
+              { profile },
+              {
+                time: {
+                  $gte: options?.startDate
+                    ? startOfDay(options?.startDate)
+                    : null,
+                  $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+                },
+              },
+            ],
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.MEDICINE: {
+        result = await entityManager.findAndCount(
+          MedicineEvent,
+          {
+            $and: [
+              { profile },
+              {
+                time: {
+                  $gte: options?.startDate
+                    ? startOfDay(options?.startDate)
+                    : null,
+                  $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+                },
+              },
+            ],
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.NOTE:
+      case BabyCareEventType.__MEMORY: {
+        result = await entityManager.findAndCount(
+          NoteEvent,
+          {
+            $and: [
+              { profile },
+              {
+                time: {
+                  $gte: options?.startDate
+                    ? startOfDay(options?.startDate)
+                    : null,
+                  $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+                },
+                purpose:
+                  eventType === BabyCareEventType.__MEMORY
+                    ? NotePurpose.MEMORY
+                    : null,
+              },
+            ],
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+          }
+        );
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    const events = result[0]
+      .map((event) =>
+        wrap(event).assign({
+          TYPE: event.eventType,
+          HASH: event.hashCode,
+        })
+      )
+      // sort latest events first
+      .sort((a, b) => b.time.getTime() - a.time.getTime());
+    return {
+      events,
+      totalCount: result[1],
+    };
   }
 
   static async fetchProfileByIdOrHandle(idOrHandle: string) {

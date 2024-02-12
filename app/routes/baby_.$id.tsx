@@ -164,7 +164,7 @@ export default function BabyCare() {
             className="bg-slate h-8 opacity-50 mx-2"
           />
           <NavLink
-            to={`/baby/${profile.handle ?? profile.id}/logs`}
+            to={`/baby/${profile.handle ?? profile.id}/log`}
             className={({ isActive }) =>
               cn(
                 "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white hover:border-blue-200",
@@ -232,12 +232,17 @@ export default function BabyCare() {
                 <ListItemText>Switch Profile</ListItemText>
               </MenuItem>
             </Link>
-            <MenuItem>
-              <ListItemIcon>
-                <HistorySearchIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText>Event Lookup</ListItemText>
-            </MenuItem>
+            <Link
+              to={`/baby/${profile.handle ?? profile.id}/find`}
+              className="h-full"
+            >
+              <MenuItem>
+                <ListItemIcon>
+                  <HistorySearchIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Event Lookup</ListItemText>
+              </MenuItem>
+            </Link>
           </Menu>
         </div>
         {profileToEdit && (

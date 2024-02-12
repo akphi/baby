@@ -15,6 +15,8 @@ import { HttpStatus } from "../shared/NetworkUtils";
 import { BabyCareEventGrid } from "./baby/BabyCareEventGrid";
 import { parseISO } from "date-fns";
 import { extractRequiredString } from "../shared/FormDataUtils";
+import { DEFAULT_SEARCH_PAGE_SIZE } from "../data/constants";
+import { parseNumber, returnUndefOnError } from "../shared/CommonUtils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data) {
@@ -23,23 +25,33 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [{ title: `Logs: ${data.profile.nickname ?? data.profile.name}` }];
 };
 
-export const loader = async ({
-  params,
-  request,
-  context,
-}: LoaderFunctionArgs) => {
+export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const profile = await BabyCareDataRegistry.fetchProfileByIdOrHandle(
     guaranteeNonNullable(params.id)
   );
   const { searchParams } = new URL(request.url);
-  const date = searchParams.get("date");
-  const events = await BabyCareDataRegistry.fetchEvents(
-    profile,
-    // NOTE: `date-fns` parseISO will return time in local timezone, which is what we pass in
-    // if we use `new Date()` instead, it will be in UTC timezone and therefore, throw off the result
-    date ? parseISO(date) : new Date()
-  );
-  return json({ profile, events });
+  const eventType = searchParams.get("type");
+  const page =
+    returnUndefOnError(() => parseNumber(searchParams.get("page") ?? "")) ?? 0;
+  const pageSize =
+    returnUndefOnError(() => parseNumber(searchParams.get("pageSize") ?? "")) ??
+    DEFAULT_SEARCH_PAGE_SIZE; // TODO: support page-size
+  const startDate = searchParams.get("startDate");
+  const endDate = searchParams.get("endDate");
+  const result = eventType
+    ? await BabyCareDataRegistry.lookupEvents(
+        profile,
+        eventType,
+        pageSize,
+        page,
+        {
+          startDate: startDate ? parseISO(startDate) : undefined,
+          endDate: endDate ? parseISO(endDate) : undefined,
+        }
+      )
+    : { events: [], totalCount: 0 };
+  console.log(result);
+  return json({ profile, result });
 };
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -111,6 +123,6 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function BabyCareLogs() {
-  const { profile, events } = useLoaderData<typeof loader>();
-  return <BabyCareEventGrid profile={profile} events={events} />;
+  const { profile, result } = useLoaderData<typeof loader>();
+  return <BabyCareEventGrid profile={profile} events={result.events} />;
 }
