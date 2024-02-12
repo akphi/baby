@@ -11,6 +11,8 @@ import {
   type PumpingEvent,
   type MeasurementEvent,
   type MedicineEvent,
+  type NoteEvent,
+  NotePurpose,
 } from "../../data/BabyCare";
 import { ClientSideRowModelModule } from "@ag-grid-community/client-side-row-model";
 import { add, format, isEqual, parseISO, startOfDay, sub } from "date-fns";
@@ -24,6 +26,7 @@ import {
   ChildToyIcon,
   MeasurementIcon,
   MedicineIcon,
+  MemoryIcon,
   MoreVertIcon,
   NoteIcon,
   NursingIcon,
@@ -392,15 +395,22 @@ const EventTypeRenderer = (
       {data?.TYPE === BabyCareEventType.MEDICINE && (
         <MedicineIcon className="h-full w-5 flex items-center text-base" />
       )}
-      {data?.TYPE === BabyCareEventType.NOTE && (
-        <NoteIcon className="h-full w-5 flex items-center text-base" />
-      )}
+      {data?.TYPE === BabyCareEventType.NOTE &&
+        ((data as SerializeFrom<NoteEvent>).purpose === NotePurpose.MEMORY ? (
+          <MemoryIcon className="h-full w-5 flex items-center text-base" />
+        ) : (
+          <NoteIcon className="h-full w-5 flex items-center text-base" />
+        ))}
       {data && (
         <div className="flex items-center justify-center rounded uppercase ml-1 text-3xs font-medium leading-4 bg-slate-500 px-1 text-slate-100">
           {data.TYPE === BabyCareEventType.DIAPER_CHANGE
             ? (data as SerializeFrom<DiaperChangeEvent>).poop
               ? BabyCareEventType.__POOP
               : BabyCareEventType.__PEE
+            : data.TYPE === BabyCareEventType.NOTE
+            ? (data as SerializeFrom<NoteEvent>).purpose === NotePurpose.MEMORY
+              ? BabyCareEventType.__MEMORY
+              : BabyCareEventType.NOTE
             : data.TYPE}
         </div>
       )}
@@ -547,12 +557,18 @@ export const BabyCareEventGrid = (props: {
                 [BabyCareEventType.MEASUREMENT]: [],
                 [BabyCareEventType.MEDICINE]: [],
                 [BabyCareEventType.NOTE]: [],
+                [BabyCareEventType.__MEMORY]: [],
               },
               groupBy(events, (event) =>
                 event.TYPE === BabyCareEventType.DIAPER_CHANGE
                   ? (event as SerializeFrom<DiaperChangeEvent>).poop
                     ? BabyCareEventType.__POOP
                     : BabyCareEventType.__PEE
+                  : event.TYPE === BabyCareEventType.NOTE
+                  ? (event as SerializeFrom<NoteEvent>).purpose ===
+                    NotePurpose.MEMORY
+                    ? BabyCareEventType.__MEMORY
+                    : BabyCareEventType.NOTE
                   : event.TYPE
               )
             )
@@ -571,37 +587,40 @@ export const BabyCareEventGrid = (props: {
             >
               <div className="h-full flex items-center justify-center">
                 {type === BabyCareEventType.BOTTLE_FEED && (
-                  <BottleIcon className="text-[22px] leading-[22px]" />
+                  <BottleIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.NURSING && (
-                  <NursingIcon className="text-[22px] leading-[22px]" />
+                  <NursingIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.PUMPING && (
-                  <BreastPumpIcon className="text-[22px] leading-[22px]" />
+                  <BreastPumpIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.__PEE && (
-                  <PeeIcon className="text-[22px] leading-[22px]" />
+                  <PeeIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.__POOP && (
-                  <PoopIcon className="text-[22px] leading-[22px]" />
+                  <PoopIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.SLEEP && (
-                  <SleepIcon className="text-[22px] leading-[22px]" />
+                  <SleepIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.PLAY && (
-                  <ChildToyIcon className="text-[22px] leading-[22px]" />
+                  <ChildToyIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.BATH && (
-                  <BathIcon className="text-[22px] leading-[22px]" />
+                  <BathIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.MEASUREMENT && (
-                  <MeasurementIcon className="text-[22px] leading-[22px]" />
+                  <MeasurementIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.MEDICINE && (
-                  <MedicineIcon className="text-[22px] leading-[22px]" />
+                  <MedicineIcon className="text-[20px] leading-[20px]" />
                 )}
                 {type === BabyCareEventType.NOTE && (
-                  <NoteIcon className="text-[22px] leading-[22px]" />
+                  <NoteIcon className="text-[20px] leading-[20px]" />
+                )}
+                {type === BabyCareEventType.__MEMORY && (
+                  <MemoryIcon className="text-[20px] leading-[20px]" />
                 )}
               </div>
               <div className="rounded  text-slate-100 bg-slate-500 text-2xs font-semibold px-1 h-4 flex items-center justify-center ml-1">
@@ -636,7 +655,7 @@ export const BabyCareEventGrid = (props: {
             },
             {
               headerName: "Type",
-              field: "time",
+              field: "HASH",
               sortable: false,
               resizable: false,
               width: 75,
@@ -671,6 +690,12 @@ export const BabyCareEventGrid = (props: {
                 return (
                   event.TYPE === BabyCareEventType.DIAPER_CHANGE &&
                   !(event as SerializeFrom<DiaperChangeEvent>).poop
+                );
+              case BabyCareEventType.__MEMORY:
+                return (
+                  event.TYPE === BabyCareEventType.NOTE &&
+                  (event as SerializeFrom<NoteEvent>).purpose ===
+                    NotePurpose.MEMORY
                 );
               default:
                 return event.TYPE === selectedEvent;

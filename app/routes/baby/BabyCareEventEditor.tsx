@@ -7,11 +7,16 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControl,
   FormControlLabel,
   IconButton,
+  InputLabel,
+  Select,
   Switch,
   TextField,
   createFilterOptions,
+  type SelectChangeEvent,
+  MenuItem,
 } from "@mui/material";
 import {
   BabyCareAction,
@@ -26,6 +31,8 @@ import {
   type MeasurementEvent,
   type MedicineEvent,
   type BabyCareProfile,
+  type NoteEvent,
+  NotePurpose,
 } from "../../data/BabyCare";
 import { useFetcher, useSubmit } from "@remix-run/react";
 import { useMemo, useState } from "react";
@@ -115,6 +122,9 @@ export const BabyCareEventEditor = (props: {
   const [weight, setWeight] = useState(
     (data as SerializeFrom<MeasurementEvent>).weight
   );
+  const [purpose, setPurpose] = useState(
+    (data as SerializeFrom<NoteEvent>).purpose
+  );
 
   const onSubmit = () => {
     let action: string;
@@ -180,6 +190,7 @@ export const BabyCareEventEditor = (props: {
         height,
         weight,
         prescription: prescriptionOption?.prescription ?? "",
+        purpose,
       }),
       { method: HttpMethod.POST }
     );
@@ -444,6 +455,31 @@ export const BabyCareEventEditor = (props: {
                 )}
               />
             </div>
+          )}
+          {data.TYPE === BabyCareEventType.NOTE && (
+            <>
+              <div className="w-full py-2">
+                <FormControl className="w-full">
+                  <InputLabel>Purpose</InputLabel>
+                  <Select
+                    value={purpose ?? "None"}
+                    label="Purpose"
+                    onChange={(event: SelectChangeEvent) => {
+                      setPurpose(
+                        event.target.value === "None"
+                          ? undefined
+                          : event.target.value
+                      );
+                    }}
+                  >
+                    <MenuItem value={"None"}>
+                      <div className="text-zinc-400">None</div>
+                    </MenuItem>
+                    <MenuItem value={NotePurpose.MEMORY}>Memory</MenuItem>
+                  </Select>
+                </FormControl>
+              </div>
+            </>
           )}
           <Divider className="my-2" />
           {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||

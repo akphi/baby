@@ -157,6 +157,7 @@ export enum BabyCareEventType {
   __POOP = "Poop",
   __PEE = "Pee",
   __FEEDING = "Feeding",
+  __MEMORY = "Memory",
 }
 
 export abstract class BabyCareEvent {
@@ -415,19 +416,29 @@ export class MedicineEvent extends BabyCareEvent {
   }
 }
 
+export enum NotePurpose {
+  MEMORY = "MEMORY",
+}
+
 @Entity()
 export class NoteEvent extends BabyCareEvent {
+  @Property({ type: "string", nullable: true })
+  purpose?: string | undefined;
+
   override get eventType() {
     return BabyCareEventType.NOTE;
   }
 
   override get notificationSummary() {
-    return `Making note`;
+    return this.purpose === NotePurpose.MEMORY
+      ? `Jotting down memory`
+      : `Making note`;
   }
 
   override get hashCode() {
     return HASHER.hash({
       ...this.hashContent,
+      purpose: this.purpose,
     });
   }
 }
@@ -1106,6 +1117,8 @@ export class BabyCareDataRegistry {
           { populate: ["profile"] }
         );
 
+        event.time = new Date(extractRequiredString(formData, "time"));
+        event.purpose = extractOptionalString(formData, "purpose")?.trim();
         event.comment = extractOptionalString(formData, "comment")?.trim();
 
         updatedEvent = event;

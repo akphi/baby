@@ -22,7 +22,6 @@ import {
   Forward10Icon,
   MeasurementIcon,
   MedicineIcon,
-  MemoryIcon,
   NoteIcon,
   NursingIcon,
   PeeIcon,
@@ -755,24 +754,6 @@ export const BabyCareDashboard = (props: {
           >
             <NoteIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-4xl text-black" />
           </IconButton>
-        </div>
-        <div className="flex justify-center items-center">
-          <IconButton
-            className="w-24 h-24"
-            onClick={() =>
-              fetcher.submit(
-                {
-                  __action: BabyCareAction.CREATE_MEASUREMENT_EVENT,
-                  id: profile.id,
-                },
-                { method: HttpMethod.POST }
-              )
-            }
-          >
-            <MemoryIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-4xl text-black" />
-          </IconButton>
-          <IconButton className="w-24 h-24 invisible" />
-          <IconButton className="w-24 h-24 invisible" />
         </div>
       </div>
     </div>
