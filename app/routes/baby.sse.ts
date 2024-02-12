@@ -7,6 +7,9 @@ import { BabyCareEventManager, BabyCareServerEvent } from "../data/BabyCare";
 // See https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events
 // See https://sergiodxa.com/articles/use-server-sent-events-with-remix
 // See https://github.com/remix-run/examples/tree/main/socket.io
+//
+// NOTE: it's probably a little more targetted and thus efficient to scope this endpoint to a specific profile
+// but that complicates the routing and components setup a little and it's probably not worth the investment for now.
 export async function loader({ request }: LoaderFunctionArgs) {
   return eventStream(request.signal, function setup(send) {
     const eventEmitter = BabyCareEventManager.getServerEventEmitter();

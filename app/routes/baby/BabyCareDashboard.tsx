@@ -559,6 +559,8 @@ export const BabyCareDashboard = (props: {
   profile: SerializeFrom<BabyCareProfile>;
 }) => {
   const { profile } = props;
+  // Since we use index route, when we use `useSubmit`, `?index` will be appended to the URL, to avoid this, we use `useFetcher` instead
+  // See https://github.com/remix-run/remix/discussions/2588
   const fetcher = useFetcher<{ event: SerializeFrom<BabyCareEvent> }>();
   const [eventToQuickEdit, setEventToQuickEdit] = useState<
     SerializeFrom<BabyCareEvent> | undefined
