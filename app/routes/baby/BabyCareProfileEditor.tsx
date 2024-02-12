@@ -388,6 +388,9 @@ export const BabyCareProfileEditor = (props: {
                 disabled={Boolean(simple)}
               >
                 <MenuItem value={Stage.NEWBORN}>Newborn</MenuItem>
+                <MenuItem value={Stage.NEWBORN_EXCLUSIVE_BOTTLE_FED}>
+                  Newborn (Exclusive Bottle-Fed)
+                </MenuItem>
                 <MenuItem value={Stage.INFANT}>Infant</MenuItem>
                 <MenuItem value={Stage.TODDLER}>Toddler</MenuItem>
                 <MenuItem value={Stage.PRESCHOOLER}>Preschooler</MenuItem>

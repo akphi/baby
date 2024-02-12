@@ -1,4 +1,10 @@
-import { Divider } from "@mui/material";
+import {
+  Divider,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+} from "@mui/material";
 import {
   json,
   type ActionFunctionArgs,
@@ -32,6 +38,8 @@ import {
   SyncIcon,
   ChildCareIcon,
   NotifyIcon,
+  HistorySearchIcon,
+  MoreVertIcon,
 } from "../shared/Icons";
 import { cn } from "../shared/StyleUtils";
 import { useEffect, useState } from "react";
@@ -147,6 +155,7 @@ export default function BabyCare() {
   const [currentActivity, setCurrentActivity] = useState<Activity>(
     Activity.DASHBOARD
   );
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [profileToEdit, setProfileToEdit] = useState<
     SerializeFrom<BabyCareProfile> | undefined
   >(undefined);
@@ -165,7 +174,7 @@ export default function BabyCare() {
 
   return (
     <div className="h-full w-full bg-slate-50">
-      <BabyCareSummary currentEvents={currentEvents} profile={profile} />
+      <BabyCareSummary events={currentEvents} profile={profile} />
       <main className="w-full overflow-auto h-[calc(100%_-_80px)]">
         {/* empty toolbar to offset the content the height of the floating toolbar */}
         <div className="h-20 w-full" />
@@ -179,7 +188,7 @@ export default function BabyCare() {
         </div>
       </main>
       <div className="h-20 w-full flex justify-center items-end">
-        <div className="flex h-14 items-center rounded-t-lg shadow-lg bg-white px-4">
+        <div className="flex h-14 items-center rounded-t-lg shadow-lg bg-white pl-4">
           <button
             className={cn(
               "h-full flex items-center justify-center text-slate-200 hover:text-red-200 border-b-2 border-white"
@@ -210,19 +219,6 @@ export default function BabyCare() {
           >
             <ChildCareIcon className="text-4xl" />
           </button>
-          <Divider
-            orientation="vertical"
-            className="bg-slate-50 h-8 opacity-50 mx-2"
-          />
-          <Link to={`/baby`} className="h-full">
-            <button
-              className={cn(
-                "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white"
-              )}
-            >
-              <SwitchProfileIcon className="text-4xl" />
-            </button>
-          </Link>
           <Divider
             orientation="vertical"
             className="bg-slate-50 h-8 opacity-50 mx-2"
@@ -276,6 +272,49 @@ export default function BabyCare() {
               })}
             />
           </button>
+          <Divider
+            orientation="vertical"
+            className="bg-slate h-8 opacity-50 ml-2"
+          />
+          <button
+            onClick={(event) => setAnchorEl(event.currentTarget)}
+            className={cn(
+              "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white"
+            )}
+          >
+            <MoreVertIcon className="text-4xl" />
+          </button>
+          <Menu
+            classes={{
+              list: "min-w-48",
+            }}
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
+            anchorOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+            transformOrigin={{
+              vertical: "bottom",
+              horizontal: "right",
+            }}
+          >
+            <Link to={`/baby`} className="h-full">
+              <MenuItem>
+                <ListItemIcon>
+                  <SwitchProfileIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Switch Profile</ListItemText>
+              </MenuItem>
+            </Link>
+            <MenuItem>
+              <ListItemIcon>
+                <HistorySearchIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Event Lookup</ListItemText>
+            </MenuItem>
+          </Menu>
         </div>
         {profileToEdit && (
           <BabyCareProfileEditor

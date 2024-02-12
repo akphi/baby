@@ -6,6 +6,8 @@ import {
   type DiaperChangeEvent,
   type BottleFeedEvent,
   type PumpingEvent,
+  type NursingEvent,
+  Stage,
 } from "../../data/BabyCare";
 import { groupBy, merge } from "lodash-es";
 import {
@@ -19,17 +21,18 @@ import {
   BreastPumpIcon,
   DarkModeIcon,
   LightModeIcon,
+  NursingIcon,
   PoopIcon,
 } from "../../shared/Icons";
 import { mlToOz } from "../../shared/UnitUtils";
 import { Divider } from "@mui/material";
 import { isDuringDaytime } from "../../data/BabyCareUtils";
 
-export const BabyCareSummary = (props: {
-  currentEvents: SerializeFrom<BabyCareEvent>[];
+export const BabyCareStatistics = (props: {
+  events: SerializeFrom<BabyCareEvent>[];
   profile: SerializeFrom<BabyCareProfile>;
 }) => {
-  const { currentEvents, profile } = props;
+  const { events, profile } = props;
   const indexedData = Object.entries(
     merge(
       {
@@ -42,7 +45,7 @@ export const BabyCareSummary = (props: {
         [BabyCareEventType.PLAY]: [],
         [BabyCareEventType.NURSING]: [],
       },
-      groupBy(currentEvents, (event) =>
+      groupBy(events, (event) =>
         event.TYPE === BabyCareEventType.DIAPER_CHANGE
           ? (event as SerializeFrom<DiaperChangeEvent>).poop
             ? BabyCareEventType.__POOP
@@ -51,10 +54,6 @@ export const BabyCareSummary = (props: {
       )
     )
   );
-  // stats
-  const poopEventCount =
-    indexedData.find(([type]) => type === BabyCareEventType.__POOP)?.[1]
-      .length ?? 0;
   const bottleEvents = (indexedData.find(
     ([type]) => type === BabyCareEventType.BOTTLE_FEED
   )?.[1] ?? []) as SerializeFrom<BottleFeedEvent>[];
@@ -62,6 +61,19 @@ export const BabyCareSummary = (props: {
     (acc, data) => acc + data.volume,
     0
   );
+  const bottleStatsBadge = (
+    <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-0.5 text-1.5xs ml-1.5 mono font-medium">
+      <BottleIcon className="text-[15px] leading-[15px] w-[23px]" />
+      <div className="ml-0.5">{totalBottleFeedVolume}ml</div>
+      <Divider className="h-full bg-slate-400 mx-1" orientation="vertical" />
+      <div className="ml-0.5">
+        {Math.round(mlToOz(totalBottleFeedVolume))}oz
+      </div>
+      <Divider className="h-full bg-slate-400 mx-1" orientation="vertical" />
+      <div className="">{bottleEvents.length}</div>
+    </div>
+  );
+
   const pumpingEvents = (indexedData.find(
     ([type]) => type === BabyCareEventType.PUMPING
   )?.[1] ?? []) as SerializeFrom<PumpingEvent>[];
@@ -69,6 +81,65 @@ export const BabyCareSummary = (props: {
     (acc, data) => acc + data.volume,
     0
   );
+  const pumpingStatsBadge = (
+    <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-0.5 text-1.5xs ml-1.5 mono font-medium">
+      <BreastPumpIcon className="text-[15px] leading-[15px] w-[23px]" />
+      <div className="ml-0.5">{totalPumpingVolume}ml</div>
+      <Divider className="h-full bg-slate-400 mx-1" orientation="vertical" />
+      <div className="ml-0.5">
+        {Math.round(mlToOz(totalPumpingVolume))}
+        oz
+      </div>
+      <Divider className="h-full bg-slate-400 mx-1" orientation="vertical" />
+      <div className="">{pumpingEvents.length}</div>
+    </div>
+  );
+
+  const nursingEvents = (indexedData.find(
+    ([type]) => type === BabyCareEventType.NURSING
+  )?.[1] ?? []) as SerializeFrom<NursingEvent>[];
+  const totalNursingDuration =
+    nursingEvents.reduce(
+      (acc, data) => acc + data.leftDuration + data.rightDuration,
+      0
+    ) /
+    (1000 * 60 * 60);
+  const nursingStatsBadge = (
+    <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-0.5 text-1.5xs ml-1.5 mono font-medium">
+      <NursingIcon className="text-[15px] leading-[15px] w-[23px]" />
+      <div className="ml-0.5">
+        {Math.round(totalNursingDuration * 10) / 10}h
+      </div>
+      <Divider className="h-full bg-slate-400 mx-1" orientation="vertical" />
+      <div className="">{nursingEvents.length}</div>
+    </div>
+  );
+
+  const poopEventCount =
+    indexedData.find(([type]) => type === BabyCareEventType.__POOP)?.[1]
+      .length ?? 0;
+  const poopStatsBadge = (
+    <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-0.5 text-1.5xs ml-1.5 mono font-medium">
+      <PoopIcon className="text-[15px] leading-[15px] w-[23px]" />
+      <div className="ml-0.5">{poopEventCount}</div>
+    </div>
+  );
+
+  return (
+    <div className="flex">
+      {profile.stage === Stage.NEWBORN && nursingStatsBadge}
+      {bottleStatsBadge}
+      {pumpingStatsBadge}
+      {poopStatsBadge}
+    </div>
+  );
+};
+
+export const BabyCareSummary = (props: {
+  events: SerializeFrom<BabyCareEvent>[];
+  profile: SerializeFrom<BabyCareProfile>;
+}) => {
+  const { events, profile } = props;
   // age
   const ageInDays = differenceInCalendarDays(new Date(), new Date(profile.dob));
   const ageInWeeks = differenceInCalendarWeeks(
@@ -107,13 +178,16 @@ export const BabyCareSummary = (props: {
   // TODO?: customize this view by stage (newborn, infant, toddler, etc.)
   return (
     <div className="h-20 w-full fixed flex items-center justify-center bg-slate-700 z-10 shadow-md select-none">
-      <div className="flex flex-col items-center text-slate-300">
-        <div className="flex items-center">
+      <div className="w-[calc(100%_-_12px)] flex flex-col items-center text-slate-300">
+        <div
+          className="flex overflow-x-auto w-full"
+          style={{ justifyContent: "safe center" }}
+        >
           <div className="select-none">{profile.nickname ?? profile.name}</div>
-          <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium">
+          <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium whitespace-nowrap">
             {ageDisplayText}
           </div>
-          <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium">
+          <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium whitespace-nowrap">
             {quotaText}
           </div>
           <div className="rounded h-6 w-6 flex items-center justify-center bg-slate-800 ml-1.5">
@@ -124,44 +198,11 @@ export const BabyCareSummary = (props: {
             )}
           </div>
         </div>
-        <div className="flex mt-1.5">
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
-            <BottleIcon className="text-[15px] leading-[15px] w-[23px]" />
-            <div className="ml-0.5">{totalBottleFeedVolume}ml</div>
-            <Divider
-              className="h-full bg-slate-400 mx-1"
-              orientation="vertical"
-            />
-            <div className="ml-0.5">
-              {Math.round(mlToOz(totalBottleFeedVolume))}oz
-            </div>
-            <Divider
-              className="h-full bg-slate-400 mx-1"
-              orientation="vertical"
-            />
-            <div className="">{bottleEvents.length}</div>
-          </div>
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
-            <BreastPumpIcon className="text-[15px] leading-[15px] w-[23px]" />
-            <div className="ml-0.5">{totalPumpingVolume}ml</div>
-            <Divider
-              className="h-full bg-slate-400 mx-1"
-              orientation="vertical"
-            />
-            <div className="ml-0.5">
-              {Math.round(mlToOz(totalPumpingVolume))}
-              oz
-            </div>
-            <Divider
-              className="h-full bg-slate-400 mx-1"
-              orientation="vertical"
-            />
-            <div className="">{pumpingEvents.length}</div>
-          </div>
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
-            <PoopIcon className="text-[15px] leading-[15px] w-[23px]" />
-            <div className="ml-0.5">{poopEventCount}</div>
-          </div>
+        <div
+          className="flex mt-1.5 overflow-x-auto w-full"
+          style={{ justifyContent: "safe center" }}
+        >
+          <BabyCareStatistics events={events} profile={profile} />
         </div>
       </div>
     </div>

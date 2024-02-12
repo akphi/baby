@@ -25,6 +25,7 @@ import {
   CheckCircle,
   NotificationsActive,
   ManageSearch,
+  Menu,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -117,3 +118,4 @@ export const Forward10Icon = Forward10Rounded;
 export const CheckCircleIcon = CheckCircle;
 export const NotifyIcon = NotificationsActive;
 export const HistorySearchIcon = ManageSearch;
+export const MenuIcon = Menu;

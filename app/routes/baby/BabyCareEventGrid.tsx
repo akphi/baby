@@ -43,10 +43,9 @@ import { HttpMethod } from "../../shared/NetworkUtils";
 import { BabyCareEventEditor } from "./BabyCareEventEditor";
 import { isNonNullable } from "../../shared/AssertionUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
-import { Divider } from "@mui/material";
-import { mlToOz } from "../../shared/UnitUtils";
 import { UNSPECIFIED_PRESCRIPTION_TAG } from "../../data/constants";
 import { computeNewValue } from "../../shared/NumberInput";
+import { BabyCareStatistics } from "./BabyCareSummary";
 
 const InlineNumberInput = (props: {
   value: number;
@@ -414,93 +413,15 @@ const BabyCareEventGridSummary = (props: {
   events: SerializeFrom<BabyCareEvent>[];
   selectedDate: Date;
 }) => {
-  const { events, selectedDate } = props;
-  const indexedData = Object.entries(
-    merge(
-      {
-        [BabyCareEventType.BOTTLE_FEED]: [],
-        [BabyCareEventType.PUMPING]: [],
-        [BabyCareEventType.__POOP]: [],
-        [BabyCareEventType.__PEE]: [],
-        [BabyCareEventType.SLEEP]: [],
-        [BabyCareEventType.BATH]: [],
-        [BabyCareEventType.PLAY]: [],
-        [BabyCareEventType.NURSING]: [],
-      },
-      groupBy(events, (event) =>
-        event.TYPE === BabyCareEventType.DIAPER_CHANGE
-          ? (event as SerializeFrom<DiaperChangeEvent>).poop
-            ? BabyCareEventType.__POOP
-            : BabyCareEventType.__PEE
-          : event.TYPE
-      )
-    )
-  );
-  // stats
-  const poopEventCount =
-    indexedData.find(([type]) => type === BabyCareEventType.__POOP)?.[1]
-      .length ?? 0;
-  const bottleEvents = (indexedData.find(
-    ([type]) => type === BabyCareEventType.BOTTLE_FEED
-  )?.[1] ?? []) as SerializeFrom<BottleFeedEvent>[];
-  const totalBottleFeedVolume = bottleEvents.reduce(
-    (acc, data) => acc + data.volume,
-    0
-  );
-  const pumpingEvents = (indexedData.find(
-    ([type]) => type === BabyCareEventType.PUMPING
-  )?.[1] ?? []) as SerializeFrom<PumpingEvent>[];
-  const totalPumpingVolume = pumpingEvents.reduce(
-    (acc, data) => acc + data.volume,
-    0
-  );
+  const { events, profile, selectedDate } = props;
 
-  // TODO?: customize this view by stage (newborn, infant, toddler, etc.)
   return (
     <div className="flex items-center w-full bg-slate-700 overflow-y-hidden overflow-x-auto select-none">
       <div className="h-10 flex items-center px-3">
         <div className="w-16 flex items-center justify-center rounded text-slate-300 bg-slate-800 px-2 py-1 text-xs mono font-medium uppercase">
           {format(selectedDate, "MMM dd")}
         </div>
-        <div className="flex">
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
-            <BottleIcon className="text-[15px] leading-[15px] w-[23px]" />
-            <div className="ml-0.5">{totalBottleFeedVolume}ml</div>
-            <Divider
-              className="h-full bg-slate-400 mx-1"
-              orientation="vertical"
-            />
-            <div className="ml-0.5">
-              {Math.round(mlToOz(totalBottleFeedVolume))}oz
-            </div>
-            <Divider
-              className="h-full bg-slate-400 mx-1"
-              orientation="vertical"
-            />
-            <div className="">{bottleEvents.length}</div>
-          </div>
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
-            <BreastPumpIcon className="text-[15px] leading-[15px] w-[23px]" />
-            <div className="ml-0.5">{totalPumpingVolume}ml</div>
-            <Divider
-              className="h-full bg-slate-400 mx-1"
-              orientation="vertical"
-            />
-            <div className="ml-0.5">
-              {Math.round(mlToOz(totalPumpingVolume))}
-              oz
-            </div>
-            <Divider
-              className="h-full bg-slate-400 mx-1"
-              orientation="vertical"
-            />
-            <div className="">{pumpingEvents.length}</div>
-          </div>
-          <div className="flex items-center rounded bg-slate-300 text-slate-700 pl-1 pr-1.5 py-1 text-xs ml-1.5 mono font-medium">
-            <PoopIcon className="text-[15px] leading-[15px] w-[23px]" />
-            <div className="ml-0.5">{poopEventCount}</div>
-          </div>
-        </div>
+        <BabyCareStatistics events={events} profile={profile} />
       </div>
     </div>
   );
