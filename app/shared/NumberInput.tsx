@@ -38,8 +38,18 @@ const BaseNumberInput = forwardRef(function NumberInput(
   },
   ref
 ) {
-  const { label, min, max, step, unit, factor, value, optional, setValue } =
-    props;
+  const {
+    label,
+    min,
+    max,
+    step,
+    unit,
+    factor,
+    value,
+    optional,
+    setValue,
+    disabled,
+  } = props;
   const currentValue = isNonNullable(value) ? value / (factor ?? 1) : undefined;
   const [inputValue, setInputValue] = useState<string | number>(
     isNonNullable(value) ? value / (factor ?? 1) : ""
@@ -65,6 +75,26 @@ const BaseNumberInput = forwardRef(function NumberInput(
     }
   }, [inputValue, setValue, _setValue, optional]);
 
+  if (disabled) {
+    return (
+      <TextField
+        inputMode="numeric"
+        variant="outlined"
+        className="w-full"
+        label={label}
+        value={inputValue}
+        disabled={Boolean(disabled)}
+        onChange={(event) => setInputValue(event.target.value)}
+        InputProps={{
+          startAdornment: unit ? (
+            <InputAdornment position="start">{unit}</InputAdornment>
+          ) : undefined,
+        }}
+        // probably better to use mui's NumberInput, but it currently does not support demical
+        // See https://github.com/mui/material-ui/issues/38518
+      />
+    );
+  }
   return (
     <div className="flex">
       <TextField

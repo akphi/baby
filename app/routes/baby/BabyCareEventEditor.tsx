@@ -59,8 +59,9 @@ export const BabyCareEventEditor = (props: {
   onClose: () => void;
   data: SerializeFrom<BabyCareEvent>;
   profile: SerializeFrom<BabyCareProfile>;
+  readOnly?: boolean | undefined;
 }) => {
-  const { open, onClose, data, profile } = props;
+  const { open, onClose, data, profile, readOnly } = props;
   const [showDeleteConfirmationDialog, setShowDeleteConfirmationDialog] =
     useState(false);
   const submit = useSubmit();
@@ -206,7 +207,7 @@ export const BabyCareEventEditor = (props: {
       disableRestoreFocus={true}
       hideBackdrop={true}
     >
-      <DialogTitle>Update Event</DialogTitle>
+      <DialogTitle>{readOnly ? "View Event" : "Update Event"}</DialogTitle>
       <DialogContent dividers>
         <form
           onSubmit={onSubmit}
@@ -223,39 +224,44 @@ export const BabyCareEventEditor = (props: {
               }}
               format="MMM dd - HH:mm"
               className="w-full"
+              disabled={Boolean(readOnly)}
             />
-            <div className="flex justify-center items-center ml-2">
-              <IconButton
-                className="w-10 h-10"
-                onClick={() =>
-                  setTime(
-                    add(time, {
-                      minutes: -30,
-                    })
-                  )
-                }
-              >
-                <Replay30
-                  fontSize="large"
-                  className="text-slate-300 hover:text-slate-400"
-                />
-              </IconButton>
-              <IconButton
-                className="w-10 h-10"
-                onClick={() =>
-                  setTime(
-                    add(time, {
-                      minutes: 10,
-                    })
-                  )
-                }
-              >
-                <Forward10
-                  fontSize="large"
-                  className="text-slate-300 hover:text-slate-400"
-                />
-              </IconButton>
-            </div>
+            {!readOnly && (
+              <div className="flex justify-center items-center ml-2">
+                <IconButton
+                  className="w-10 h-10"
+                  onClick={() =>
+                    setTime(
+                      add(time, {
+                        minutes: -30,
+                      })
+                    )
+                  }
+                  disabled={Boolean(readOnly)}
+                >
+                  <Replay30
+                    fontSize="large"
+                    className="text-slate-300 hover:text-slate-400"
+                  />
+                </IconButton>
+                <IconButton
+                  className="w-10 h-10"
+                  onClick={() =>
+                    setTime(
+                      add(time, {
+                        minutes: 10,
+                      })
+                    )
+                  }
+                  disabled={Boolean(readOnly)}
+                >
+                  <Forward10
+                    fontSize="large"
+                    className="text-slate-300 hover:text-slate-400"
+                  />
+                </IconButton>
+              </div>
+            )}
           </div>
           {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
             data.TYPE === BabyCareEventType.PUMPING) && (
@@ -271,6 +277,7 @@ export const BabyCareEventEditor = (props: {
                   setVolume(value ?? 0);
                 }}
                 className="flex-1"
+                disabled={Boolean(readOnly)}
               />
             </div>
           )}
@@ -287,6 +294,7 @@ export const BabyCareEventEditor = (props: {
                   setFormulaMilkVolume(value);
                 }}
                 className="flex-1"
+                disabled={Boolean(readOnly)}
               />
             </div>
           )}
@@ -305,6 +313,7 @@ export const BabyCareEventEditor = (props: {
                     setLeftDuration(value ?? 0);
                   }}
                   className="flex-1"
+                  disabled={Boolean(readOnly)}
                 />
               </div>
               <div className="w-full py-2">
@@ -320,6 +329,7 @@ export const BabyCareEventEditor = (props: {
                     setRightDuration(value ?? 0);
                   }}
                   className="flex-1"
+                  disabled={Boolean(readOnly)}
                 />
               </div>
             </>
@@ -334,6 +344,7 @@ export const BabyCareEventEditor = (props: {
                   />
                 }
                 label="Poop"
+                disabled={Boolean(readOnly)}
               />
               <FormControlLabel
                 control={
@@ -343,6 +354,7 @@ export const BabyCareEventEditor = (props: {
                   />
                 }
                 label="Pee"
+                disabled={Boolean(readOnly)}
               />
             </div>
           )}
@@ -360,6 +372,7 @@ export const BabyCareEventEditor = (props: {
                     setHeight(value);
                   }}
                   className="flex-1"
+                  disabled={Boolean(readOnly)}
                 />
               </div>
               <div className="w-full py-2">
@@ -374,6 +387,7 @@ export const BabyCareEventEditor = (props: {
                     setWeight(value);
                   }}
                   className="flex-1"
+                  disabled={Boolean(readOnly)}
                 />
               </div>
             </>
@@ -389,6 +403,7 @@ export const BabyCareEventEditor = (props: {
                   }
                   return option.prescription;
                 }}
+                disabled={Boolean(readOnly)}
                 onInputChange={(event, newInputValue, reason) => {
                   if (reason === "reset" || reason === "clear") {
                     return;
@@ -471,6 +486,7 @@ export const BabyCareEventEditor = (props: {
                           : event.target.value
                       );
                     }}
+                    disabled={Boolean(readOnly)}
                   >
                     <MenuItem value={"None"}>
                       <div className="text-zinc-400">None</div>
@@ -499,6 +515,7 @@ export const BabyCareEventEditor = (props: {
                   setDuration(value);
                 }}
                 className="flex-1"
+                disabled={Boolean(readOnly)}
               />
             </div>
           )}
@@ -513,6 +530,7 @@ export const BabyCareEventEditor = (props: {
               }}
               variant="outlined"
               className="w-full"
+              disabled={Boolean(readOnly)}
             />
           </div>
         </form>
@@ -521,16 +539,20 @@ export const BabyCareEventEditor = (props: {
         <Button variant="outlined" onClick={onClose}>
           Cancel
         </Button>
-        <Button
-          variant="outlined"
-          color="error"
-          onClick={() => setShowDeleteConfirmationDialog(true)}
-        >
-          Remove
-        </Button>
-        <Button variant="contained" onClick={onSubmit}>
-          Update
-        </Button>
+        {!readOnly && (
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => setShowDeleteConfirmationDialog(true)}
+          >
+            Remove
+          </Button>
+        )}
+        {!readOnly && (
+          <Button variant="contained" onClick={onSubmit}>
+            Update
+          </Button>
+        )}
         {showDeleteConfirmationDialog && (
           <ConfirmationDialog
             open={showDeleteConfirmationDialog}

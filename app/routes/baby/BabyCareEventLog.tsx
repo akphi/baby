@@ -28,10 +28,10 @@ import { useState } from "react";
 import { groupBy, merge } from "lodash-es";
 import { MobileDatePicker } from "@mui/x-date-pickers";
 import { cn } from "../../shared/StyleUtils";
-import { useSearchParams, useSubmit } from "@remix-run/react";
-import { HttpMethod } from "../../shared/NetworkUtils";
+import { useSearchParams } from "@remix-run/react";
 import { BabyCareStatistics } from "./BabyCareSummary";
 import { BabyCareEventGrid } from "./BabyCareEventGrid";
+import { Divider } from "@mui/material";
 
 const BabyCareEventGridSummary = (props: {
   profile: SerializeFrom<BabyCareProfile>;
@@ -57,32 +57,28 @@ export const BabyCareEventLog = (props: {
   events: SerializeFrom<BabyCareEvent>[];
 }) => {
   const { profile, events } = props;
-  const [params] = useSearchParams();
-  const submit = useSubmit();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedEvent, setSelectedEvent] = useState<string | undefined>(
     undefined
   );
-  const [selectedDate, _setSelectedDate] = useState<Date>(
-    startOfDay(
-      params.has("date") ? parseISO(params.get("date") as string) : new Date()
-    )
+  const selectedDate = startOfDay(
+    searchParams.has("date")
+      ? parseISO(searchParams.get("date") as string)
+      : new Date()
   );
   const setSelectedDate = (date: Date) => {
-    submit(
-      isEqual(date, startOfDay(new Date()))
-        ? {}
-        : { date: format(date, "yyyy-MM-dd") },
-      {
-        method: HttpMethod.GET,
-      }
-    );
-    _setSelectedDate(startOfDay(date));
+    if (!isEqual(date, startOfDay(new Date()))) {
+      setSearchParams((params) => {
+        params.set("date", format(date, "yyyy-MM-dd"));
+        return params;
+      });
+    }
   };
 
   return (
-    <div className="w-full h-full home__event-grid">
-      <div className="flex items-center w-full bg-slate-100 overflow-y-hidden overflow-x-auto">
-        <div className="h-10 flex items-center px-2">
+    <div className="w-full h-full">
+      <div className="h-10 flex items-center w-full bg-slate-100 overflow-y-hidden overflow-x-auto">
+        <div className="flex items-center pl-2">
           <button
             className="text-slate-500 hover:text-slate-600"
             onClick={() =>
@@ -138,7 +134,8 @@ export const BabyCareEventLog = (props: {
             <div className="font-medium text-slate-600 text-2xs">TODAY</div>
           </button>
         </div>
-        <div className="h-10 w-full flex items-center px-2 border-l">
+        <Divider className="h-5 mx-2 " orientation="vertical" />
+        <div className="w-full flex items-center">
           <button
             className={cn(
               "h-7 flex items-center px-2 rounded border-2 border-slate-200 hover:border-slate-300",

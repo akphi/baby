@@ -225,7 +225,11 @@ export default function BabyCare() {
             }}
           >
             <Link to={`/baby`} className="h-full">
-              <MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                }}
+              >
                 <ListItemIcon>
                   <SwitchProfileIcon fontSize="small" />
                 </ListItemIcon>
@@ -233,10 +237,14 @@ export default function BabyCare() {
               </MenuItem>
             </Link>
             <Link
-              to={`/baby/${profile.handle ?? profile.id}/find`}
+              to={`/baby/${profile.handle ?? profile.id}/search`}
               className="h-full"
             >
-              <MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                }}
+              >
                 <ListItemIcon>
                   <HistorySearchIcon fontSize="small" />
                 </ListItemIcon>

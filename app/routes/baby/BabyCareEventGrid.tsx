@@ -56,13 +56,43 @@ const InlineNumberInput = (props: {
   factor?: number;
   className?: string;
   children?: React.ReactNode;
+  readOnly?: boolean | undefined;
 }) => {
-  const { min, max, step, unit, factor, value, setValue, className, children } =
-    props;
+  const {
+    min,
+    max,
+    step,
+    unit,
+    factor,
+    value,
+    setValue,
+    className,
+    children,
+    readOnly,
+  } = props;
   const _value = isNonNullable(value) ? value / (factor ?? 1) : undefined;
   const _setValue = (value: number) => {
     setValue(computeNewValue(value, min, max, step) * (factor ?? 1));
   };
+
+  if (readOnly) {
+    return (
+      <div
+        className={cn(
+          "relative h-6 w-16 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded",
+          className
+        )}
+      >
+        <div className="w-full h-full flex rounded justify-center items-center">
+          {children}
+          <div className="flex items-center font-mono text-xs">{_value}</div>
+          <div className="flex items-center font-mono text-2xs ml-0.5">
+            {unit}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -116,8 +146,11 @@ const InlineNumberInput = (props: {
   );
 };
 
-const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
-  const { data } = props;
+const EventOverview = (props: {
+  data: SerializeFrom<BabyCareEvent>;
+  readOnly?: boolean | undefined;
+}) => {
+  const { data, readOnly } = props;
 
   const [volume, setVolume] = useState(
     (data as SerializeFrom<BottleFeedEvent | PumpingEvent>).volume
@@ -190,6 +223,7 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
       {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
         data.TYPE === BabyCareEventType.PUMPING) && (
         <InlineNumberInput
+          readOnly={readOnly}
           min={0}
           max={1000}
           step={5}
@@ -222,6 +256,7 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
       {data.TYPE === BabyCareEventType.NURSING && (
         <>
           <InlineNumberInput
+            readOnly={readOnly}
             value={leftDuration}
             unit={"mn"}
             factor={60 * 1000}
@@ -238,6 +273,7 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
             </div>
           </InlineNumberInput>
           <InlineNumberInput
+            readOnly={readOnly}
             value={rightDuration}
             unit={"mn"}
             factor={60 * 1000}
@@ -258,6 +294,7 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
       {data.TYPE === BabyCareEventType.MEASUREMENT && (
         <>
           <InlineNumberInput
+            readOnly={readOnly}
             min={0}
             max={300}
             step={1}
@@ -275,6 +312,7 @@ const EventOverview = (props: { data: SerializeFrom<BabyCareEvent> }) => {
             </div>
           </InlineNumberInput>
           <InlineNumberInput
+            readOnly={readOnly}
             min={0}
             max={100}
             step={0.1}
@@ -319,6 +357,7 @@ const EventOverviewRenderer = (
   params: ICellRendererParams<SerializeFrom<BabyCareEvent>> & {
     profile: SerializeFrom<BabyCareProfile>;
     setEventToEdit: (event: SerializeFrom<BabyCareEvent>) => void;
+    readOnly?: boolean | undefined;
   }
 ) => {
   const data = params.data;
@@ -330,7 +369,7 @@ const EventOverviewRenderer = (
   return (
     <div className="flex items-center h-full w-full justify-between">
       <div className="flex items-center h-full w-full overflow-x-auto overflow-y-hidden">
-        <EventOverview data={data} key={data.HASH} />
+        <EventOverview data={data} key={data.HASH} readOnly={params.readOnly} />
         {data.comment && (
           <div className="flex items-center rounded h-6 text-2xs text-slate-600 bg-amber-100 px-2">
             {data.comment}
@@ -417,8 +456,10 @@ const EventTypeRenderer = (
 export const BabyCareEventGrid = (props: {
   profile: SerializeFrom<BabyCareProfile>;
   events: SerializeFrom<BabyCareEvent>[];
+  readOnly?: boolean | undefined;
+  showDate?: boolean | undefined;
 }) => {
-  const { profile, events } = props;
+  const { profile, events, readOnly, showDate } = props;
   const [eventToEdit, setEventToEdit] = useState<
     SerializeFrom<BabyCareEvent> | undefined
   >(undefined);
@@ -440,11 +481,18 @@ export const BabyCareEventGrid = (props: {
             headerName: "Time",
             field: "time",
             resizable: false,
-            width: 50,
-            cellStyle: { textAlign: "center", fontSize: "12px" },
+            width: showDate ? 130 : 50,
+            cellStyle: {
+              textAlign: "center",
+              fontSize: "12px",
+            },
             suppressSizeToFit: true,
             cellClass: "text-slate-600 pr-0",
-            valueFormatter: (params) => format(new Date(params.value), "HH:mm"),
+            valueFormatter: (params) =>
+              format(
+                new Date(params.value),
+                showDate ? "MMM dd yyyy HH:mm" : "HH:mm"
+              ),
           },
           {
             headerName: "Type",
@@ -466,6 +514,7 @@ export const BabyCareEventGrid = (props: {
             cellRendererParams: {
               profile,
               setEventToEdit,
+              readOnly,
             },
             cellRenderer: EventOverviewRenderer,
           },
@@ -479,6 +528,7 @@ export const BabyCareEventGrid = (props: {
           onClose={() => setEventToEdit(undefined)}
           data={eventToEdit}
           profile={profile}
+          readOnly={readOnly}
         />
       )}
     </>

@@ -1,8 +1,6 @@
 import {
   MikroORM,
   type Options,
-  type IDatabaseDriver,
-  type Connection,
   Property,
   ManyToOne,
   TableExistsException,
@@ -11,13 +9,17 @@ import {
   DateTimeType,
   JsonType,
 } from "@mikro-orm/core";
-import { SqliteDriver } from "@mikro-orm/sqlite";
+import { type SqlEntityManager, SqliteDriver } from "@mikro-orm/sqlite";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
 import { add, endOfDay, formatDistanceToNowStrict, startOfDay } from "date-fns";
 import { v4 as uuid } from "uuid";
 import { hasher as initHasher } from "node-object-hash";
 import { readFileSync } from "node:fs";
-import { getNullableEntry, returnUndefOnError } from "../shared/CommonUtils";
+import {
+  getNullableEntry,
+  pruneNullValues,
+  returnUndefOnError,
+} from "../shared/CommonUtils";
 import {
   assertTrue,
   guaranteeNonEmptyString,
@@ -443,7 +445,7 @@ export class NoteEvent extends BabyCareEvent {
   }
 }
 
-const BABY_CARE_DB_CONFIG: Options = {
+const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
   dbName: "../home-storage/baby-care/db.sqlite",
   driver: SqliteDriver,
   entities: [
@@ -520,11 +522,11 @@ export enum BabyCareServerEvent {
 }
 
 export class BabyCareDataRegistry {
-  private static _orm: MikroORM<IDatabaseDriver<Connection>>;
+  private static _orm: MikroORM<SqliteDriver>;
 
-  static async getORM() {
+  static async getORM(): Promise<MikroORM<SqliteDriver>> {
     if (!BabyCareDataRegistry._orm) {
-      const orm = await MikroORM.init(BABY_CARE_DB_CONFIG);
+      const orm = await MikroORM.init<SqliteDriver>(BABY_CARE_DB_CONFIG);
       // auto-populate the first time
       try {
         await orm.getSchemaGenerator().createSchema();
@@ -543,7 +545,7 @@ export class BabyCareDataRegistry {
     return BabyCareDataRegistry._orm;
   }
 
-  static async getEntityManager() {
+  static async getEntityManager(): Promise<SqlEntityManager> {
     return (await BabyCareDataRegistry.getORM()).em.fork();
   }
 
@@ -560,114 +562,74 @@ export class BabyCareDataRegistry {
     const events: BabyCareEvent[] = (
       await Promise.all([
         entityManager.find(BottleFeedEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(NursingEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(PumpingEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(DiaperChangeEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(SleepEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(BathEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(PlayEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(MeasurementEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(MedicineEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
         entityManager.find(NoteEvent, {
-          $and: [
-            { profile },
-            {
-              time: {
-                $gte: startOfDay(date),
-                $lt: startOfDay(add(date, { days: 1 })),
-              },
-            },
-          ],
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
         }),
       ])
     )
@@ -692,81 +654,279 @@ export class BabyCareDataRegistry {
     options: {
       startDate?: Date | undefined;
       endDate?: Date | undefined;
+      searchText?: string | undefined;
     }
   ): Promise<{ events: BabyCareEvent[]; totalCount: number }> {
     const entityManager = await BabyCareDataRegistry.getEntityManager();
     let result: [BabyCareEvent[], number] = [[], 0];
-    switch (eventType) {
-      case BabyCareEventType.MEASUREMENT: {
+    switch (eventType.toLowerCase()) {
+      case BabyCareEventType.BOTTLE_FEED.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          BottleFeedEvent,
+          {
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.PUMPING.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          PumpingEvent,
+          {
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.NURSING.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          NursingEvent,
+          {
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.__POOP.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          DiaperChangeEvent,
+          {
+            profile,
+            poop: true,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.__PEE.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          DiaperChangeEvent,
+          {
+            profile,
+            poop: false,
+            pee: true,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.BATH.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          BathEvent,
+          {
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.PLAY.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          PlayEvent,
+          {
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.SLEEP.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          SleepEvent,
+          {
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.MEASUREMENT.toLowerCase(): {
         result = await entityManager.findAndCount(
           MeasurementEvent,
           {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: options?.startDate
-                    ? startOfDay(options?.startDate)
-                    : null,
-                  $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-                },
-              },
-            ],
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
           },
           {
             limit: pageSize,
             offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
           }
         );
         break;
       }
-      case BabyCareEventType.MEDICINE: {
+      case BabyCareEventType.MEDICINE.toLowerCase(): {
         result = await entityManager.findAndCount(
           MedicineEvent,
           {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: options?.startDate
-                    ? startOfDay(options?.startDate)
-                    : null,
-                  $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-                },
-              },
-            ],
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            $or: options?.searchText
+              ? [
+                  {
+                    comment: {
+                      $like: `%${options.searchText}%`,
+                    },
+                  },
+                  {
+                    prescription: {
+                      $like: `%${options.searchText}%`,
+                      $ne: UNSPECIFIED_PRESCRIPTION_TAG,
+                    },
+                  },
+                ]
+              : [],
           },
           {
             limit: pageSize,
             offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
           }
         );
         break;
       }
-      case BabyCareEventType.NOTE:
-      case BabyCareEventType.__MEMORY: {
+      case BabyCareEventType.NOTE.toLowerCase():
+      case BabyCareEventType.__MEMORY.toLowerCase(): {
         result = await entityManager.findAndCount(
           NoteEvent,
           {
-            $and: [
-              { profile },
-              {
-                time: {
-                  $gte: options?.startDate
-                    ? startOfDay(options?.startDate)
-                    : null,
-                  $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-                },
-                purpose:
-                  eventType === BabyCareEventType.__MEMORY
-                    ? NotePurpose.MEMORY
-                    : null,
-              },
-            ],
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            purpose:
+              eventType === BabyCareEventType.__MEMORY
+                ? NotePurpose.MEMORY
+                : null,
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
           },
           {
             limit: pageSize,
             offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
           }
         );
         break;
@@ -775,17 +935,14 @@ export class BabyCareDataRegistry {
         break;
       }
     }
-    const events = result[0]
-      .map((event) =>
+
+    return {
+      events: result[0].map((event) =>
         wrap(event).assign({
           TYPE: event.eventType,
           HASH: event.hashCode,
         })
-      )
-      // sort latest events first
-      .sort((a, b) => b.time.getTime() - a.time.getTime());
-    return {
-      events,
+      ),
       totalCount: result[1],
     };
   }
