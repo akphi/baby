@@ -445,25 +445,6 @@ export class NoteEvent extends BabyCareEvent {
   }
 }
 
-const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
-  dbName: "../home-storage/baby-care/db.sqlite",
-  driver: SqliteDriver,
-  entities: [
-    BabyCareProfile,
-    BottleFeedEvent,
-    NursingEvent,
-    PumpingEvent,
-    DiaperChangeEvent,
-    SleepEvent,
-    PlayEvent,
-    BathEvent,
-    MeasurementEvent,
-    MedicineEvent,
-    NoteEvent,
-  ],
-  discovery: { disableDynamicFileAccess: true },
-};
-
 export enum BabyCareAction {
   CREATE_PROFILE = "baby-care.profile.create",
   UPDATE_PROFILE = "baby-care.profile.update",
@@ -520,6 +501,31 @@ export enum BabyCareAction {
 export enum BabyCareServerEvent {
   PROFILE_DATA_CHANGE = "baby-care.profile-data-change",
 }
+
+export enum BabyCareEventGroupByType {
+  DAY = "day",
+  WEEK = "week",
+  MONTH = "month",
+}
+
+const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
+  dbName: "../home-storage/baby-care/db.sqlite",
+  driver: SqliteDriver,
+  entities: [
+    BabyCareProfile,
+    BottleFeedEvent,
+    NursingEvent,
+    PumpingEvent,
+    DiaperChangeEvent,
+    SleepEvent,
+    PlayEvent,
+    BathEvent,
+    MeasurementEvent,
+    MedicineEvent,
+    NoteEvent,
+  ],
+  discovery: { disableDynamicFileAccess: true },
+};
 
 export class BabyCareDataRegistry {
   private static _orm: MikroORM<SqliteDriver>;
@@ -931,6 +937,306 @@ export class BabyCareDataRegistry {
         );
         break;
       }
+      default: {
+        break;
+      }
+    }
+
+    return {
+      events: result[0].map((event) =>
+        wrap(event).assign({
+          TYPE: event.eventType,
+          HASH: event.hashCode,
+        })
+      ),
+      totalCount: result[1],
+    };
+  }
+
+  static async getStatistics(
+    profile: BabyCareProfile,
+    eventType: string,
+    groupBy: string,
+    options: {
+      startDate?: Date | undefined;
+      endDate?: Date | undefined;
+      searchText?: string | undefined;
+    }
+  ): Promise<{ events: BabyCareEvent[]; totalCount: number }> {
+    const entityManager = await BabyCareDataRegistry.getEntityManager();
+    let result: [BabyCareEvent[], number] = [[], 0];
+    switch (eventType.toLowerCase()) {
+      case BabyCareEventType.BOTTLE_FEED.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          BottleFeedEvent,
+          {
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            comment: options?.searchText
+              ? {
+                  $like: `%${options.searchText}%`,
+                }
+              : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      // case BabyCareEventType.PUMPING.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     PumpingEvent,
+      //     {
+      //       profile,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.NURSING.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     NursingEvent,
+      //     {
+      //       profile,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.__POOP.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     DiaperChangeEvent,
+      //     {
+      //       profile,
+      //       poop: true,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.__PEE.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     DiaperChangeEvent,
+      //     {
+      //       profile,
+      //       poop: false,
+      //       pee: true,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.BATH.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     BathEvent,
+      //     {
+      //       profile,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.PLAY.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     PlayEvent,
+      //     {
+      //       profile,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.SLEEP.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     SleepEvent,
+      //     {
+      //       profile,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.MEASUREMENT.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     MeasurementEvent,
+      //     {
+      //       profile,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.MEDICINE.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     MedicineEvent,
+      //     {
+      //       profile,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       $or: options?.searchText
+      //         ? [
+      //             {
+      //               comment: {
+      //                 $like: `%${options.searchText}%`,
+      //               },
+      //             },
+      //             {
+      //               prescription: {
+      //                 $like: `%${options.searchText}%`,
+      //                 $ne: UNSPECIFIED_PRESCRIPTION_TAG,
+      //               },
+      //             },
+      //           ]
+      //         : [],
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
+      // case BabyCareEventType.NOTE.toLowerCase():
+      // case BabyCareEventType.__MEMORY.toLowerCase(): {
+      //   result = await entityManager.findAndCount(
+      //     NoteEvent,
+      //     {
+      //       profile,
+      //       time: pruneNullValues({
+      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+      //       }),
+      //       purpose:
+      //         eventType === BabyCareEventType.__MEMORY
+      //           ? NotePurpose.MEMORY
+      //           : null,
+      //       comment: options?.searchText
+      //         ? {
+      //             $like: `%${options.searchText}%`,
+      //           }
+      //         : {},
+      //     },
+      //     {
+      //       limit: pageSize,
+      //       offset: pageSize * Math.max(0, page - 1),
+      //       orderBy: { time: "DESC" },
+      //     }
+      //   );
+      //   break;
+      // }
       default: {
         break;
       }

@@ -92,7 +92,7 @@ export default function BabyCareProfileManager() {
                     <FemaleIcon />
                   )
                 }
-                className="w-full h-10 my-1 flex items-center justify-between pr-0 pl-4"
+                className="w-full h-10 my-1 flex items-center justify-between pr-0 pl-4 pt-0 pb-0"
               >
                 <div className="h-full flex items-center">
                   <div className="text-sm">

@@ -41,13 +41,15 @@ import { useState } from "react";
 import { NumberInput } from "../../shared/NumberInput";
 import { DatePicker } from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
-import { parseISO } from "date-fns";
+import { add, isAfter, isBefore, parseISO, startOfDay } from "date-fns";
 import { useForm } from "react-hook-form";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
 import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
 import { getNonNullableEntry, uniq } from "../../shared/CommonUtils";
 import { generateHourText } from "../../data/BabyCareUtils";
+import { BottleIcon } from "../../shared/Icons";
+import { cn } from "../../shared/StyleUtils";
 
 const HourRangeSlider = (props: {
   label: string;
@@ -298,6 +300,9 @@ export const BabyCareProfileEditor = (props: {
     onClose();
   });
 
+  // stage badge
+  const birthDate = profile ? new Date(profile.dob) : undefined;
+
   return (
     <Dialog
       open={open}
@@ -381,19 +386,156 @@ export const BabyCareProfileEditor = (props: {
               <InputLabel>Stage</InputLabel>
               <Select
                 value={stage}
+                classes={{
+                  select: "flex justify-between",
+                }}
                 label="Stage"
                 onChange={(event: SelectChangeEvent) => {
                   setStage(event.target.value as Stage);
                 }}
                 disabled={Boolean(simple)}
               >
-                <MenuItem value={Stage.NEWBORN}>Newborn</MenuItem>
-                <MenuItem value={Stage.NEWBORN_EXCLUSIVE_BOTTLE_FED}>
-                  Newborn (Exclusive Bottle-Fed)
+                <MenuItem
+                  value={Stage.NEWBORN}
+                  className="flex justify-between"
+                >
+                  <div>Newborn</div>
+                  <div
+                    className={cn(
+                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      {
+                        "bg-blue-500 text-slate-100":
+                          birthDate &&
+                          isBefore(
+                            new Date(),
+                            add(startOfDay(birthDate), {
+                              months: 3,
+                              days: 1,
+                            })
+                          ),
+                      }
+                    )}
+                  >
+                    0-3M
+                  </div>
                 </MenuItem>
-                <MenuItem value={Stage.INFANT}>Infant</MenuItem>
-                <MenuItem value={Stage.TODDLER}>Toddler</MenuItem>
-                <MenuItem value={Stage.PRESCHOOLER}>Preschooler</MenuItem>
+                <MenuItem
+                  value={Stage.NEWBORN_EXCLUSIVE_BOTTLE_FED}
+                  className="flex justify-between"
+                >
+                  <div className="flex items-center">
+                    <div>Newborn</div>
+                    <div className="h-6 flex items-center bg-slate-700 text-slate-300 font-mono text-xs rounded-full ml-2 px-3">
+                      <div className="mr-2">Exclusive</div>
+                      <BottleIcon className="text-[16px] leading-[16px]" />
+                    </div>
+                  </div>
+                  <div
+                    className={cn(
+                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      {
+                        "bg-blue-500 text-slate-100":
+                          birthDate &&
+                          isBefore(
+                            new Date(),
+                            add(startOfDay(birthDate), {
+                              months: 3,
+                              days: 1,
+                            })
+                          ),
+                      }
+                    )}
+                  >
+                    0-3M
+                  </div>
+                </MenuItem>
+                <MenuItem value={Stage.INFANT} className="flex justify-between">
+                  <div>Infant</div>
+                  <div
+                    className={cn(
+                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      {
+                        "bg-blue-500 text-slate-100":
+                          birthDate &&
+                          isAfter(
+                            new Date(),
+                            add(startOfDay(birthDate), {
+                              months: 3,
+                            })
+                          ) &&
+                          isBefore(
+                            new Date(),
+                            add(startOfDay(birthDate), {
+                              years: 1,
+                              days: 1,
+                            })
+                          ),
+                      }
+                    )}
+                  >
+                    3M-1T
+                  </div>
+                </MenuItem>
+                <MenuItem
+                  value={Stage.TODDLER}
+                  className="flex justify-between"
+                >
+                  <div>Toddler</div>
+                  <div
+                    className={cn(
+                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      {
+                        "bg-blue-500 text-slate-100":
+                          birthDate &&
+                          isAfter(
+                            new Date(),
+                            add(startOfDay(birthDate), {
+                              years: 1,
+                            })
+                          ) &&
+                          isBefore(
+                            new Date(),
+                            add(startOfDay(birthDate), {
+                              years: 3,
+                              days: 1,
+                            })
+                          ),
+                      }
+                    )}
+                  >
+                    1-3T
+                  </div>
+                </MenuItem>
+                <MenuItem
+                  value={Stage.PRESCHOOLER}
+                  className="flex justify-between"
+                >
+                  <div>Preschooler</div>
+                  <div
+                    className={cn(
+                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      {
+                        "bg-blue-500 text-slate-100":
+                          birthDate &&
+                          isAfter(
+                            new Date(),
+                            add(startOfDay(birthDate), {
+                              years: 3,
+                            })
+                          ) &&
+                          isBefore(
+                            new Date(),
+                            add(startOfDay(birthDate), {
+                              years: 5,
+                              days: 1,
+                            })
+                          ),
+                      }
+                    )}
+                  >
+                    3-5T
+                  </div>
+                </MenuItem>
               </Select>
             </FormControl>
           </div>

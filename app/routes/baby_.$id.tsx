@@ -149,10 +149,8 @@ export default function BabyCare() {
               cn(
                 "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white hover:border-blue-200",
                 {
-                  "text-blue-500": isActive,
-                  "border-blue-500": isActive,
-                  "hover:text-blue-500": isActive,
-                  "hover:border-blue-500": isActive,
+                  "text-blue-500 border-blue-500 hover:text-blue-500 hover:border-blue-500":
+                    isActive,
                 }
               )
             }
@@ -169,10 +167,8 @@ export default function BabyCare() {
               cn(
                 "h-full flex items-center justify-center text-slate-200 hover:text-blue-200 border-b-2 border-white hover:border-blue-200",
                 {
-                  "text-blue-500": isActive,
-                  "border-blue-500": isActive,
-                  "hover:text-blue-500": isActive,
-                  "hover:border-blue-500": isActive,
+                  "text-blue-500 border-blue-500 hover:text-blue-500 hover:border-blue-500":
+                    isActive,
                 }
               )
             }

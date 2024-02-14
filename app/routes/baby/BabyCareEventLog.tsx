@@ -118,12 +118,7 @@ export const BabyCareEventLog = (props: {
             className={cn(
               "h-7 flex items-center px-2 rounded border-2 border-slate-200 hover:border-slate-300 ml-1",
               {
-                "bg-blue-100": isEqual(selectedDate, startOfDay(new Date())),
-                "border-blue-500": isEqual(
-                  selectedDate,
-                  startOfDay(new Date())
-                ),
-                "hover:border-blue-500": isEqual(
+                "bg-blue-100 border-blue-500 hover:border-blue-500": isEqual(
                   selectedDate,
                   startOfDay(new Date())
                 ),
@@ -140,9 +135,8 @@ export const BabyCareEventLog = (props: {
             className={cn(
               "h-7 flex items-center px-2 rounded border-2 border-slate-200 hover:border-slate-300",
               {
-                "bg-blue-100": selectedEvent === undefined,
-                "border-blue-500": selectedEvent === undefined,
-                "hover:border-blue-500": selectedEvent === undefined,
+                "bg-blue-100 border-blue-500 hover:border-blue-500":
+                  selectedEvent === undefined,
               }
             )}
             onClick={() => setSelectedEvent(undefined)}
@@ -188,9 +182,8 @@ export const BabyCareEventLog = (props: {
               className={cn(
                 "h-7 flex items-center px-2 rounded border-2 border-slate-200 hover:border-slate-300 ml-1",
                 {
-                  "bg-blue-100": selectedEvent === type,
-                  "border-blue-500": selectedEvent === type,
-                  "hover:border-blue-500": selectedEvent === type,
+                  "bg-blue-100 border-blue-500 hover:border-blue-500":
+                    selectedEvent === type,
                 }
               )}
             >

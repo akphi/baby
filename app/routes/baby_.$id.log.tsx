@@ -72,7 +72,7 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 }
 
-export default function BabyCareLogs() {
+export default function BabyCareLog() {
   const { profile, events } = useLoaderData<typeof loader>();
   return <BabyCareEventLog profile={profile} events={events} />;
 }

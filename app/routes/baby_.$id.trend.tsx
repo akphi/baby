@@ -25,33 +25,20 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
 
   const { searchParams } = new URL(request.url);
   const eventType = searchParams.get("type");
-  const page =
-    returnUndefOnError(() => parseNumber(searchParams.get("page") ?? "NaN")) ??
-    1;
-  const searchText = searchParams.has("text")
-    ? decodeURIComponent(searchParams.get("text") ?? "")
-    : undefined;
-  const pageSize = DEFAULT_SEARCH_PAGE_SIZE; // TODO: support page-size
+  const groupBy = searchParams.get("groupBy");
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
 
   const result = eventType
-    ? await BabyCareDataRegistry.lookupEvents(
-        profile,
-        eventType,
-        pageSize,
-        page,
-        {
-          startDate: startDate ? parseISO(startDate) : undefined,
-          endDate: endDate ? parseISO(endDate) : undefined,
-          searchText,
-        }
-      )
+    ? await BabyCareDataRegistry.lookupEvents(profile, eventType, 0, 0, {
+        startDate: startDate ? parseISO(startDate) : undefined,
+        endDate: endDate ? parseISO(endDate) : undefined,
+      })
     : { events: [], totalCount: 0 };
   return json({ profile, result });
 };
 
-export default function BabyCareSearch() {
+export default function BabyCareTrend() {
   const { profile, result } = useLoaderData<typeof loader>();
   return (
     <BabyCareEventSearch
