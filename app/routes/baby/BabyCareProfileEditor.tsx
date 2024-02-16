@@ -39,7 +39,7 @@ import {
 import { useSubmit } from "@remix-run/react";
 import { useState } from "react";
 import { NumberInput } from "../../shared/NumberInput";
-import { DatePicker } from "@mui/x-date-pickers";
+import { DesktopDateTimePicker } from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
 import { add, isAfter, isBefore, parseISO, startOfDay } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -371,7 +371,7 @@ export const BabyCareProfileEditor = (props: {
             </FormControl>
           </div>
           <div className="w-full py-2">
-            <DatePicker
+            <DesktopDateTimePicker
               label="Date of Birth"
               value={dob}
               onChange={(value: Date | null) => {
@@ -379,6 +379,7 @@ export const BabyCareProfileEditor = (props: {
               }}
               disabled={Boolean(simple)}
               className="w-full"
+              format="MMM dd yyyy - HH:mm"
             />
           </div>
           <div className="w-full py-2">
@@ -425,7 +426,7 @@ export const BabyCareProfileEditor = (props: {
                 >
                   <div className="flex items-center">
                     <div>Newborn</div>
-                    <div className="h-6 flex items-center bg-slate-700 text-slate-300 font-mono text-xs rounded-full ml-2 px-3">
+                    <div className="h-6 flex items-center bg-slate-700 text-slate-300 font-mono text-xs rounded-full ml-2 px-3 mui--nullify-disabled-wash">
                       <div className="mr-2">Exclusive</div>
                       <BottleIcon className="text-[16px] leading-[16px]" />
                     </div>

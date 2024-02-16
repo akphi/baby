@@ -33,3 +33,7 @@ body {
   border-radius: 0;
   border: none;
 }
+
+.mui--nullify-disabled-wash {
+  -webkit-text-fill-color: initial;
+}
