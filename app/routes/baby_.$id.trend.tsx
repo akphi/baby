@@ -3,19 +3,21 @@ import {
   type LoaderFunctionArgs,
   type MetaFunction,
 } from "@remix-run/node";
-import { BabyCareDataRegistry } from "../data/BabyCare";
+import {
+  BabyCareDataRegistry,
+  BabyCareEventGroupByType,
+} from "../data/BabyCare";
 import { guaranteeNonNullable } from "../shared/AssertionUtils";
 import { useLoaderData } from "@remix-run/react";
 import { parseISO } from "date-fns";
-import { DEFAULT_SEARCH_PAGE_SIZE } from "../data/constants";
-import { parseNumber, returnUndefOnError } from "../shared/CommonUtils";
-import { BabyCareEventSearch } from "./baby/BabyCareEventSearch";
+import { BabyCareEventTrend } from "./baby/BabyCareEventTrend.client";
+import { ClientOnly } from "remix-utils/client-only";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data) {
     return [];
   }
-  return [{ title: `Search: ${data.profile.nickname ?? data.profile.name}` }];
+  return [{ title: `Trend: ${data.profile.nickname ?? data.profile.name}` }];
 };
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
@@ -25,26 +27,26 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
 
   const { searchParams } = new URL(request.url);
   const eventType = searchParams.get("type");
-  const groupBy = searchParams.get("groupBy");
+  const groupBy = searchParams.get("groupBy") ?? BabyCareEventGroupByType.DATE;
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
 
-  const result = eventType
-    ? await BabyCareDataRegistry.lookupEvents(profile, eventType, 0, 0, {
+  const stats = eventType
+    ? await BabyCareDataRegistry.getStats(profile, eventType, groupBy, {
         startDate: startDate ? parseISO(startDate) : undefined,
         endDate: endDate ? parseISO(endDate) : undefined,
       })
-    : { events: [], totalCount: 0 };
-  return json({ profile, result });
+    : { records: [] };
+  return json({ profile, stats });
 };
 
 export default function BabyCareTrend() {
-  const { profile, result } = useLoaderData<typeof loader>();
+  const { profile, stats } = useLoaderData<typeof loader>();
   return (
-    <BabyCareEventSearch
-      profile={profile}
-      events={result.events}
-      totalCount={result.totalCount}
-    />
+    // NOTE: This is a client-only component since it requires access to window object
+    // See https://github.com/remix-run/remix/discussions/6424
+    <ClientOnly fallback={null}>
+      {() => <BabyCareEventTrend profile={profile} stats={stats} />}
+    </ClientOnly>
   );
 }

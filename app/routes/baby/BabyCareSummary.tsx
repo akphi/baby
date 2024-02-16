@@ -11,12 +11,6 @@ import {
 } from "../../data/BabyCare";
 import { groupBy, merge } from "lodash-es";
 import {
-  differenceInCalendarDays,
-  differenceInCalendarMonths,
-  differenceInCalendarWeeks,
-  differenceInCalendarYears,
-} from "date-fns";
-import {
   BottleIcon,
   BreastPumpIcon,
   DarkModeIcon,
@@ -26,7 +20,7 @@ import {
 } from "../../shared/Icons";
 import { mlToOz } from "../../shared/UnitUtils";
 import { Divider } from "@mui/material";
-import { isDuringDaytime } from "../../data/BabyCareUtils";
+import { generateBabyAgeText, isDuringDaytime } from "../../data/BabyCareUtils";
 
 export const BabyCareStatistics = (props: {
   events: SerializeFrom<BabyCareEvent>[];
@@ -140,29 +134,7 @@ export const BabyCareSummary = (props: {
   profile: SerializeFrom<BabyCareProfile>;
 }) => {
   const { events, profile } = props;
-  // age
-  const ageInDays = differenceInCalendarDays(new Date(), new Date(profile.dob));
-  const ageInWeeks = differenceInCalendarWeeks(
-    new Date(),
-    new Date(profile.dob)
-  );
-  const ageInMonths = differenceInCalendarMonths(
-    new Date(),
-    new Date(profile.dob)
-  );
-  const ageInYears = differenceInCalendarYears(
-    new Date(),
-    new Date(profile.dob)
-  );
-  const ageDisplayText =
-    ageInYears >= 2
-      ? `${ageInYears} years`
-      : ageInMonths >= 12
-      ? `${ageInMonths} months`
-      : ageInWeeks > 1
-      ? `${ageInWeeks} weeks`
-      : `${ageInDays} days`;
-  // quota
+  const ageDisplayText = generateBabyAgeText(profile.dob);
   const isDaytime = isDuringDaytime(
     new Date(),
     profile.settings.babyDaytimeStart,

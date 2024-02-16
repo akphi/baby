@@ -11,7 +11,21 @@ import {
 } from "@mikro-orm/core";
 import { type SqlEntityManager, SqliteDriver } from "@mikro-orm/sqlite";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
-import { add, endOfDay, formatDistanceToNowStrict, startOfDay } from "date-fns";
+import {
+  add,
+  endOfDay,
+  format,
+  formatDistanceToNowStrict,
+  parseISO,
+  startOfDay,
+  differenceInCalendarDays,
+  differenceInCalendarMonths,
+  differenceInCalendarISOWeeks,
+  parse,
+  endOfISOWeek,
+  startOfISOWeek,
+  startOfMonth,
+} from "date-fns";
 import { v4 as uuid } from "uuid";
 import { hasher as initHasher } from "node-object-hash";
 import { readFileSync } from "node:fs";
@@ -445,6 +459,53 @@ export class NoteEvent extends BabyCareEvent {
   }
 }
 
+export interface BabyCareEventTimeSeriesStatsRecord {
+  t_raw: string;
+  t_label: string;
+  t_diff: number;
+  t_diff_label: string;
+
+  count: number;
+}
+
+export interface BabyCareEventTimeSeriesStatsRecord {
+  t_raw: string;
+  t_label: string;
+  t_diff: number;
+  t_diff_label: string;
+
+  count: number;
+}
+
+export interface BottleFeedEventTimeSeriesStatsRecord
+  extends BabyCareEventTimeSeriesStatsRecord {
+  sum_volume: number;
+  avg_volume: number;
+  sum_formula_milk_volume: number;
+  avg_formula_milk_volume: number;
+}
+
+export interface PumpingEventTimeSeriesStatsRecord
+  extends BabyCareEventTimeSeriesStatsRecord {
+  sum_volume: number;
+  avg_volume: number;
+}
+
+export interface NursingEventTimeSeriesStatsRecord
+  extends BabyCareEventTimeSeriesStatsRecord {
+  sum_duration: number;
+  avg_duration: number;
+}
+
+export interface BabyCareEventStats {
+  records: object[];
+}
+
+export interface BabyCareEventTimeSeriesStats extends BabyCareEventStats {
+  records: BabyCareEventTimeSeriesStatsRecord[];
+  unit: string;
+}
+
 export enum BabyCareAction {
   CREATE_PROFILE = "baby-care.profile.create",
   UPDATE_PROFILE = "baby-care.profile.update",
@@ -503,7 +564,7 @@ export enum BabyCareServerEvent {
 }
 
 export enum BabyCareEventGroupByType {
-  DAY = "day",
+  DATE = "date",
   WEEK = "week",
   MONTH = "month",
 }
@@ -563,6 +624,8 @@ export class BabyCareDataRegistry {
     return profiles;
   }
 
+  // NOTE: it's important to use `startOfDay` since it will convert the temporal value into local time
+  // and since all logging is done with local time, the filters will be applied accordingly
   static async fetchEvents(profile: BabyCareProfile, date: Date) {
     const entityManager = await BabyCareDataRegistry.getEntityManager();
     const events: BabyCareEvent[] = (
@@ -953,304 +1016,246 @@ export class BabyCareDataRegistry {
     };
   }
 
-  static async getStatistics(
+  static async getStats(
     profile: BabyCareProfile,
     eventType: string,
     groupBy: string,
     options: {
       startDate?: Date | undefined;
       endDate?: Date | undefined;
-      searchText?: string | undefined;
     }
-  ): Promise<{ events: BabyCareEvent[]; totalCount: number }> {
+  ): Promise<BabyCareEventStats> {
     const entityManager = await BabyCareDataRegistry.getEntityManager();
-    let result: [BabyCareEvent[], number] = [[], 0];
-    switch (eventType.toLowerCase()) {
-      case BabyCareEventType.BOTTLE_FEED.toLowerCase(): {
-        result = await entityManager.findAndCount(
-          BottleFeedEvent,
-          {
-            profile,
-            time: pruneNullValues({
-              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-            }),
-            comment: options?.searchText
-              ? {
-                  $like: `%${options.searchText}%`,
-                }
-              : {},
-          },
-          {
-            limit: pageSize,
-            offset: pageSize * Math.max(0, page - 1),
-            orderBy: { time: "DESC" },
-          }
-        );
+    const connection = entityManager.getConnection();
+    const knex = connection.getKnex();
+
+    let result: BabyCareEventStats = {
+      records: [],
+    };
+    let timeGroupByFieldFormat: string;
+    let recordTimeProcessor: (
+      record: BabyCareEventTimeSeriesStatsRecord
+    ) => BabyCareEventTimeSeriesStatsRecord;
+
+    switch (groupBy.toLowerCase()) {
+      case BabyCareEventGroupByType.DATE.toLowerCase(): {
+        timeGroupByFieldFormat = "%Y-%m-%d";
+        recordTimeProcessor = (record) => {
+          const date = parseISO(record.t_raw);
+          const diff = differenceInCalendarDays(
+            startOfDay(date),
+            startOfDay(profile.dob)
+          );
+          return {
+            ...record,
+            t_label: format(date, "dd MMM yyyy"),
+            t_diff: diff,
+            t_diff_label: `Day ${diff}`,
+          };
+        };
         break;
       }
-      // case BabyCareEventType.PUMPING.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     PumpingEvent,
-      //     {
-      //       profile,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.NURSING.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     NursingEvent,
-      //     {
-      //       profile,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.__POOP.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     DiaperChangeEvent,
-      //     {
-      //       profile,
-      //       poop: true,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.__PEE.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     DiaperChangeEvent,
-      //     {
-      //       profile,
-      //       poop: false,
-      //       pee: true,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.BATH.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     BathEvent,
-      //     {
-      //       profile,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.PLAY.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     PlayEvent,
-      //     {
-      //       profile,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.SLEEP.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     SleepEvent,
-      //     {
-      //       profile,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.MEASUREMENT.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     MeasurementEvent,
-      //     {
-      //       profile,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.MEDICINE.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     MedicineEvent,
-      //     {
-      //       profile,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       $or: options?.searchText
-      //         ? [
-      //             {
-      //               comment: {
-      //                 $like: `%${options.searchText}%`,
-      //               },
-      //             },
-      //             {
-      //               prescription: {
-      //                 $like: `%${options.searchText}%`,
-      //                 $ne: UNSPECIFIED_PRESCRIPTION_TAG,
-      //               },
-      //             },
-      //           ]
-      //         : [],
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
-      // case BabyCareEventType.NOTE.toLowerCase():
-      // case BabyCareEventType.__MEMORY.toLowerCase(): {
-      //   result = await entityManager.findAndCount(
-      //     NoteEvent,
-      //     {
-      //       profile,
-      //       time: pruneNullValues({
-      //         $gte: options?.startDate ? startOfDay(options?.startDate) : null,
-      //         $lte: options?.endDate ? endOfDay(options?.endDate) : null,
-      //       }),
-      //       purpose:
-      //         eventType === BabyCareEventType.__MEMORY
-      //           ? NotePurpose.MEMORY
-      //           : null,
-      //       comment: options?.searchText
-      //         ? {
-      //             $like: `%${options.searchText}%`,
-      //           }
-      //         : {},
-      //     },
-      //     {
-      //       limit: pageSize,
-      //       offset: pageSize * Math.max(0, page - 1),
-      //       orderBy: { time: "DESC" },
-      //     }
-      //   );
-      //   break;
-      // }
+      case BabyCareEventGroupByType.WEEK.toLowerCase(): {
+        // NOTE: SQLite %W refer to ISO-8601 week number of the year, i.e. week starts on Monday
+        timeGroupByFieldFormat = "%Y-%W";
+        recordTimeProcessor = (record) => {
+          // Parsing the week in ISO-8601 format requires special date-fns config
+          const weekFirstDate = parse(record.t_raw, "RRRR-II", new Date(), {
+            useAdditionalWeekYearTokens: true,
+          });
+          const diff = differenceInCalendarISOWeeks(
+            weekFirstDate,
+            startOfISOWeek(profile.dob)
+          );
+          return {
+            ...record,
+            t_label: `${format(weekFirstDate, "dd MMM yyyy")} - ${format(
+              endOfISOWeek(weekFirstDate),
+              "dd MMM yyyy"
+            )}`,
+            t_diff: diff,
+            t_diff_label: `Week ${diff}`,
+          };
+        };
+        break;
+      }
+      case BabyCareEventGroupByType.MONTH.toLowerCase(): {
+        timeGroupByFieldFormat = "%Y-%m";
+        recordTimeProcessor = (record) => {
+          const monthFirstDate = parseISO(`${record.t_raw}-01`);
+          const diff = differenceInCalendarMonths(
+            monthFirstDate,
+            startOfMonth(profile.dob)
+          );
+          return {
+            ...record,
+            t_label: format(monthFirstDate, "MMM yyyy"),
+            t_diff: diff,
+            t_diff_label: `Month ${diff}`,
+          };
+        };
+        break;
+      }
+      default: {
+        return result;
+      }
+    }
+    switch (eventType.toLowerCase()) {
+      case BabyCareEventType.BOTTLE_FEED.toLowerCase(): {
+        const metadata = entityManager.getMetadata(BottleFeedEvent);
+        const _time = guaranteeNonNullable(
+          metadata.properties.time.fieldNames[0]
+        );
+        const _profile_id = guaranteeNonNullable(
+          metadata.properties.profile.fieldNames[0]
+        );
+        const _volume = guaranteeNonNullable(
+          metadata.properties.volume.fieldNames[0]
+        );
+        const _formula_milk_volume = guaranteeNonNullable(
+          metadata.properties.formulaMilkVolume.fieldNames[0]
+        );
+        const queryBuilder = knex.from(metadata.tableName).where({
+          [_profile_id]: profile.id,
+        });
+        if (options.startDate) {
+          queryBuilder.andWhere(
+            _time,
+            ">=",
+            startOfDay(options.startDate).valueOf()
+          );
+        }
+        if (options.endDate) {
+          queryBuilder.andWhere(
+            _time,
+            "<",
+            endOfDay(options.endDate).valueOf()
+          );
+        }
+        queryBuilder
+          .select(
+            knex.raw(
+              `STRFTIME('${timeGroupByFieldFormat}', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')) as t_raw`
+            ),
+            knex.sum(_volume).as("sum_volume"),
+            knex.raw(`ROUND(AVG(${_volume})) as avg_volume`),
+            knex.sum(_formula_milk_volume).as("sum_formula_milk_volume"),
+            knex.raw(
+              `ROUND(AVG(${_formula_milk_volume})) as avg_formula_milk_volume`
+            )
+          )
+          .count("*", { as: "count" })
+          .groupBy("t_raw")
+          .orderBy("t_raw", "ASC");
+        result = {
+          records: (await queryBuilder).map(recordTimeProcessor),
+          unit: "ml",
+        } as BabyCareEventTimeSeriesStats;
+        break;
+      }
+      case BabyCareEventType.PUMPING.toLowerCase(): {
+        const metadata = entityManager.getMetadata(PumpingEvent);
+        const _time = guaranteeNonNullable(
+          metadata.properties.time.fieldNames[0]
+        );
+        const _profile_id = guaranteeNonNullable(
+          metadata.properties.profile.fieldNames[0]
+        );
+        const _volume = guaranteeNonNullable(
+          metadata.properties.volume.fieldNames[0]
+        );
+        const queryBuilder = knex.from(metadata.tableName).where({
+          [_profile_id]: profile.id,
+        });
+        if (options.startDate) {
+          queryBuilder.andWhere(
+            _time,
+            ">=",
+            startOfDay(options.startDate).valueOf()
+          );
+        }
+        if (options.endDate) {
+          queryBuilder.andWhere(
+            _time,
+            "<",
+            endOfDay(options.endDate).valueOf()
+          );
+        }
+        queryBuilder
+          .select(
+            knex.raw(
+              `STRFTIME('${timeGroupByFieldFormat}', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')) as t_raw`
+            ),
+            knex.sum(_volume).as("sum_volume"),
+            knex.raw(`ROUND(AVG(${_volume})) as avg_volume`)
+          )
+          .count("*", { as: "count" })
+          .groupBy("t_raw")
+          .orderBy("t_raw", "ASC");
+        result = {
+          records: (await queryBuilder).map(recordTimeProcessor),
+          unit: "ml",
+        } as BabyCareEventTimeSeriesStats;
+        break;
+      }
+      case BabyCareEventType.NURSING.toLowerCase(): {
+        const metadata = entityManager.getMetadata(NursingEvent);
+        const _time = guaranteeNonNullable(
+          metadata.properties.time.fieldNames[0]
+        );
+        const _profile_id = guaranteeNonNullable(
+          metadata.properties.profile.fieldNames[0]
+        );
+        const _left_duration = guaranteeNonNullable(
+          metadata.properties.leftDuration.fieldNames[0]
+        );
+        const _right_duration = guaranteeNonNullable(
+          metadata.properties.rightDuration.fieldNames[0]
+        );
+        const queryBuilder = knex.from(metadata.tableName).where({
+          [_profile_id]: profile.id,
+        });
+        if (options.startDate) {
+          queryBuilder.andWhere(
+            _time,
+            ">=",
+            startOfDay(options.startDate).valueOf()
+          );
+        }
+        if (options.endDate) {
+          queryBuilder.andWhere(
+            _time,
+            "<",
+            endOfDay(options.endDate).valueOf()
+          );
+        }
+        queryBuilder
+          .select(
+            knex.raw(
+              `STRFTIME('${timeGroupByFieldFormat}', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')) as t_raw`
+            ),
+            knex.raw(
+              `ROUND(SUM(${_left_duration} + ${_right_duration})/3600000.0, 1) as sum_duration`
+            ),
+            knex.raw(
+              `ROUND(AVG(${_left_duration} + ${_right_duration})/3600000.0, 1) as avg_duration`
+            )
+          )
+          .count("*", { as: "count" })
+          .groupBy("t_raw")
+          .orderBy("t_raw", "ASC");
+        result = {
+          records: (await queryBuilder).map(recordTimeProcessor),
+          unit: "h",
+        } as BabyCareEventTimeSeriesStats;
+        break;
+      }
       default: {
         break;
       }
     }
 
-    return {
-      events: result[0].map((event) =>
-        wrap(event).assign({
-          TYPE: event.eventType,
-          HASH: event.hashCode,
-        })
-      ),
-      totalCount: result[1],
-    };
+    return result;
   }
 
   static async fetchProfileByIdOrHandle(idOrHandle: string) {

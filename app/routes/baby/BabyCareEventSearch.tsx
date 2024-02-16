@@ -253,7 +253,7 @@ export const BabyCareEventSearch = (props: {
         />
       </div>
       {!eventType && (
-        <div className="h-[calc(100%_-_56px)] flex justify-center items-center font-medium text-slate-500 select-none text-sm">
+        <div className="h-[calc(100%_-_40px)] flex justify-center items-center font-medium text-slate-500 select-none text-sm">
           Select an event type to start
         </div>
       )}

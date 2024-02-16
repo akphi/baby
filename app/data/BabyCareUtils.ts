@@ -1,15 +1,28 @@
 import {
   differenceInCalendarDays,
   differenceInCalendarMonths,
-  differenceInCalendarWeeks,
+  differenceInCalendarISOWeeks,
   differenceInCalendarYears,
+  startOfDay,
 } from "date-fns";
 
 export const generateBabyAgeText = (dob: string) => {
-  const ageInDays = differenceInCalendarDays(new Date(), new Date(dob));
-  const ageInWeeks = differenceInCalendarWeeks(new Date(), new Date(dob));
-  const ageInMonths = differenceInCalendarMonths(new Date(), new Date(dob));
-  const ageInYears = differenceInCalendarYears(new Date(), new Date(dob));
+  const ageInDays = differenceInCalendarDays(
+    startOfDay(new Date()),
+    startOfDay(new Date(dob))
+  );
+  const ageInWeeks = differenceInCalendarISOWeeks(
+    startOfDay(new Date()),
+    startOfDay(new Date(dob))
+  );
+  const ageInMonths = differenceInCalendarMonths(
+    startOfDay(new Date()),
+    startOfDay(new Date(dob))
+  );
+  const ageInYears = differenceInCalendarYears(
+    startOfDay(new Date()),
+    startOfDay(new Date(dob))
+  );
   return ageInYears >= 2
     ? `${ageInYears} years`
     : ageInMonths >= 12

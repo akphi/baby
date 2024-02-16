@@ -39,6 +39,7 @@ import {
   HistorySearchIcon,
   MoreVertIcon,
   ClockIcon,
+  AnalyticsIcon,
 } from "../shared/Icons";
 import { cn } from "../shared/StyleUtils";
 import { useEffect, useState } from "react";
@@ -220,18 +221,6 @@ export default function BabyCare() {
               horizontal: "right",
             }}
           >
-            <Link to={`/baby`} className="h-full">
-              <MenuItem
-                onClick={() => {
-                  setAnchorEl(null);
-                }}
-              >
-                <ListItemIcon>
-                  <SwitchProfileIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Switch Profile</ListItemText>
-              </MenuItem>
-            </Link>
             <Link
               to={`/baby/${profile.handle ?? profile.id}/search`}
               className="h-full"
@@ -244,7 +233,35 @@ export default function BabyCare() {
                 <ListItemIcon>
                   <HistorySearchIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>Event Lookup</ListItemText>
+                <ListItemText>Search</ListItemText>
+              </MenuItem>
+            </Link>
+            <Link
+              to={`/baby/${profile.handle ?? profile.id}/trend`}
+              className="h-full"
+            >
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                }}
+              >
+                <ListItemIcon>
+                  <AnalyticsIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Trend</ListItemText>
+              </MenuItem>
+            </Link>
+            <Divider className="my-2" />
+            <Link to={`/baby`} className="h-full">
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                }}
+              >
+                <ListItemIcon>
+                  <SwitchProfileIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Switch Profile</ListItemText>
               </MenuItem>
             </Link>
           </Menu>
