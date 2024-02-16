@@ -72,6 +72,11 @@ export const BabyCareEventLog = (props: {
         params.set("date", format(date, "yyyy-MM-dd"));
         return params;
       });
+    } else {
+      setSearchParams((params) => {
+        params.delete("date");
+        return params;
+      });
     }
   };
 
