@@ -46,6 +46,7 @@ import { pruneFormData } from "../../shared/FormDataUtils";
 import { isString } from "../../shared/AssertionUtils";
 import { debounce } from "lodash-es";
 import { Forward10, Replay30 } from "@mui/icons-material";
+import { BabyCareEmoji } from "../../shared/Icons";
 
 interface PrescriptionOption {
   inputValue?: string;
@@ -65,7 +66,9 @@ export const BabyCareEventEditor = (props: {
   const [showDeleteConfirmationDialog, setShowDeleteConfirmationDialog] =
     useState(false);
   const submit = useSubmit();
-  const fetcher = useFetcher<{ prescriptions: string[] }>();
+  const fetcher = useFetcher<{
+    prescriptions: string[];
+  }>();
   const prescriptionSuggestions: PrescriptionOption[] = (
     fetcher.data?.prescriptions ?? []
   ).map((prescription) => ({
@@ -190,13 +193,46 @@ export const BabyCareEventEditor = (props: {
         poop,
         height,
         weight,
-        prescription: prescriptionOption?.prescription ?? "",
+        prescription: prescriptionOption?.prescription,
         purpose,
       }),
-      { method: HttpMethod.POST }
+      {
+        method: HttpMethod.POST,
+        // NOTE: force using fetcher so we can potentially intercept and capture pending items
+        // to render optimistic UI.
+        //
+        // Interestingly, if we just use `useFetcher` and `fetcher.submit`, for some reason, closing
+        // the dialog immediately causes the fetcher call to be cancelled, but that's not the case for `useSubmit`
+        navigate: false,
+        fetcherKey: BabyCareAction.EDIT_GENERIC_EVENT,
+      }
     );
+
     onClose();
   };
+
+  const eventTypeIcon =
+    data.TYPE === BabyCareEventType.BOTTLE_FEED
+      ? BabyCareEmoji.BOTTLE
+      : data.TYPE === BabyCareEventType.NURSING
+      ? BabyCareEmoji.NURSING
+      : data.TYPE === BabyCareEventType.PUMPING
+      ? BabyCareEmoji.BREAST_PUMP
+      : data.TYPE === BabyCareEventType.DIAPER_CHANGE
+      ? BabyCareEmoji.PEE
+      : data.TYPE === BabyCareEventType.PLAY
+      ? BabyCareEmoji.CHILD_TOY
+      : data.TYPE === BabyCareEventType.BATH
+      ? BabyCareEmoji.BATH
+      : data.TYPE === BabyCareEventType.SLEEP
+      ? BabyCareEmoji.SLEEP
+      : data.TYPE === BabyCareEventType.MEASUREMENT
+      ? BabyCareEmoji.MEASUREMENT
+      : data.TYPE === BabyCareEventType.MEDICINE
+      ? BabyCareEmoji.MEDICINE
+      : data.TYPE === BabyCareEventType.NOTE
+      ? BabyCareEmoji.NOTE
+      : undefined;
 
   return (
     <Dialog
@@ -207,7 +243,9 @@ export const BabyCareEventEditor = (props: {
       disableRestoreFocus={true}
       hideBackdrop={true}
     >
-      <DialogTitle>{readOnly ? "View Event" : "Update Event"}</DialogTitle>
+      <DialogTitle>{`${readOnly ? "View" : "Update"}${
+        eventTypeIcon ? ` ${eventTypeIcon}` : ""
+      } Event`}</DialogTitle>
       <DialogContent dividers>
         <form
           onSubmit={onSubmit}

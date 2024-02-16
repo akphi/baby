@@ -38,10 +38,13 @@ import type { ICellRendererParams } from "@ag-grid-community/core";
 import { useMemo, useState } from "react";
 import { debounce } from "lodash-es";
 import { cn } from "../../shared/StyleUtils";
-import { useSubmit } from "@remix-run/react";
+import { useFetchers, useSubmit } from "@remix-run/react";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { BabyCareEventEditor } from "./BabyCareEventEditor";
-import { isNonNullable } from "../../shared/AssertionUtils";
+import {
+  guaranteeNonNullable,
+  isNonNullable,
+} from "../../shared/AssertionUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
 import { UNSPECIFIED_PRESCRIPTION_TAG } from "../../data/constants";
 import { computeNewValue } from "../../shared/NumberInput";
@@ -356,12 +359,12 @@ const EventOverview = (props: {
 const EventOverviewRenderer = (
   params: ICellRendererParams<SerializeFrom<BabyCareEvent>> & {
     profile: SerializeFrom<BabyCareProfile>;
+    pendingUpdateEvents: SerializeFrom<BabyCareEvent>[];
     setEventToEdit: (event: SerializeFrom<BabyCareEvent>) => void;
     readOnly?: boolean | undefined;
   }
 ) => {
   const data = params.data;
-  const setEventToEdit = params.setEventToEdit;
 
   if (!data) {
     return null;
@@ -369,7 +372,19 @@ const EventOverviewRenderer = (
   return (
     <div className="flex items-center h-full w-full justify-between">
       <div className="flex items-center h-full w-full overflow-x-auto overflow-y-hidden">
-        <EventOverview data={data} key={data.HASH} readOnly={params.readOnly} />
+        <EventOverview
+          data={data}
+          key={
+            // NOTE: this will force re-mount components for pending events, and not causing janks
+            // as we are taking advantage of optimistic UI, when latest data comes back, correction can be made
+            params.pendingUpdateEvents.find(
+              (pendingEvent) => pendingEvent.id === data.id
+            )?.id === data.id
+              ? data.HASH
+              : data.id
+          }
+          readOnly={params.readOnly}
+        />
         {data.comment && (
           <div className="flex items-center rounded h-6 text-2xs text-slate-600 bg-amber-100 px-2">
             {data.comment}
@@ -386,7 +401,7 @@ const EventOverviewRenderer = (
             e.stopPropagation();
           };
         }}
-        onClick={() => setEventToEdit(data)}
+        onClick={() => params.setEventToEdit(data)}
       >
         <MoreVertIcon className="text-lg text-slate-300 hover:text-slate-500" />
       </button>
@@ -453,6 +468,20 @@ const EventTypeRenderer = (
   );
 };
 
+const usePendingUpdatedEvents = () => {
+  return useFetchers()
+    .filter(
+      (fetcher) =>
+        fetcher.formData && fetcher.key === BabyCareAction.EDIT_GENERIC_EVENT
+    )
+    .map((fetcher) => {
+      const formData = guaranteeNonNullable(fetcher.formData);
+      return Object.fromEntries(
+        formData.entries()
+      ) as unknown as SerializeFrom<BabyCareEvent>;
+    });
+};
+
 export const BabyCareEventGrid = (props: {
   profile: SerializeFrom<BabyCareProfile>;
   events: SerializeFrom<BabyCareEvent>[];
@@ -463,6 +492,19 @@ export const BabyCareEventGrid = (props: {
   const [eventToEdit, setEventToEdit] = useState<
     SerializeFrom<BabyCareEvent> | undefined
   >(undefined);
+
+  // used to render optimistic UI to reduce janks while editing
+  const pendingUpdateEvents = usePendingUpdatedEvents();
+  const mergedEvents = [...events];
+  pendingUpdateEvents.forEach((pendingEvent) => {
+    const matchingEvent = mergedEvents.find(
+      (event) => event.id === pendingEvent.id
+    );
+    if (matchingEvent) {
+      const idx = mergedEvents.indexOf(matchingEvent);
+      mergedEvents[idx] = { ...matchingEvent, ...pendingEvent };
+    }
+  });
 
   return (
     <>
@@ -513,13 +555,14 @@ export const BabyCareEventGrid = (props: {
             cellClass: "pr-0 pl-1",
             cellRendererParams: {
               profile,
+              pendingUpdateEvents,
               setEventToEdit,
               readOnly,
             },
             cellRenderer: EventOverviewRenderer,
           },
         ]}
-        rowData={events}
+        rowData={mergedEvents}
         modules={[ClientSideRowModelModule]}
       />
       {eventToEdit && (

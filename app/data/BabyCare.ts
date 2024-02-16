@@ -513,6 +513,7 @@ export enum BabyCareAction {
 
   REQUEST_ASSISTANT = "baby-care.assistant.request",
 
+  EDIT_GENERIC_EVENT = "baby-care.event.generic-edit",
   CREATE_DYNAMIC_EVENT = "baby-care.dynamic-event.create",
 
   CREATE_BOTTLE_FEED_EVENT = "baby-care.bottle-feed-event.create",
