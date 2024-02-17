@@ -22,7 +22,6 @@ import {
   differenceInCalendarMonths,
   differenceInCalendarISOWeeks,
   parse,
-  endOfISOWeek,
   startOfISOWeek,
   startOfMonth,
 } from "date-fns";
@@ -459,13 +458,20 @@ export class NoteEvent extends BabyCareEvent {
   }
 }
 
-export interface BabyCareEventTimeSeriesStatsRecord {
-  t_raw: string;
-  t_label: string;
-  t_diff: number;
-  t_diff_label: string;
+export enum BabyCareEventTimeSeriesStatsFrequency {
+  DAILY = "daily",
+  WEEKLY = "weekly",
+  MONTHLY = "monthly",
+}
 
-  count: number;
+export enum BabyCareEventTimeSeriesStatsRange {
+  ONE_WEEK = "1W",
+  ONE_MONTH = "1M",
+  THREE_MONTH = "3M",
+  SIX_MONTH = "6M",
+  YTD = "YTD",
+  ONE_YEAR = "1Y",
+  MAX = "MAX",
 }
 
 export interface BabyCareEventTimeSeriesStatsRecord {
@@ -562,12 +568,6 @@ export enum BabyCareAction {
 
 export enum BabyCareServerEvent {
   PROFILE_DATA_CHANGE = "baby-care.profile-data-change",
-}
-
-export enum BabyCareEventGroupByType {
-  DATE = "date",
-  WEEK = "week",
-  MONTH = "month",
 }
 
 const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
@@ -1020,7 +1020,7 @@ export class BabyCareDataRegistry {
   static async getStats(
     profile: BabyCareProfile,
     eventType: string,
-    groupBy: string,
+    frequency: string,
     options: {
       startDate?: Date | undefined;
       endDate?: Date | undefined;
@@ -1038,8 +1038,8 @@ export class BabyCareDataRegistry {
       record: BabyCareEventTimeSeriesStatsRecord
     ) => BabyCareEventTimeSeriesStatsRecord;
 
-    switch (groupBy.toLowerCase()) {
-      case BabyCareEventGroupByType.DATE.toLowerCase(): {
+    switch (frequency.toLowerCase()) {
+      case BabyCareEventTimeSeriesStatsFrequency.DAILY.toLowerCase(): {
         timeGroupByFieldFormat = "%Y-%m-%d";
         recordTimeProcessor = (record) => {
           const date = parseISO(record.t_raw);
@@ -1056,7 +1056,7 @@ export class BabyCareDataRegistry {
         };
         break;
       }
-      case BabyCareEventGroupByType.WEEK.toLowerCase(): {
+      case BabyCareEventTimeSeriesStatsFrequency.WEEKLY.toLowerCase(): {
         // NOTE: SQLite %W refer to ISO-8601 week number of the year, i.e. week starts on Monday
         timeGroupByFieldFormat = "%Y-%W";
         recordTimeProcessor = (record) => {
@@ -1070,17 +1070,14 @@ export class BabyCareDataRegistry {
           );
           return {
             ...record,
-            t_label: `${format(weekFirstDate, "dd MMM yyyy")} - ${format(
-              endOfISOWeek(weekFirstDate),
-              "dd MMM yyyy"
-            )}`,
+            t_label: `${format(weekFirstDate, "dd MMM yyyy")}`, // for brevity, only show the first day of the week
             t_diff: diff,
             t_diff_label: `Week ${diff}`,
           };
         };
         break;
       }
-      case BabyCareEventGroupByType.MONTH.toLowerCase(): {
+      case BabyCareEventTimeSeriesStatsFrequency.MONTHLY.toLowerCase(): {
         timeGroupByFieldFormat = "%Y-%m";
         recordTimeProcessor = (record) => {
           const monthFirstDate = parseISO(`${record.t_raw}-01`);

@@ -27,6 +27,7 @@ import {
   ManageSearch,
   Menu,
   Analytics,
+  SearchOff,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -121,3 +122,4 @@ export const NotifyIcon = NotificationsActive;
 export const HistorySearchIcon = ManageSearch;
 export const MenuIcon = Menu;
 export const AnalyticsIcon = Analytics;
+export const ZoomOffIcon = SearchOff;

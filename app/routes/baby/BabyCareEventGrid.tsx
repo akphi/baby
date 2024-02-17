@@ -377,6 +377,7 @@ const EventOverviewRenderer = (
           key={
             // NOTE: this will force re-mount components for pending events, and not causing janks
             // as we are taking advantage of optimistic UI, when latest data comes back, correction can be made
+            // See https://twitter.com/remix_run/status/1744823043116216667
             params.pendingUpdateEvents.find(
               (pendingEvent) => pendingEvent.id === data.id
             )?.id === data.id
@@ -494,6 +495,7 @@ export const BabyCareEventGrid = (props: {
   >(undefined);
 
   // used to render optimistic UI to reduce janks while editing
+  // See https://twitter.com/remix_run/status/1744823043116216667
   const pendingUpdateEvents = usePendingUpdatedEvents();
   const mergedEvents = [...events];
   pendingUpdateEvents.forEach((pendingEvent) => {
