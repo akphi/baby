@@ -486,10 +486,12 @@ const usePendingUpdatedEvents = () => {
 export const BabyCareEventGrid = (props: {
   profile: SerializeFrom<BabyCareProfile>;
   events: SerializeFrom<BabyCareEvent>[];
+  // TODO?: consider merging/cleaning these flags since their usage are overlapping and unclear
   readOnly?: boolean | undefined;
+  enableDialogEdit?: boolean | undefined;
   showDate?: boolean | undefined;
 }) => {
-  const { profile, events, readOnly, showDate } = props;
+  const { profile, events, readOnly, showDate, enableDialogEdit } = props;
   const [eventToEdit, setEventToEdit] = useState<
     SerializeFrom<BabyCareEvent> | undefined
   >(undefined);
@@ -573,7 +575,7 @@ export const BabyCareEventGrid = (props: {
           onClose={() => setEventToEdit(undefined)}
           data={eventToEdit}
           profile={profile}
-          readOnly={readOnly}
+          readOnly={readOnly && !enableDialogEdit}
         />
       )}
     </>

@@ -265,6 +265,7 @@ export const BabyCareEventSearch = (props: {
               profile={profile}
               showDate
               readOnly
+              enableDialogEdit
             />
           </div>
           <div className="h-10 w-full flex items-center justify-end bg-slate-700 overflow-y-hidden overflow-x-auto select-none">
