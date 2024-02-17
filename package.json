@@ -13,7 +13,7 @@
     "clean": "rimraf ./build ./public/build",
     "build": "npm-run-all build:home",
     "build:home": "remix build",
-    "bundle:docker": "docker build -t home:local .",
+    "build:docker": "docker build -t home:local .",
     "dev": "remix dev",
     "dev:ui": "remix dev --manual",
     "start": "npm-run-all --parallel start:home start:zigbee",
