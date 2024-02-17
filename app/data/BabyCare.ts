@@ -587,6 +587,7 @@ const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
     NoteEvent,
   ],
   discovery: { disableDynamicFileAccess: true },
+  timezone: "America/New_York",
 };
 
 export class BabyCareDataRegistry {
