@@ -587,8 +587,11 @@ const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
     NoteEvent,
   ],
   discovery: { disableDynamicFileAccess: true },
-  timezone: "America/New_York",
 };
+
+if (process.env.TZ) {
+  BABY_CARE_DB_CONFIG.timezone = process.env.TZ;
+}
 
 export class BabyCareDataRegistry {
   private static _orm: MikroORM<SqliteDriver>;
