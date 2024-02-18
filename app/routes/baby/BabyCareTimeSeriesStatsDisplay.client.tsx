@@ -99,23 +99,51 @@ const BabyCareTimeSeriesStatsDisplayHeader = (props: {
             </div>
             <div className="ml-4">
               {`Avg. Vol: ${
-                (data as BottleFeedEventTimeSeriesStatsRecord).sum_volume
+                (data as BottleFeedEventTimeSeriesStatsRecord).avg_volume
               }ml`}
             </div>
             <div className="ml-4">
               {`Formula: ${
-                (data as BottleFeedEventTimeSeriesStatsRecord).sum_volume
+                (data as BottleFeedEventTimeSeriesStatsRecord)
+                  .sum_formula_milk_volume
               }ml`}
             </div>
             <div className="ml-4">
               {`Avg. Formula: ${
-                (data as BottleFeedEventTimeSeriesStatsRecord).sum_volume
+                (data as BottleFeedEventTimeSeriesStatsRecord)
+                  .avg_formula_milk_volume
               }ml`}
             </div>
           </>
         )}
-        {eventType === BabyCareEventType.PUMPING.toLowerCase() && <>asd</>}
-        {eventType === BabyCareEventType.NURSING.toLowerCase() && <></>}
+        {eventType === BabyCareEventType.PUMPING.toLowerCase() && (
+          <>
+            <div>
+              {`Vol: ${
+                (data as PumpingEventTimeSeriesStatsRecord).sum_volume
+              }ml`}
+            </div>
+            <div className="ml-4">
+              {`Avg. Vol: ${
+                (data as PumpingEventTimeSeriesStatsRecord).avg_volume
+              }ml`}
+            </div>
+          </>
+        )}
+        {eventType === BabyCareEventType.NURSING.toLowerCase() && (
+          <>
+            <div>
+              {`Duration: ${
+                (data as NursingEventTimeSeriesStatsRecord).sum_duration
+              }h`}
+            </div>
+            <div className="ml-4">
+              {`Avg. Duration: ${
+                (data as NursingEventTimeSeriesStatsRecord).avg_duration
+              }h`}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
