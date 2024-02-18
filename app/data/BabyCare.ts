@@ -458,6 +458,27 @@ export class NoteEvent extends BabyCareEvent {
   }
 }
 
+@Entity()
+export class TravelEvent extends BabyCareEvent {
+  @Property({ type: DateTimeType, nullable: true })
+  endTime?: Date | undefined;
+
+  override get eventType() {
+    return BabyCareEventType.NOTE;
+  }
+
+  override get notificationSummary() {
+    return `Traveling`;
+  }
+
+  override get hashCode() {
+    return HASHER.hash({
+      ...this.hashContent,
+      endTime: this.endTime,
+    });
+  }
+}
+
 export enum BabyCareEventTimeSeriesStatsFrequency {
   DAILY = "daily",
   WEEKLY = "weekly",
@@ -586,6 +607,7 @@ const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
     MeasurementEvent,
     MedicineEvent,
     NoteEvent,
+    TravelEvent,
   ],
   discovery: { disableDynamicFileAccess: true },
 };
@@ -1919,9 +1941,9 @@ class BabyCareEventNotificationService {
   ]; // 30mins, 15mins, 5mins before next event (by interval)
 
   private readonly requestAssistantUrl: string | undefined;
-  private readonly notificationWebhookUrl: string | undefined;
-  private readonly notificationWebhookDebugUrl: string | undefined;
-  private readonly reminderMentionRoleID: string | undefined;
+  private readonly notifierWebhookUrl: string | undefined;
+  private readonly notifierWebhookDebugUrl: string | undefined;
+  private readonly notifierWebhookMentionRoleID: string | undefined;
 
   private readonly _reminderProfileMap = new Map<
     string,
@@ -1937,16 +1959,16 @@ class BabyCareEventNotificationService {
     this.requestAssistantUrl = returnUndefOnError(() =>
       guaranteeNonEmptyString(config.babyCare.requestAssistantUrl)
     );
-    this.notificationWebhookUrl =
-      process.env.REMINDER_WEBHOOK_URL ??
+    this.notifierWebhookUrl =
+      process.env.NOTIFIER_WEBHOOK_URL ??
       returnUndefOnError(() =>
-        guaranteeNonEmptyString(config.babyCare.reminderWebhookUrl)
+        guaranteeNonEmptyString(config.babyCare.notifierWebhook.url)
       );
-    this.notificationWebhookDebugUrl = returnUndefOnError(() =>
-      guaranteeNonEmptyString(config.babyCare.reminderWebhookDebugUrl)
+    this.notifierWebhookDebugUrl = returnUndefOnError(() =>
+      guaranteeNonEmptyString(config.babyCare.notifierWebhook.debugUrl)
     );
-    this.reminderMentionRoleID = returnUndefOnError(() =>
-      guaranteeNonEmptyString(config.babyCare.reminderMentionRoleID)
+    this.notifierWebhookMentionRoleID = returnUndefOnError(() =>
+      guaranteeNonEmptyString(config.babyCare.notifierWebhook.mentionRoleID)
     );
 
     // This is the reminder loop which run with a specified interval. Every cycle, it checks for all reminders
@@ -2021,10 +2043,10 @@ class BabyCareEventNotificationService {
   }
 
   private async notify(sender: string, message: string) {
-    if (!this.notificationWebhookUrl) {
+    if (!this.notifierWebhookUrl) {
       return;
     }
-    await fetch(this.notificationWebhookUrl, {
+    await fetch(this.notifierWebhookUrl, {
       method: HttpMethod.POST,
       headers: {
         [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
@@ -2037,17 +2059,19 @@ class BabyCareEventNotificationService {
         // e.g. after sending 3 notifications, the 4th will not be shown as push nofication
         // the workaround is to mention roles like @everyone or @here, or some custom role like this
         content: `${
-          this.reminderMentionRoleID ? `<@&${this.reminderMentionRoleID}> ` : ""
+          this.notifierWebhookMentionRoleID
+            ? `<@&${this.notifierWebhookMentionRoleID}> `
+            : ""
         }${message}`,
       }),
     });
   }
 
   private async notifyDebug(sender: string, message: string) {
-    if (!this.notificationWebhookDebugUrl) {
+    if (!this.notifierWebhookDebugUrl) {
       return;
     }
-    await fetch(this.notificationWebhookDebugUrl, {
+    await fetch(this.notifierWebhookDebugUrl, {
       method: HttpMethod.POST,
       headers: {
         [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
