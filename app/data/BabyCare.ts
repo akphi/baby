@@ -1,6 +1,5 @@
 import {
   MikroORM,
-  type Options,
   Property,
   ManyToOne,
   TableExistsException,
@@ -592,32 +591,43 @@ export enum BabyCareServerEvent {
   PROFILE_DATA_CHANGE = "baby-care.profile-data-change",
 }
 
-const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
-  dbName: "../home-storage/baby-care/db.sqlite",
-  driver: SqliteDriver,
-  entities: [
-    BabyCareProfile,
-    BottleFeedEvent,
-    NursingEvent,
-    PumpingEvent,
-    DiaperChangeEvent,
-    SleepEvent,
-    PlayEvent,
-    BathEvent,
-    MeasurementEvent,
-    MedicineEvent,
-    NoteEvent,
-    TravelEvent,
-  ],
-  discovery: { disableDynamicFileAccess: true },
-};
+const getConfig = () =>
+  JSON.parse(
+    readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
+  );
 
 export class BabyCareDataRegistry {
   private static _orm: MikroORM<SqliteDriver>;
 
   static async getORM(): Promise<MikroORM<SqliteDriver>> {
+    const config = getConfig().babyCare;
+    const dbPath = config.dbPath;
+    if (!dbPath) {
+      throw new Error(
+        "Database is not found. Please specify 'babyCare.dbPath' in the config file"
+      );
+    }
+
     if (!BabyCareDataRegistry._orm) {
-      const orm = await MikroORM.init<SqliteDriver>(BABY_CARE_DB_CONFIG);
+      const orm = await MikroORM.init<SqliteDriver>({
+        dbName: dbPath,
+        driver: SqliteDriver,
+        entities: [
+          BabyCareProfile,
+          BottleFeedEvent,
+          NursingEvent,
+          PumpingEvent,
+          DiaperChangeEvent,
+          SleepEvent,
+          PlayEvent,
+          BathEvent,
+          MeasurementEvent,
+          MedicineEvent,
+          NoteEvent,
+          TravelEvent,
+        ],
+        discovery: { disableDynamicFileAccess: true },
+      });
       // auto-populate the first time
       try {
         await orm.getSchemaGenerator().createSchema();
@@ -1953,22 +1963,20 @@ class BabyCareEventNotificationService {
   private readonly _reminderLoop: NodeJS.Timeout;
 
   constructor() {
-    const config = JSON.parse(
-      readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
-    );
+    const config = getConfig().babyCare;
     this.requestAssistantUrl = returnUndefOnError(() =>
-      guaranteeNonEmptyString(config.babyCare.requestAssistantUrl)
+      guaranteeNonEmptyString(config.requestAssistantUrl)
     );
     this.notifierWebhookUrl =
       process.env.NOTIFIER_WEBHOOK_URL ??
       returnUndefOnError(() =>
-        guaranteeNonEmptyString(config.babyCare.notifierWebhook.url)
+        guaranteeNonEmptyString(config.notifierWebhook.url)
       );
     this.notifierWebhookDebugUrl = returnUndefOnError(() =>
-      guaranteeNonEmptyString(config.babyCare.notifierWebhook.debugUrl)
+      guaranteeNonEmptyString(config.notifierWebhook.debugUrl)
     );
     this.notifierWebhookMentionRoleID = returnUndefOnError(() =>
-      guaranteeNonEmptyString(config.babyCare.notifierWebhook.mentionRoleID)
+      guaranteeNonEmptyString(config.notifierWebhook.mentionRoleID)
     );
 
     // This is the reminder loop which run with a specified interval. Every cycle, it checks for all reminders
