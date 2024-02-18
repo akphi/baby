@@ -45,6 +45,19 @@ export async function action({ request, params }: ActionFunctionArgs) {
       );
       return json({}, HttpStatus.OK);
     }
+    case BabyCareAction.NOTIFY_MESSAGE: {
+      const idOrHandle = payload.profileId?.trim();
+      const debug = payload.debug ? Boolean(payload.debug) : undefined;
+      const message = guaranteeNonEmptyString(
+        payload.message,
+        "'message' is missing or empty"
+      ).trim();
+      await BabyCareEventManager.notificationService.notifyMessage(message, {
+        idOrHandle,
+        debug,
+      });
+      return json({}, HttpStatus.OK);
+    }
     case BabyCareAction.CREATE_DYNAMIC_EVENT:
     case BabyCareAction.CREATE_BOTTLE_FEED_EVENT:
     case BabyCareAction.CREATE_NURSING_EVENT:

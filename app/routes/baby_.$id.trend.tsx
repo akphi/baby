@@ -12,8 +12,7 @@ import {
 import { guaranteeNonNullable } from "../shared/AssertionUtils";
 import { useLoaderData } from "@remix-run/react";
 import { parseISO, startOfDay, startOfYear, sub } from "date-fns";
-import { BabyCareEventTrend } from "./baby/BabyCareEventTrend.client";
-import { ClientOnly } from "remix-utils/client-only";
+import { BabyCareEventTrend } from "./baby/BabyCareEventTrend";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   if (!data) {
@@ -100,11 +99,5 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
 
 export default function BabyCareTrend() {
   const { profile, stats } = useLoaderData<typeof loader>();
-  return (
-    // NOTE: This is a client-only component since it requires access to window object
-    // See https://github.com/remix-run/remix/discussions/6424
-    <ClientOnly fallback={null}>
-      {() => <BabyCareEventTrend profile={profile} stats={stats} />}
-    </ClientOnly>
-  );
+  return <BabyCareEventTrend profile={profile} stats={stats} />;
 }

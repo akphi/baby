@@ -120,7 +120,7 @@ export class BabyCareProfile {
     defaultFeedingInterval: DEFAULT_FEEDING_INTERVAL,
     defaultNightFeedingInterval: DEFAULT_NIGHT_FEEDING_INTERVAL,
     // pumping
-    defaultPumpingDuration: DEFAULT_PUMPING_DURATION,
+    defaultPumpingDuration: DEFAULT_PUMPING_DURATION, // TODO?: we should consider removing this field
     defaultPumpingInterval: DEFAULT_PUMPING_INTERNAL,
     defaultNightPumpingInterval: DEFAULT_NIGHT_PUMPING_INTERNAL,
     // timing
@@ -518,6 +518,7 @@ export enum BabyCareAction {
   REMOVE_PROFILE = "baby-care.profile.remove",
 
   REQUEST_ASSISTANT = "baby-care.assistant.request",
+  NOTIFY_MESSAGE = "baby-care.notification.notify-message",
 
   EDIT_GENERIC_EVENT = "baby-care.event.generic-edit",
   CREATE_DYNAMIC_EVENT = "baby-care.dynamic-event.create",
@@ -588,10 +589,6 @@ const BABY_CARE_DB_CONFIG: Options<SqliteDriver> = {
   ],
   discovery: { disableDynamicFileAccess: true },
 };
-
-if (process.env.TZ) {
-  BABY_CARE_DB_CONFIG.timezone = process.env.TZ;
-}
 
 export class BabyCareDataRegistry {
   private static _orm: MikroORM<SqliteDriver>;
@@ -1451,7 +1448,6 @@ export class BabyCareDataRegistry {
       }
       case BabyCareAction.CREATE_PUMPING_EVENT: {
         const quickEvent = new PumpingEvent(new Date(), profile);
-        quickEvent.duration = profile.settings.defaultPumpingDuration;
         quickEvent.volume = profile.settings.defaultFeedingVolume;
         event = quickEvent;
         break;
@@ -2000,10 +1996,19 @@ class BabyCareEventNotificationService {
           }
 
           if (reminder.shouldNotify(profile)) {
-            this.notify(
-              `[Reminder] ${profile.nickname ?? profile.name}`,
-              reminder.generateMessage(step),
-              reminder
+            const sender = `[Reminder] ${profile.nickname ?? profile.name}`;
+            const message = reminder.generateMessage(step);
+            this.notify(sender, message);
+            this.notifyDebug(
+              sender,
+              `${message}\n\n${JSON.stringify(
+                {
+                  ...reminder,
+                  eventTime: new Date(reminder.eventTimestamp),
+                },
+                null,
+                2
+              )}`
             );
           }
 
@@ -2015,11 +2020,7 @@ class BabyCareEventNotificationService {
     }, BabyCareEventNotificationService.REMINDER_INTERVAL);
   }
 
-  private async notify(
-    sender: string,
-    message: string,
-    reminder?: BabyCareEventReminder | undefined
-  ) {
+  private async notify(sender: string, message: string) {
     if (!this.notificationWebhookUrl) {
       return;
     }
@@ -2040,19 +2041,12 @@ class BabyCareEventNotificationService {
         }${message}`,
       }),
     });
+  }
+
+  private async notifyDebug(sender: string, message: string) {
     if (!this.notificationWebhookDebugUrl) {
       return;
     }
-    const metadata = reminder
-      ? JSON.stringify(
-          {
-            ...reminder,
-            eventTime: new Date(reminder.eventTimestamp),
-          },
-          null,
-          2
-        )
-      : "";
     await fetch(this.notificationWebhookDebugUrl, {
       method: HttpMethod.POST,
       headers: {
@@ -2063,7 +2057,7 @@ class BabyCareEventNotificationService {
           process.env.NODE_ENV === "development"
             ? `{DEBUG-DEV} ${sender}`
             : `{DEBUG} ${sender}`,
-        content: `${message}${metadata ? `\n\n${metadata}` : ""}`,
+        content: message,
       }),
     });
   }
@@ -2224,6 +2218,26 @@ class BabyCareEventNotificationService {
     await fetch(this.requestAssistantUrl, {
       method: HttpMethod.POST,
     });
+  }
+
+  async notifyMessage(
+    message: string,
+    options: {
+      idOrHandle?: string | undefined;
+      debug?: boolean | undefined;
+    }
+  ) {
+    const profile = options.idOrHandle
+      ? await BabyCareDataRegistry.fetchProfileByIdOrHandle(options.idOrHandle)
+      : undefined;
+    const sender = `[Notify] ${
+      profile ? profile.nickname ?? profile.name : "System"
+    }`;
+    if (options.debug) {
+      this.notifyDebug(sender, message);
+    } else {
+      this.notify(sender, message);
+    }
   }
 }
 
