@@ -66,7 +66,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
     case BabyCareAction.CREATE_DIAPER_CHANGE_PEE_EVENT:
     case BabyCareAction.CREATE_SLEEP_EVENT:
     case BabyCareAction.CREATE_BATH_EVENT:
-    case BabyCareAction.CREATE_PLAY_EVENT: {
+    case BabyCareAction.CREATE_PLAY_EVENT:
+    case BabyCareAction.CREATE_MEASUREMENT_EVENT:
+    case BabyCareAction.CREATE_MEDICINE_EVENT:
+    case BabyCareAction.CREATE_NOTE_EVENT:
+    case BabyCareAction.CREATE_TRAVEL_EVENT: {
       const idOrHandle = guaranteeNonEmptyString(
         payload.profileId?.trim(),
         "'profileId' is missing or empty"

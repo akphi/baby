@@ -52,7 +52,7 @@ import {
   DEFAULT_NURSING_DURATION_FOR_EACH_SIDE,
   DEFAULT_ENABLE_NOTIFICATION,
   MINIMUM_AUTOCOMPLETE_SEARCH_TEXT_LENGTH,
-  UNSPECIFIED_PRESCRIPTION_TAG,
+  UNSPECIFIED_VALUE_TAG,
 } from "./constants";
 import EventEmitter from "node:events";
 import {
@@ -167,6 +167,7 @@ export enum BabyCareEventType {
   MEASUREMENT = "Measure",
   MEDICINE = "Medicine",
   NOTE = "Note",
+  TRAVEL = "Travel",
 
   __POOP = "Poop",
   __PEE = "Pee",
@@ -412,7 +413,7 @@ export class MeasurementEvent extends BabyCareEvent {
 @Entity()
 export class MedicineEvent extends BabyCareEvent {
   @Property({ type: "string" })
-  prescription = UNSPECIFIED_PRESCRIPTION_TAG;
+  prescription = UNSPECIFIED_VALUE_TAG;
 
   override get eventType() {
     return BabyCareEventType.MEDICINE;
@@ -459,11 +460,30 @@ export class NoteEvent extends BabyCareEvent {
 
 @Entity()
 export class TravelEvent extends BabyCareEvent {
-  @Property({ type: DateTimeType, nullable: true })
-  endTime?: Date | undefined;
+  @Property({ type: DateTimeType })
+  endTime: Date;
+
+  @Property({ type: "string" })
+  destination: string;
+
+  @Property({ type: "string" })
+  timeZone: string;
+
+  constructor(
+    time: Date,
+    profile: BabyCareProfile,
+    endTime: Date,
+    destination: string,
+    timeZone: string
+  ) {
+    super(time, profile);
+    this.endTime = endTime;
+    this.destination = destination;
+    this.timeZone = timeZone;
+  }
 
   override get eventType() {
-    return BabyCareEventType.NOTE;
+    return BabyCareEventType.TRAVEL;
   }
 
   override get notificationSummary() {
@@ -474,6 +494,8 @@ export class TravelEvent extends BabyCareEvent {
     return HASHER.hash({
       ...this.hashContent,
       endTime: this.endTime,
+      destination: this.destination,
+      timeZone: this.timeZone,
     });
   }
 }
@@ -584,6 +606,10 @@ export enum BabyCareAction {
   UPDATE_NOTE_EVENT = "baby-care.note-event.update",
   REMOVE_NOTE_EVENT = "baby-care.note-event.remove",
 
+  CREATE_TRAVEL_EVENT = "baby-care.travel-event.create",
+  UPDATE_TRAVEL_EVENT = "baby-care.travel-event.update",
+  REMOVE_TRAVEL_EVENT = "baby-care.travel-event.remove",
+
   FETCH_TOP_PRESCRIPTIONS = "baby-care.fetch-top-prescriptions",
 }
 
@@ -591,16 +617,18 @@ export enum BabyCareServerEvent {
   PROFILE_DATA_CHANGE = "baby-care.profile-data-change",
 }
 
-const getConfig = () =>
-  JSON.parse(
-    readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
+const getBabyCareConfig = () =>
+  guaranteeNonNullable(
+    JSON.parse(
+      readFileSync("../home-storage/home.config.json", { encoding: "utf-8" })
+    ).babyCare
   );
 
 export class BabyCareDataRegistry {
   private static _orm: MikroORM<SqliteDriver>;
 
   static async getORM(): Promise<MikroORM<SqliteDriver>> {
-    const config = getConfig().babyCare;
+    const config = getBabyCareConfig();
     const dbPath = config.dbPath;
     if (!dbPath) {
       throw new Error(
@@ -728,6 +756,13 @@ export class BabyCareDataRegistry {
           },
         }),
         entityManager.find(NoteEvent, {
+          profile,
+          time: {
+            $gte: startOfDay(date),
+            $lt: startOfDay(add(date, { days: 1 })),
+          },
+        }),
+        entityManager.find(TravelEvent, {
           profile,
           time: {
             $gte: startOfDay(date),
@@ -992,7 +1027,7 @@ export class BabyCareDataRegistry {
                   {
                     prescription: {
                       $like: `%${options.searchText}%`,
-                      $ne: UNSPECIFIED_PRESCRIPTION_TAG,
+                      $ne: UNSPECIFIED_VALUE_TAG,
                     },
                   },
                 ]
@@ -1025,6 +1060,39 @@ export class BabyCareDataRegistry {
                   $like: `%${options.searchText}%`,
                 }
               : {},
+          },
+          {
+            limit: pageSize,
+            offset: pageSize * Math.max(0, page - 1),
+            orderBy: { time: "DESC" },
+          }
+        );
+        break;
+      }
+      case BabyCareEventType.TRAVEL.toLowerCase(): {
+        result = await entityManager.findAndCount(
+          TravelEvent,
+          {
+            profile,
+            time: pruneNullValues({
+              $gte: options?.startDate ? startOfDay(options?.startDate) : null,
+              $lte: options?.endDate ? endOfDay(options?.endDate) : null,
+            }),
+            $or: options?.searchText
+              ? [
+                  {
+                    comment: {
+                      $like: `%${options.searchText}%`,
+                    },
+                  },
+                  {
+                    destination: {
+                      $like: `%${options.searchText}%`,
+                      $ne: UNSPECIFIED_VALUE_TAG,
+                    },
+                  },
+                ]
+              : [],
           },
           {
             limit: pageSize,
@@ -1534,6 +1602,17 @@ export class BabyCareDataRegistry {
         event = new NoteEvent(new Date(), profile);
         break;
       }
+      case BabyCareAction.CREATE_TRAVEL_EVENT: {
+        const now = new Date();
+        event = new TravelEvent(
+          now,
+          profile,
+          now,
+          UNSPECIFIED_VALUE_TAG,
+          Intl.DateTimeFormat().resolvedOptions().timeZone
+        );
+        break;
+      }
       default:
         throw new Error(`Unsupported quick event creation action '${action}'`);
     }
@@ -1728,6 +1807,28 @@ export class BabyCareDataRegistry {
         updatedEvent = event;
         break;
       }
+
+      case BabyCareAction.UPDATE_TRAVEL_EVENT: {
+        const event = await entityManager.findOneOrFail(
+          TravelEvent,
+          {
+            id: eventId,
+          },
+          { populate: ["profile"] }
+        );
+
+        event.time = new Date(extractRequiredString(formData, "time"));
+        event.endTime = new Date(extractRequiredString(formData, "endTime"));
+        event.comment = extractOptionalString(formData, "comment")?.trim();
+        event.destination = extractRequiredString(
+          formData,
+          "destination"
+        ).trim();
+        event.timeZone = extractRequiredString(formData, "timeZone").trim();
+
+        updatedEvent = event;
+        break;
+      }
       default:
         throw new Error(`Unsupported event update action '${action}'`);
     }
@@ -1753,7 +1854,8 @@ export class BabyCareDataRegistry {
       case BabyCareAction.REMOVE_SLEEP_EVENT:
       case BabyCareAction.REMOVE_MEASUREMENT_EVENT:
       case BabyCareAction.REMOVE_MEDICINE_EVENT:
-      case BabyCareAction.REMOVE_NOTE_EVENT: {
+      case BabyCareAction.REMOVE_NOTE_EVENT:
+      case BabyCareAction.REMOVE_TRAVEL_EVENT: {
         const entityManager = await BabyCareDataRegistry.getEntityManager();
         const clazz =
           action === BabyCareAction.REMOVE_BOTTLE_FEED_EVENT
@@ -1776,6 +1878,8 @@ export class BabyCareDataRegistry {
             ? MedicineEvent
             : action === BabyCareAction.REMOVE_NOTE_EVENT
             ? NoteEvent
+            : action === BabyCareAction.REMOVE_TRAVEL_EVENT
+            ? TravelEvent
             : undefined;
         const event = await entityManager.findOneOrFail(
           guaranteeNonNullable(clazz),
@@ -1812,7 +1916,7 @@ export class BabyCareDataRegistry {
             profile: profileId,
             prescription: {
               $like: `%${searchText}%`,
-              $ne: UNSPECIFIED_PRESCRIPTION_TAG,
+              $ne: UNSPECIFIED_VALUE_TAG,
             },
           }
         : {
@@ -1963,7 +2067,7 @@ class BabyCareEventNotificationService {
   private readonly _reminderLoop: NodeJS.Timeout;
 
   constructor() {
-    const config = getConfig().babyCare;
+    const config = getBabyCareConfig();
     this.requestAssistantUrl = returnUndefOnError(() =>
       guaranteeNonEmptyString(config.requestAssistantUrl)
     );

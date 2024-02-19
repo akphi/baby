@@ -138,6 +138,9 @@ export const BabyCareEventSearch = (props: {
           <MenuItem value={BabyCareEventType.__MEMORY.toLowerCase()}>
             Memory
           </MenuItem>
+          <MenuItem value={BabyCareEventType.TRAVEL.toLowerCase()}>
+            Travel
+          </MenuItem>
           <MenuItem value={BabyCareEventType.NOTE.toLowerCase()}>Note</MenuItem>
           <Divider />
           <MenuItem value={BabyCareEventType.BOTTLE_FEED.toLowerCase()}>

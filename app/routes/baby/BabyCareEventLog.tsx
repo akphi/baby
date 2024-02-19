@@ -23,6 +23,7 @@ import {
   PeeIcon,
   PoopIcon,
   SleepIcon,
+  TravelIcon,
 } from "../../shared/Icons";
 import { useState } from "react";
 import { groupBy, merge } from "lodash-es";
@@ -156,16 +157,17 @@ export const BabyCareEventLog = (props: {
               {
                 [BabyCareEventType.BOTTLE_FEED]: [],
                 [BabyCareEventType.PUMPING]: [],
+                [BabyCareEventType.NURSING]: [],
                 [BabyCareEventType.__POOP]: [],
                 [BabyCareEventType.__PEE]: [],
                 [BabyCareEventType.SLEEP]: [],
                 [BabyCareEventType.BATH]: [],
                 [BabyCareEventType.PLAY]: [],
-                [BabyCareEventType.NURSING]: [],
                 [BabyCareEventType.MEASUREMENT]: [],
                 [BabyCareEventType.MEDICINE]: [],
                 [BabyCareEventType.NOTE]: [],
                 [BabyCareEventType.__MEMORY]: [],
+                [BabyCareEventType.TRAVEL]: [],
               },
               groupBy(events, (event) =>
                 event.TYPE === BabyCareEventType.DIAPER_CHANGE
@@ -228,6 +230,9 @@ export const BabyCareEventLog = (props: {
                 )}
                 {type === BabyCareEventType.__MEMORY && (
                   <MemoryIcon className="text-[20px] leading-[20px]" />
+                )}
+                {type === BabyCareEventType.TRAVEL && (
+                  <TravelIcon className="text-[20px] leading-[20px]" />
                 )}
               </div>
               <div className="rounded  text-slate-100 bg-slate-500 text-2xs font-semibold px-1 h-4 flex items-center justify-center ml-1">

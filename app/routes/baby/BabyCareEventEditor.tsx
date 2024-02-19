@@ -33,20 +33,21 @@ import {
   type BabyCareProfile,
   type NoteEvent,
   NotePurpose,
+  type TravelEvent,
 } from "../../data/BabyCare";
 import { useFetcher, useSubmit } from "@remix-run/react";
 import { useMemo, useState } from "react";
 import { NumberInput, OptionalNumberInput } from "../../shared/NumberInput";
 import { DesktopDateTimePicker } from "@mui/x-date-pickers";
 import type { SerializeFrom } from "@remix-run/node";
-import { add, parseISO } from "date-fns";
+import { add, isAfter, parseISO } from "date-fns";
 import { HttpMethod } from "../../shared/NetworkUtils";
 import { ConfirmationDialog } from "../../shared/ConfirmationDialog";
 import { pruneFormData } from "../../shared/FormDataUtils";
 import { isString } from "../../shared/AssertionUtils";
 import { debounce } from "lodash-es";
 import { Forward10, Replay30 } from "@mui/icons-material";
-import { BabyCareEmoji } from "../../shared/Icons";
+import { BabyCareEmoji, MyLocationIcon } from "../../shared/Icons";
 
 interface PrescriptionOption {
   inputValue?: string;
@@ -129,6 +130,17 @@ export const BabyCareEventEditor = (props: {
   const [purpose, setPurpose] = useState(
     (data as SerializeFrom<NoteEvent>).purpose
   );
+  const [destination, setDestination] = useState(
+    (data as SerializeFrom<TravelEvent>).destination
+  );
+  const [endTime, setEndTime] = useState(
+    (data as SerializeFrom<TravelEvent>).endTime
+      ? parseISO((data as SerializeFrom<TravelEvent>).endTime)
+      : parseISO(data.time) // set minimum to the same as time
+  );
+  const [timeZone, setTimeZone] = useState(
+    (data as SerializeFrom<TravelEvent>).timeZone
+  );
 
   const onSubmit = () => {
     let action: string;
@@ -173,6 +185,10 @@ export const BabyCareEventEditor = (props: {
         action = BabyCareAction.UPDATE_NOTE_EVENT;
         break;
       }
+      case BabyCareEventType.TRAVEL: {
+        action = BabyCareAction.UPDATE_TRAVEL_EVENT;
+        break;
+      }
       default:
         return;
     }
@@ -186,15 +202,23 @@ export const BabyCareEventEditor = (props: {
         // attributes from specific events
         duration,
         volume,
+
         formulaMilkVolume,
         leftDuration,
         rightDuration,
+
         pee,
         poop,
+
         height,
         weight,
+
         prescription: prescriptionOption?.prescription,
         purpose,
+
+        endTime: endTime?.toISOString(),
+        destination,
+        timeZone,
       }),
       {
         method: HttpMethod.POST,
@@ -232,6 +256,8 @@ export const BabyCareEventEditor = (props: {
       ? BabyCareEmoji.MEDICINE
       : data.TYPE === BabyCareEventType.NOTE
       ? BabyCareEmoji.NOTE
+      : data.TYPE === BabyCareEventType.TRAVEL
+      ? BabyCareEmoji.TRAVEL
       : undefined;
 
   return (
@@ -535,6 +561,108 @@ export const BabyCareEventEditor = (props: {
               </div>
             </>
           )}
+          {data.TYPE === BabyCareEventType.TRAVEL && (
+            <>
+              <div className="w-full py-2 flex">
+                <DesktopDateTimePicker
+                  label="End Time"
+                  value={endTime}
+                  onChange={(value: Date | null) => {
+                    setEndTime(value ?? new Date());
+                  }}
+                  format="MMM dd - HH:mm"
+                  className="w-full"
+                  disabled={Boolean(readOnly)}
+                  minDateTime={time}
+                />
+                {!readOnly && (
+                  <div className="flex justify-center items-center ml-2">
+                    <IconButton
+                      className="w-10 h-10"
+                      onClick={() => {
+                        const newValue = add(endTime, {
+                          minutes: -30,
+                        });
+                        if (isAfter(newValue, time)) {
+                          setEndTime(newValue);
+                        }
+                      }}
+                      disabled={Boolean(readOnly)}
+                    >
+                      <Replay30
+                        fontSize="large"
+                        className="text-slate-300 hover:text-slate-400"
+                      />
+                    </IconButton>
+                    <IconButton
+                      className="w-10 h-10"
+                      onClick={() => {
+                        const newValue = add(endTime, {
+                          minutes: 10,
+                        });
+                        if (isAfter(newValue, time)) {
+                          setEndTime(newValue);
+                        }
+                      }}
+                      disabled={Boolean(readOnly)}
+                    >
+                      <Forward10
+                        fontSize="large"
+                        className="text-slate-300 hover:text-slate-400"
+                      />
+                    </IconButton>
+                  </div>
+                )}
+              </div>
+              <div className="w-full py-2">
+                <TextField
+                  label="Destination"
+                  value={destination}
+                  required
+                  autoFocus
+                  variant="outlined"
+                  onChange={(event) => {
+                    setDestination(event.target.value ?? "");
+                  }}
+                  className="w-full"
+                  disabled={Boolean(readOnly)}
+                />
+              </div>
+              <div className="w-full py-2 flex">
+                <FormControl className="w-full">
+                  <InputLabel>Time Zone</InputLabel>
+                  <Select
+                    value={timeZone}
+                    label="Time Zone"
+                    onChange={(event: SelectChangeEvent) => {
+                      setTimeZone(event.target.value);
+                    }}
+                    disabled={Boolean(readOnly)}
+                  >
+                    {Intl.supportedValuesOf("timeZone").map((tz) => (
+                      <MenuItem key={tz} value={tz}>
+                        {tz}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <div className="flex justify-center items-center ml-2">
+                  <IconButton
+                    color="primary"
+                    className="w-10 h-10"
+                    onClick={() =>
+                      setTimeZone(
+                        Intl.DateTimeFormat().resolvedOptions().timeZone
+                      )
+                    }
+                    disabled={Boolean(readOnly)}
+                  >
+                    <MyLocationIcon fontSize="medium" />
+                  </IconButton>
+                </div>
+              </div>
+            </>
+          )}
           <Divider className="my-2" />
           {(data.TYPE === BabyCareEventType.BOTTLE_FEED ||
             data.TYPE === BabyCareEventType.PUMPING ||
@@ -637,6 +765,10 @@ export const BabyCareEventEditor = (props: {
                 }
                 case BabyCareEventType.NOTE: {
                   action = BabyCareAction.REMOVE_NOTE_EVENT;
+                  break;
+                }
+                case BabyCareEventType.TRAVEL: {
+                  action = BabyCareAction.REMOVE_TRAVEL_EVENT;
                   break;
                 }
                 default:

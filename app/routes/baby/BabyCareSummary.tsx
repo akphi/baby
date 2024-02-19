@@ -21,6 +21,7 @@ import {
 import { mlToOz } from "../../shared/UnitUtils";
 import { Divider } from "@mui/material";
 import { generateBabyAgeText, isDuringDaytime } from "../../data/BabyCareUtils";
+import { ClientOnly } from "remix-utils/client-only";
 
 export const BabyCareStatistics = (props: {
   events: SerializeFrom<BabyCareEvent>[];
@@ -32,12 +33,13 @@ export const BabyCareStatistics = (props: {
       {
         [BabyCareEventType.BOTTLE_FEED]: [],
         [BabyCareEventType.PUMPING]: [],
+        [BabyCareEventType.NURSING]: [],
         [BabyCareEventType.__POOP]: [],
         [BabyCareEventType.__PEE]: [],
         [BabyCareEventType.SLEEP]: [],
         [BabyCareEventType.BATH]: [],
         [BabyCareEventType.PLAY]: [],
-        [BabyCareEventType.NURSING]: [],
+        [BabyCareEventType.TRAVEL]: [],
       },
       groupBy(events, (event) =>
         event.TYPE === BabyCareEventType.DIAPER_CHANGE
@@ -134,7 +136,6 @@ export const BabyCareSummary = (props: {
   profile: SerializeFrom<BabyCareProfile>;
 }) => {
   const { events, profile } = props;
-  const ageDisplayText = generateBabyAgeText(profile.dob);
   const isDaytime = isDuringDaytime(
     new Date(),
     profile.settings.babyDaytimeStart,
@@ -156,9 +157,13 @@ export const BabyCareSummary = (props: {
           style={{ justifyContent: "safe center" }}
         >
           <div className="select-none">{profile.nickname ?? profile.name}</div>
-          <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium whitespace-nowrap">
-            {ageDisplayText}
-          </div>
+          <ClientOnly>
+            {() => (
+              <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium whitespace-nowrap">
+                {generateBabyAgeText(profile.dob)}
+              </div>
+            )}
+          </ClientOnly>
           <div className="rounded bg-slate-800 px-2 py-1 text-xs ml-1.5 mono font-medium whitespace-nowrap">
             {quotaText}
           </div>

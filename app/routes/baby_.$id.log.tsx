@@ -48,7 +48,8 @@ export async function action({ request }: ActionFunctionArgs) {
     case BabyCareAction.UPDATE_PLAY_EVENT:
     case BabyCareAction.UPDATE_MEASUREMENT_EVENT:
     case BabyCareAction.UPDATE_MEDICINE_EVENT:
-    case BabyCareAction.UPDATE_NOTE_EVENT: {
+    case BabyCareAction.UPDATE_NOTE_EVENT:
+    case BabyCareAction.UPDATE_TRAVEL_EVENT: {
       const eventId = extractRequiredString(formData, "id");
       const event = await BabyCareDataRegistry.updateEvent(formData, eventId);
       return json({ event }, HttpStatus.OK);
@@ -62,7 +63,8 @@ export async function action({ request }: ActionFunctionArgs) {
     case BabyCareAction.REMOVE_SLEEP_EVENT:
     case BabyCareAction.REMOVE_MEASUREMENT_EVENT:
     case BabyCareAction.REMOVE_MEDICINE_EVENT:
-    case BabyCareAction.REMOVE_NOTE_EVENT: {
+    case BabyCareAction.REMOVE_NOTE_EVENT:
+    case BabyCareAction.REMOVE_TRAVEL_EVENT: {
       const eventId = extractRequiredString(formData, "id");
       const event = await BabyCareDataRegistry.removeEvent(action, eventId);
       return json({ event }, HttpStatus.OK);

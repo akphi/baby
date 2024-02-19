@@ -12,10 +12,11 @@ import {
   type MeasurementEvent,
   type MedicineEvent,
   type NoteEvent,
+  type TravelEvent,
   NotePurpose,
 } from "../../data/BabyCare";
 import { ClientSideRowModelModule } from "@ag-grid-community/client-side-row-model";
-import { format } from "date-fns";
+import { differenceInCalendarDays, format } from "date-fns";
 import {
   AddIcon,
   BathIcon,
@@ -32,6 +33,7 @@ import {
   PoopIcon,
   RemoveIcon,
   SleepIcon,
+  TravelIcon,
   WarningIcon,
 } from "../../shared/Icons";
 import type { ICellRendererParams } from "@ag-grid-community/core";
@@ -46,8 +48,9 @@ import {
   isNonNullable,
 } from "../../shared/AssertionUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
-import { UNSPECIFIED_PRESCRIPTION_TAG } from "../../data/constants";
+import { UNSPECIFIED_VALUE_TAG } from "../../data/constants";
 import { computeNewValue } from "../../shared/NumberInput";
+import { ClientOnly } from "remix-utils/client-only";
 
 const InlineNumberInput = (props: {
   value: number;
@@ -338,7 +341,7 @@ const EventOverview = (props: {
         (data as SerializeFrom<MedicineEvent>).prescription && (
           <div className="flex items-center rounded h-6 text-2xs text-slate-600 bg-indigo-100 px-2">
             {(data as SerializeFrom<MedicineEvent>).prescription ===
-            UNSPECIFIED_PRESCRIPTION_TAG ? (
+            UNSPECIFIED_VALUE_TAG ? (
               <div className="flex h-full">
                 <div className="flex h-full items-center justify-center">
                   <WarningIcon className="flex text-lg text-indigo-300" />
@@ -352,11 +355,52 @@ const EventOverview = (props: {
             )}
           </div>
         )}
+      {data.TYPE === BabyCareEventType.TRAVEL &&
+        (data as SerializeFrom<TravelEvent>).destination && (
+          <>
+            <ClientOnly>
+              {() => (
+                <div
+                  className={
+                    "relative h-6 w-16 shrink-0 flex justify-center items-center text-slate-600 bg-slate-100 rounded mr-2"
+                  }
+                >
+                  <div className="w-full h-full flex rounded justify-center items-center">
+                    <div className="flex items-center font-mono text-xs">
+                      {differenceInCalendarDays(
+                        (data as SerializeFrom<TravelEvent>).endTime,
+                        (data as SerializeFrom<TravelEvent>).time
+                      )}
+                    </div>
+                    <div className="flex items-center font-mono text-2xs ml-0.5">
+                      days
+                    </div>
+                  </div>
+                </div>
+              )}
+            </ClientOnly>
+            <div className="flex items-center rounded h-6 text-2xs text-slate-600 bg-indigo-100 px-2">
+              {(data as SerializeFrom<TravelEvent>).destination ===
+              UNSPECIFIED_VALUE_TAG ? (
+                <div className="flex h-full">
+                  <div className="flex h-full items-center justify-center">
+                    <WarningIcon className="flex text-lg text-indigo-300" />
+                  </div>
+                  <div className="flex h-full items-center ml-1 text-indigo-400">
+                    [unspecified]
+                  </div>
+                </div>
+              ) : (
+                (data as SerializeFrom<TravelEvent>).destination
+              )}
+            </div>
+          </>
+        )}
     </>
   );
 };
 
-const EventOverviewRenderer = (
+const EventOverviewDisplay = (
   params: ICellRendererParams<SerializeFrom<BabyCareEvent>> & {
     profile: SerializeFrom<BabyCareProfile>;
     pendingUpdateEvents: SerializeFrom<BabyCareEvent>[];
@@ -410,7 +454,7 @@ const EventOverviewRenderer = (
   );
 };
 
-const EventTypeRenderer = (
+const EventTypeDisplay = (
   params: ICellRendererParams<SerializeFrom<BabyCareEvent>>
 ) => {
   const data = params.data;
@@ -452,6 +496,9 @@ const EventTypeRenderer = (
         ) : (
           <NoteIcon className="h-full w-5 flex items-center text-base" />
         ))}
+      {data?.TYPE === BabyCareEventType.TRAVEL && (
+        <TravelIcon className="h-full w-5 flex items-center text-base" />
+      )}
       {data && (
         <div className="flex items-center justify-center rounded uppercase ml-1 text-3xs font-medium leading-4 bg-slate-500 px-1 text-slate-100">
           {data.TYPE === BabyCareEventType.DIAPER_CHANGE
@@ -466,6 +513,24 @@ const EventTypeRenderer = (
         </div>
       )}
     </div>
+  );
+};
+
+const EventTimeDisplay = (
+  params: ICellRendererParams<SerializeFrom<BabyCareEvent>, Date> & {
+    showDate?: boolean | undefined;
+  }
+) => {
+  const time = params.value;
+  if (!time) {
+    return null;
+  }
+  return (
+    <ClientOnly>
+      {() =>
+        format(new Date(time), params.showDate ? "MMM dd yyyy HH:mm" : "HH:mm")
+      }
+    </ClientOnly>
   );
 };
 
@@ -534,21 +599,20 @@ export const BabyCareEventGrid = (props: {
             },
             suppressSizeToFit: true,
             cellClass: "text-slate-600 pr-0",
-            valueFormatter: (params) =>
-              format(
-                new Date(params.value),
-                showDate ? "MMM dd yyyy HH:mm" : "HH:mm"
-              ),
+            cellRendererParams: {
+              showDate,
+            },
+            cellRenderer: EventTimeDisplay,
           },
           {
             headerName: "Type",
-            field: "HASH",
+            field: "HASH", // we send in the hash because the display type is computed based on multiple fields
             sortable: false,
             resizable: false,
             width: 75,
             cellClass: "px-0",
             suppressSizeToFit: true,
-            cellRenderer: EventTypeRenderer,
+            cellRenderer: EventTypeDisplay,
           },
           {
             headerName: "Overview",
@@ -563,7 +627,7 @@ export const BabyCareEventGrid = (props: {
               setEventToEdit,
               readOnly,
             },
-            cellRenderer: EventOverviewRenderer,
+            cellRenderer: EventOverviewDisplay,
           },
         ]}
         rowData={mergedEvents}

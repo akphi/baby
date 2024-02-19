@@ -13,7 +13,7 @@ export const DEFAULT_BABY_DAYTIME_END_HOUR = 19; // 7pm
 export const DEFAULT_PARENT_DAYTIME_START_HOUR = 6; // 6am
 export const DEFAULT_PARENT_DAYTIME_END_HOUR = 24; // 12am
 
-export const UNSPECIFIED_PRESCRIPTION_TAG = "[unspecified]";
+export const UNSPECIFIED_VALUE_TAG = "[unspecified]";
 
 export const DAYTIME_MINIMUM_DURATION = 12; // :)
 

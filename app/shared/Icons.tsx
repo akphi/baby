@@ -28,6 +28,7 @@ import {
   Menu,
   Analytics,
   SearchOff,
+  MyLocation,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -47,6 +48,7 @@ export enum BabyCareEmoji {
   MEDICINE = "💊",
   NOTE = "📝",
   MEMORY = "🌈",
+  TRAVEL = "🚌",
 }
 
 export const NursingIcon = (props: IconProps) => (
@@ -94,6 +96,9 @@ export const NoteIcon = (props: IconProps) => (
 export const MemoryIcon = (props: IconProps) => (
   <Icon {...props}>{BabyCareEmoji.MEMORY}</Icon>
 );
+export const TravelIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.TRAVEL}</Icon>
+);
 export const AddIcon = Add;
 export const AddCircleIcon = AddCircle;
 export const RemoveIcon = Remove;
@@ -123,3 +128,4 @@ export const HistorySearchIcon = ManageSearch;
 export const MenuIcon = Menu;
 export const AnalyticsIcon = Analytics;
 export const ZoomOffIcon = SearchOff;
+export const MyLocationIcon = MyLocation;

@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { BabyCareProfileEditor } from "./baby/BabyCareProfileEditor";
 import { generateBabyAgeText } from "../data/BabyCareUtils";
 import { useBabyCareProfileSyncPulse } from "./baby/BabyCareDataSync";
+import { ClientOnly } from "remix-utils/client-only";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Home: Baby Care" }];
@@ -98,9 +99,13 @@ export default function BabyCareProfileManager() {
                   <div className="text-sm">
                     {profile.nickname ?? profile.name}
                   </div>
-                  <div className="flex items-center text-2xs font-semibold h-5 px-1.5 rounded bg-blue-500 bg-blend-darken ml-1.5 text-slate-50">
-                    {generateBabyAgeText(profile.dob) + " old"}
-                  </div>
+                  <ClientOnly>
+                    {() => (
+                      <div className="flex items-center text-2xs font-semibold h-5 px-1.5 rounded bg-blue-500 bg-blend-darken ml-1.5 text-slate-50">
+                        {generateBabyAgeText(profile.dob) + " old"}
+                      </div>
+                    )}
+                  </ClientOnly>
                 </div>
                 <div
                   className="w-7 h-full flex items-center justify-center"

@@ -29,6 +29,7 @@ import {
   RemoveIcon,
   Replay30Icon,
   SleepIcon,
+  TravelIcon,
 } from "../../shared/Icons";
 import { CircularProgress, Fade, IconButton, Snackbar } from "@mui/material";
 import { HttpMethod } from "../../shared/NetworkUtils";
@@ -756,6 +757,24 @@ export const BabyCareDashboard = (props: {
           >
             <NoteIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-4xl text-black" />
           </IconButton>
+        </div>
+        <div className="flex justify-center items-center">
+          <IconButton
+            className="w-24 h-24"
+            onClick={() =>
+              fetcher.submit(
+                {
+                  __action: BabyCareAction.CREATE_TRAVEL_EVENT,
+                  id: profile.id,
+                },
+                { method: HttpMethod.POST }
+              )
+            }
+          >
+            <TravelIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-teal-100 border-teal-500 text-5xl text-black" />
+          </IconButton>
+          <IconButton className="w-24 h-24 invisible" />
+          <IconButton className="w-24 h-24 invisible" />
         </div>
       </div>
     </div>

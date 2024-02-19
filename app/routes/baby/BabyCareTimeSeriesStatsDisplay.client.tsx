@@ -15,6 +15,7 @@ import { cn } from "../../shared/StyleUtils";
 import { ZoomOffIcon } from "../../shared/Icons";
 import { Chart as ChartJS, type Plugin } from "chart.js";
 import ZoomPlugin from "chartjs-plugin-zoom";
+import AnnotationPlugin from "chartjs-plugin-annotation";
 import { useEffect, useRef, useState } from "react";
 import { guaranteeNonNullable } from "../../shared/AssertionUtils";
 
@@ -22,6 +23,7 @@ import { guaranteeNonNullable } from "../../shared/AssertionUtils";
 // See https://github.com/remix-run/remix/discussions/6424
 // See https://github.com/chartjs/chartjs-plugin-zoom/issues/742
 ChartJS.register(ZoomPlugin);
+ChartJS.register(AnnotationPlugin);
 
 const HoverLinePlugin: Plugin<
   "line",
@@ -331,6 +333,20 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
             },
           },
           plugins: {
+            annotation: {
+              annotations: {
+                currentTimeBox: {
+                  // Indicates the type of annotation
+                  type: "box",
+                  backgroundColor: "#fffbebdd", // tailwind amber-50
+                  borderWidth: 0.5,
+                  borderColor: "#fcd34ddd", // tailwind amber-300
+                  xMin: 87.5,
+                  xMax: 88.5,
+                  drawTime: "beforeDraw", // put the annotation behind the datasets
+                },
+              },
+            },
             zoom: {
               pan: {
                 enabled: true,
