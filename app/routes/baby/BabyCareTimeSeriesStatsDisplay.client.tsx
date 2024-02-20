@@ -12,12 +12,16 @@ import { add, format, parse } from "date-fns";
 import { useNavigate, useSearchParams } from "@remix-run/react";
 import { Button, IconButton, Menu, MenuItem } from "@mui/material";
 import { cn } from "../../shared/StyleUtils";
-import { ZoomOffIcon } from "../../shared/Icons";
+import {
+  CurrentDataWarningStatusIcon,
+  TravelStatusIcon,
+  ZoomOffIcon,
+} from "../../shared/Icons";
 import { Chart as ChartJS, type Plugin } from "chart.js";
 import ZoomPlugin from "chartjs-plugin-zoom";
 import AnnotationPlugin from "chartjs-plugin-annotation";
 import { useEffect, useRef, useState } from "react";
-import { guaranteeNonNullable } from "../../shared/AssertionUtils";
+import { guaranteeNonNullable, isNumber } from "../../shared/AssertionUtils";
 
 // NOTE: this requires access to window object, hence needs to render in client-only mode
 // See https://github.com/remix-run/remix/discussions/6424
@@ -57,7 +61,7 @@ const HoverLinePlugin: Plugin<
 
     ctx.beginPath();
     ctx.setLineDash([2.5, 2.5]);
-    ctx.strokeStyle = "#9CA3AF"; // tailwind gray-400
+    ctx.strokeStyle = "#9ca3af"; // tailwind gray-400
     ctx.moveTo(x, top);
     ctx.lineTo(x, bottom);
     ctx.stroke();
@@ -90,60 +94,143 @@ const BabyCareTimeSeriesStatsDisplayHeader = (props: {
         <div className="h-8 px-4 flex items-center ml-4 rounded-full font-bold font-mono bg-slate-200 text-slate-500">
           {data.t_label}
         </div>
+        {tooltipDataIndex === undefined ||
+        tooltipDataIndex === stats.records.length - 1 ? (
+          <div className="h-8 w-8 flex justify-center items-center rounded-full bg-red-100 ml-2">
+            <CurrentDataWarningStatusIcon className="text-red-500" />
+          </div>
+        ) : data.is_traveling ? (
+          <div className="h-8 w-8 flex justify-center items-center rounded-full bg-amber-100 ml-2">
+            <TravelStatusIcon className="text-amber-500" />
+          </div>
+        ) : null}
       </div>
       <div className="h-6 w-full flex items-center font-mono text-2xs whitespace-nowrap overflow-x-auto">
         {eventType === BabyCareEventType.BOTTLE_FEED.toLowerCase() && (
           <>
-            <div>
-              {`Vol: ${
-                (data as BottleFeedEventTimeSeriesStatsRecord).sum_volume
-              }ml`}
-            </div>
-            <div className="ml-4">
-              {`Avg. Vol: ${
-                (data as BottleFeedEventTimeSeriesStatsRecord).avg_volume
-              }ml`}
-            </div>
-            <div className="ml-4">
-              {`Formula: ${
-                (data as BottleFeedEventTimeSeriesStatsRecord)
-                  .sum_formula_milk_volume
-              }ml`}
-            </div>
-            <div className="ml-4">
-              {`Avg. Formula: ${
-                (data as BottleFeedEventTimeSeriesStatsRecord)
-                  .avg_formula_milk_volume
-              }ml`}
-            </div>
+            {isNumber(
+              (data as BottleFeedEventTimeSeriesStatsRecord).sum_volume
+            ) && (
+              <div>
+                {`Vol: ${
+                  (data as BottleFeedEventTimeSeriesStatsRecord).sum_volume
+                }ml`}
+              </div>
+            )}
+            {isNumber(
+              (data as BottleFeedEventTimeSeriesStatsRecord).daily_avg_volume
+            ) && (
+              <div className="ml-4">
+                {`Daily Avg. Vol: ${
+                  (data as BottleFeedEventTimeSeriesStatsRecord)
+                    .daily_avg_volume
+                }ml`}
+              </div>
+            )}
+            {isNumber(
+              (data as BottleFeedEventTimeSeriesStatsRecord).avg_volume
+            ) && (
+              <div className="ml-4">
+                {`Avg. Vol: ${
+                  (data as BottleFeedEventTimeSeriesStatsRecord).avg_volume
+                }ml`}
+              </div>
+            )}
+            {isNumber(
+              (data as BottleFeedEventTimeSeriesStatsRecord)
+                .sum_formula_milk_volume
+            ) && (
+              <div className="ml-4">
+                {`Formula: ${
+                  (data as BottleFeedEventTimeSeriesStatsRecord)
+                    .sum_formula_milk_volume
+                }ml`}
+              </div>
+            )}
+            {isNumber(
+              (data as BottleFeedEventTimeSeriesStatsRecord)
+                .daily_avg_formula_milk_volume
+            ) && (
+              <div className="ml-4">
+                {`Daily Avg. Formula: ${
+                  (data as BottleFeedEventTimeSeriesStatsRecord)
+                    .daily_avg_formula_milk_volume
+                }ml`}
+              </div>
+            )}
+            {isNumber(
+              (data as BottleFeedEventTimeSeriesStatsRecord)
+                .avg_formula_milk_volume
+            ) && (
+              <div className="ml-4">
+                {`Avg. Formula: ${
+                  (data as BottleFeedEventTimeSeriesStatsRecord)
+                    .avg_formula_milk_volume
+                }ml`}
+              </div>
+            )}
           </>
         )}
         {eventType === BabyCareEventType.PUMPING.toLowerCase() && (
           <>
-            <div>
-              {`Vol: ${
-                (data as PumpingEventTimeSeriesStatsRecord).sum_volume
-              }ml`}
-            </div>
-            <div className="ml-4">
-              {`Avg. Vol: ${
-                (data as PumpingEventTimeSeriesStatsRecord).avg_volume
-              }ml`}
-            </div>
+            {isNumber(
+              (data as PumpingEventTimeSeriesStatsRecord).sum_volume
+            ) && (
+              <div>
+                {`Vol: ${
+                  (data as PumpingEventTimeSeriesStatsRecord).sum_volume
+                }ml`}
+              </div>
+            )}
+            {isNumber(
+              (data as PumpingEventTimeSeriesStatsRecord).daily_avg_volume
+            ) && (
+              <div className="ml-4">
+                {`Daily Avg. Vol: ${
+                  (data as PumpingEventTimeSeriesStatsRecord).daily_avg_volume
+                }ml`}
+              </div>
+            )}
+            {isNumber(
+              (data as PumpingEventTimeSeriesStatsRecord).avg_volume
+            ) && (
+              <div className="ml-4">
+                {`Avg. Vol: ${
+                  (data as PumpingEventTimeSeriesStatsRecord).avg_volume
+                }ml`}
+              </div>
+            )}
           </>
         )}
         {eventType === BabyCareEventType.NURSING.toLowerCase() && (
           <>
-            <div>
-              {`Duration: ${
-                (data as NursingEventTimeSeriesStatsRecord).sum_duration
-              }h`}
-            </div>
-            <div className="ml-4">
-              {`Avg. Duration: ${
-                (data as NursingEventTimeSeriesStatsRecord).avg_duration
-              }h`}
-            </div>
+            {isNumber(
+              (data as NursingEventTimeSeriesStatsRecord).sum_duration
+            ) && (
+              <div>
+                {`Duration: ${
+                  (data as NursingEventTimeSeriesStatsRecord).sum_duration
+                }h`}
+              </div>
+            )}
+            {isNumber(
+              (data as NursingEventTimeSeriesStatsRecord).daily_avg_duration
+            ) && (
+              <div className="ml-4">
+                {`Daily Avg. Duration: ${
+                  (data as NursingEventTimeSeriesStatsRecord).daily_avg_duration
+                }ml`}
+              </div>
+            )}
+            {isNumber(
+              (data as NursingEventTimeSeriesStatsRecord).avg_duration
+            ) && (
+              <div className="ml-4">
+                {`Avg. Duration: ${
+                  (data as NursingEventTimeSeriesStatsRecord).avg_duration
+                }h`}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -210,11 +297,11 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
                     tension: 0.5,
                   },
                   {
-                    label: "avg_volume",
+                    label: "daily_avg_volume",
                     data: stats.records.map(
                       (record) =>
                         (record as BottleFeedEventTimeSeriesStatsRecord)
-                          .avg_volume
+                          .daily_avg_volume
                     ),
                     borderColor: "#93c5fd", // tailwind blue-300
                     tension: 0.5,
@@ -230,11 +317,11 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
                     tension: 0.5,
                   },
                   {
-                    label: "avg_formula_milk_volume",
+                    label: "daily_avg_formula_milk_volume",
                     data: stats.records.map(
                       (record) =>
                         (record as BottleFeedEventTimeSeriesStatsRecord)
-                          .avg_formula_milk_volume
+                          .daily_avg_formula_milk_volume
                     ),
                     borderColor: "#f9a8d4", // tailwind pink-300
                     tension: 0.5,
@@ -253,10 +340,11 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
                     tension: 0.5,
                   },
                   {
-                    label: "avg_volume",
+                    label: "daily_avg_volume",
                     data: stats.records.map(
                       (record) =>
-                        (record as PumpingEventTimeSeriesStatsRecord).avg_volume
+                        (record as PumpingEventTimeSeriesStatsRecord)
+                          .daily_avg_volume
                     ),
                     borderColor: "#93c5fd", // tailwind blue-300
                     tension: 0.5,
@@ -276,11 +364,11 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
                     tension: 0.5,
                   },
                   {
-                    label: "avg_duration",
+                    label: "daily_avg_duration",
                     data: stats.records.map(
                       (record) =>
                         (record as NursingEventTimeSeriesStatsRecord)
-                          .avg_duration
+                          .daily_avg_duration
                     ),
                     borderColor: "#93c5fd", // tailwind blue-300
                     tension: 0.5,
@@ -307,6 +395,9 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
                 color: "#d1d5db", // tailwind gray-300
                 lineWidth: 0.5,
               },
+              min: guaranteeNonNullable(stats.records[0]).t_diff,
+              max: guaranteeNonNullable(stats.records[stats.records.length - 1])
+                .t_diff,
             },
             y: {
               type: "linear",
@@ -335,15 +426,32 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
           plugins: {
             annotation: {
               annotations: {
+                ...stats.records
+                  .filter((record) => record.is_traveling)
+                  .reduce((acc, record) => {
+                    acc[`travel_${record.t_diff}`] = {
+                      type: "box",
+                      drawTime: "beforeDraw", // put the annotation behind the datasets and the grid lines
+                      backgroundColor: "#fef3c7", // tailwind amber-100
+                      borderWidth: 0,
+                      xMin: record.t_diff - 0.5,
+                      xMax: record.t_diff + 0.5,
+                    };
+                    return acc;
+                  }, {} as Record<string, unknown>),
                 currentTimeBox: {
-                  // Indicates the type of annotation
                   type: "box",
-                  backgroundColor: "#fffbebdd", // tailwind amber-50
-                  borderWidth: 0.5,
-                  borderColor: "#fcd34ddd", // tailwind amber-300
-                  xMin: 87.5,
-                  xMax: 88.5,
-                  drawTime: "beforeDraw", // put the annotation behind the datasets
+                  drawTime: "beforeDraw", // put the annotation behind the datasets and the grid lines
+                  backgroundColor: "#fee2e2", // tailwind red-100
+                  borderWidth: 0,
+                  xMin:
+                    guaranteeNonNullable(
+                      stats.records[stats.records.length - 1]
+                    ).t_diff - 0.5,
+                  xMax:
+                    guaranteeNonNullable(
+                      stats.records[stats.records.length - 1]
+                    ).t_diff + 0.5,
                 },
               },
             },
@@ -355,7 +463,10 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
               },
               limits: {
                 x: {
-                  min: -1,
+                  min: 0,
+                  max: guaranteeNonNullable(
+                    stats.records[stats.records.length - 1]
+                  ).t_diff,
                 },
                 y: {
                   min: 0,

@@ -36,6 +36,7 @@ import {
   assertTrue,
   guaranteeNonEmptyString,
   guaranteeNonNullable,
+  isNumber,
 } from "../shared/AssertionUtils";
 import { ContentType, HttpHeader, HttpMethod } from "../shared/NetworkUtils";
 import {
@@ -522,6 +523,12 @@ export interface BabyCareEventTimeSeriesStatsRecord {
   t_diff: number;
   t_diff_label: string;
 
+  t_min: number;
+  t_max: number;
+  t_no_day: number;
+
+  is_traveling: boolean;
+
   count: number;
 }
 
@@ -529,20 +536,24 @@ export interface BottleFeedEventTimeSeriesStatsRecord
   extends BabyCareEventTimeSeriesStatsRecord {
   sum_volume: number;
   avg_volume: number;
+  daily_avg_volume: number;
   sum_formula_milk_volume: number;
   avg_formula_milk_volume: number;
+  daily_avg_formula_milk_volume: number;
 }
 
 export interface PumpingEventTimeSeriesStatsRecord
   extends BabyCareEventTimeSeriesStatsRecord {
   sum_volume: number;
   avg_volume: number;
+  daily_avg_volume: number;
 }
 
 export interface NursingEventTimeSeriesStatsRecord
   extends BabyCareEventTimeSeriesStatsRecord {
   sum_duration: number;
   avg_duration: number;
+  daily_avg_duration: number;
 }
 
 export interface BabyCareEventStats {
@@ -1139,6 +1150,22 @@ export class BabyCareDataRegistry {
       record: BabyCareEventTimeSeriesStatsRecord
     ) => BabyCareEventTimeSeriesStatsRecord;
 
+    const travel_metadata = entityManager.getMetadata(TravelEvent);
+    const _travel_profile_id = guaranteeNonNullable(
+      travel_metadata.properties.profile.fieldNames[0]
+    );
+    const _travel_startTime = guaranteeNonNullable(
+      travel_metadata.properties.time.fieldNames[0]
+    );
+    const _travel_endTime = guaranteeNonNullable(
+      travel_metadata.properties.endTime.fieldNames[0]
+    );
+    const _travel_timeZone = guaranteeNonNullable(
+      travel_metadata.properties.timeZone.fieldNames[0]
+    );
+    const _travel_current_time_zone =
+      Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     switch (frequency.toLowerCase()) {
       case BabyCareEventTimeSeriesStatsFrequency.DAILY.toLowerCase(): {
         timeGroupByFieldFormat = "%Y-%m-%d";
@@ -1153,6 +1180,7 @@ export class BabyCareDataRegistry {
             t_label: format(date, "dd MMM yyyy"),
             t_diff: diff,
             t_diff_label: `Day ${diff}`,
+            is_traveling: (record.is_traveling as unknown as number) === 1,
           };
         };
         break;
@@ -1174,6 +1202,7 @@ export class BabyCareDataRegistry {
             t_label: `${format(weekFirstDate, "dd MMM yyyy")}`, // for brevity, only show the first day of the week
             t_diff: diff,
             t_diff_label: `Week ${diff}`,
+            is_traveling: (record.is_traveling as unknown as number) === 1,
           };
         };
         break;
@@ -1191,6 +1220,7 @@ export class BabyCareDataRegistry {
             t_label: format(monthFirstDate, "MMM yyyy"),
             t_diff: diff,
             t_diff_label: `Month ${diff}`,
+            is_traveling: (record.is_traveling as unknown as number) === 1,
           };
         };
         break;
@@ -1202,11 +1232,11 @@ export class BabyCareDataRegistry {
     switch (eventType.toLowerCase()) {
       case BabyCareEventType.BOTTLE_FEED.toLowerCase(): {
         const metadata = entityManager.getMetadata(BottleFeedEvent);
-        const _time = guaranteeNonNullable(
-          metadata.properties.time.fieldNames[0]
-        );
         const _profile_id = guaranteeNonNullable(
           metadata.properties.profile.fieldNames[0]
+        );
+        const _time = guaranteeNonNullable(
+          metadata.properties.time.fieldNames[0]
         );
         const _volume = guaranteeNonNullable(
           metadata.properties.volume.fieldNames[0]
@@ -1214,9 +1244,9 @@ export class BabyCareDataRegistry {
         const _formula_milk_volume = guaranteeNonNullable(
           metadata.properties.formulaMilkVolume.fieldNames[0]
         );
-        const queryBuilder = knex.from(metadata.tableName).where({
-          [_profile_id]: profile.id,
-        });
+        const queryBuilder = knex
+          .from(metadata.tableName)
+          .where(_profile_id, profile.id);
         if (options.startDate) {
           queryBuilder.andWhere(
             _time,
@@ -1231,11 +1261,23 @@ export class BabyCareDataRegistry {
             endOfDay(options.endDate).valueOf()
           );
         }
+
         queryBuilder
           .select(
             knex.raw(
               `STRFTIME('${timeGroupByFieldFormat}', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')) as t_raw`
             ),
+            knex.raw(
+              `COUNT(DISTINCT(STRFTIME('%Y-%m-%d', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')))) as t_no_day`
+            ),
+            // NOTE: this might be a little to expensive, but might be appropriate for the scale of this app
+            // we can defnitely do a post-processing to optimize and calculate it, but it's probably not worth the complexity at the moment
+            knex.raw(
+              `MAX(EXISTS(SELECT * FROM ${travel_metadata.tableName} WHERE ${_travel_profile_id} = '${profile.id}' AND ${_travel_startTime} <= ${metadata.tableName}.${_time} AND ${_travel_endTime} >= ${metadata.tableName}.${_time} AND ${_travel_timeZone} != '${_travel_current_time_zone}' LIMIT 1)) as is_traveling`
+            ),
+            knex.raw(`COUNT(*) as count`),
+            knex.min(_time).as("t_min"),
+            knex.max(_time).as("t_max"),
             knex.sum(_volume).as("sum_volume"),
             knex.raw(`ROUND(AVG(${_volume})) as avg_volume`),
             knex.sum(_formula_milk_volume).as("sum_formula_milk_volume"),
@@ -1243,29 +1285,43 @@ export class BabyCareDataRegistry {
               `ROUND(AVG(${_formula_milk_volume})) as avg_formula_milk_volume`
             )
           )
-          .count("*", { as: "count" })
           .groupBy("t_raw")
           .orderBy("t_raw", "ASC");
         result = {
-          records: (await queryBuilder).map(recordTimeProcessor),
+          records: (await queryBuilder).map((item) => {
+            const record = recordTimeProcessor(
+              item
+            ) as BottleFeedEventTimeSeriesStatsRecord;
+            return {
+              ...record,
+              daily_avg_volume: isNumber(record.sum_volume)
+                ? Math.round(record.sum_volume / record.t_no_day)
+                : null,
+              daily_avg_formula_milk_volume: isNumber(
+                record.sum_formula_milk_volume
+              )
+                ? Math.round(record.sum_formula_milk_volume / record.t_no_day)
+                : null,
+            } as BottleFeedEventTimeSeriesStatsRecord;
+          }),
           unit: "ml",
         } as BabyCareEventTimeSeriesStats;
         break;
       }
       case BabyCareEventType.PUMPING.toLowerCase(): {
         const metadata = entityManager.getMetadata(PumpingEvent);
-        const _time = guaranteeNonNullable(
-          metadata.properties.time.fieldNames[0]
-        );
         const _profile_id = guaranteeNonNullable(
           metadata.properties.profile.fieldNames[0]
+        );
+        const _time = guaranteeNonNullable(
+          metadata.properties.time.fieldNames[0]
         );
         const _volume = guaranteeNonNullable(
           metadata.properties.volume.fieldNames[0]
         );
-        const queryBuilder = knex.from(metadata.tableName).where({
-          [_profile_id]: profile.id,
-        });
+        const queryBuilder = knex
+          .from(metadata.tableName)
+          .where(_profile_id, profile.id);
         if (options.startDate) {
           queryBuilder.andWhere(
             _time,
@@ -1285,25 +1341,45 @@ export class BabyCareDataRegistry {
             knex.raw(
               `STRFTIME('${timeGroupByFieldFormat}', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')) as t_raw`
             ),
+            knex.raw(
+              `COUNT(DISTINCT(STRFTIME('%Y-%m-%d', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')))) as t_no_day`
+            ),
+            // NOTE: this might be a little to expensive, but might be appropriate for the scale of this app
+            // we can defnitely do a post-processing to optimize and calculate it, but it's probably not worth the complexity at the moment
+            knex.raw(
+              `MAX(EXISTS(SELECT * FROM ${travel_metadata.tableName} WHERE ${_travel_profile_id} = '${profile.id}' AND ${_travel_startTime} <= ${metadata.tableName}.${_time} AND ${_travel_endTime} >= ${metadata.tableName}.${_time} AND ${_travel_timeZone} != '${_travel_current_time_zone}' LIMIT 1)) as is_traveling`
+            ),
+            knex.raw(`COUNT(*) as count`),
+            knex.min(_time).as("t_min"),
+            knex.max(_time).as("t_max"),
             knex.sum(_volume).as("sum_volume"),
             knex.raw(`ROUND(AVG(${_volume})) as avg_volume`)
           )
-          .count("*", { as: "count" })
           .groupBy("t_raw")
           .orderBy("t_raw", "ASC");
         result = {
-          records: (await queryBuilder).map(recordTimeProcessor),
+          records: (await queryBuilder).map((item) => {
+            const record = recordTimeProcessor(
+              item
+            ) as PumpingEventTimeSeriesStatsRecord;
+            return {
+              ...record,
+              daily_avg_volume: isNumber(record.sum_volume)
+                ? Math.round(record.sum_volume / record.t_no_day)
+                : null,
+            } as PumpingEventTimeSeriesStatsRecord;
+          }),
           unit: "ml",
         } as BabyCareEventTimeSeriesStats;
         break;
       }
       case BabyCareEventType.NURSING.toLowerCase(): {
         const metadata = entityManager.getMetadata(NursingEvent);
-        const _time = guaranteeNonNullable(
-          metadata.properties.time.fieldNames[0]
-        );
         const _profile_id = guaranteeNonNullable(
           metadata.properties.profile.fieldNames[0]
+        );
+        const _time = guaranteeNonNullable(
+          metadata.properties.time.fieldNames[0]
         );
         const _left_duration = guaranteeNonNullable(
           metadata.properties.leftDuration.fieldNames[0]
@@ -1311,9 +1387,9 @@ export class BabyCareDataRegistry {
         const _right_duration = guaranteeNonNullable(
           metadata.properties.rightDuration.fieldNames[0]
         );
-        const queryBuilder = knex.from(metadata.tableName).where({
-          [_profile_id]: profile.id,
-        });
+        const queryBuilder = knex
+          .from(metadata.tableName)
+          .where(_profile_id, profile.id);
         if (options.startDate) {
           queryBuilder.andWhere(
             _time,
@@ -1334,17 +1410,37 @@ export class BabyCareDataRegistry {
               `STRFTIME('${timeGroupByFieldFormat}', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')) as t_raw`
             ),
             knex.raw(
+              `COUNT(DISTINCT(STRFTIME('%Y-%m-%d', DATE(CAST(${_time}/1000 as int), 'unixepoch', 'localtime')))) as t_no_day`
+            ),
+            // NOTE: this might be a little to expensive, but might be appropriate for the scale of this app
+            // we can defnitely do a post-processing to optimize and calculate it, but it's probably not worth the complexity at the moment
+            knex.raw(
+              `MAX(EXISTS(SELECT * FROM ${travel_metadata.tableName} WHERE ${_travel_profile_id} = '${profile.id}' AND ${_travel_startTime} <= ${metadata.tableName}.${_time} AND ${_travel_endTime} >= ${metadata.tableName}.${_time} AND ${_travel_timeZone} != '${_travel_current_time_zone}' LIMIT 1)) as is_traveling`
+            ),
+            knex.raw(`COUNT(*) as count`),
+            knex.min(_time).as("t_min"),
+            knex.max(_time).as("t_max"),
+            knex.raw(
               `ROUND(SUM(${_left_duration} + ${_right_duration})/3600000.0, 1) as sum_duration`
             ),
             knex.raw(
               `ROUND(AVG(${_left_duration} + ${_right_duration})/3600000.0, 1) as avg_duration`
             )
           )
-          .count("*", { as: "count" })
           .groupBy("t_raw")
           .orderBy("t_raw", "ASC");
         result = {
-          records: (await queryBuilder).map(recordTimeProcessor),
+          records: (await queryBuilder).map((item) => {
+            const record = recordTimeProcessor(
+              item
+            ) as NursingEventTimeSeriesStatsRecord;
+            return {
+              ...record,
+              daily_avg_duration: isNumber(record.sum_duration)
+                ? record.sum_duration / record.t_no_day
+                : null,
+            } as NursingEventTimeSeriesStatsRecord;
+          }),
           unit: "h",
         } as BabyCareEventTimeSeriesStats;
         break;
@@ -1807,7 +1903,6 @@ export class BabyCareDataRegistry {
         updatedEvent = event;
         break;
       }
-
       case BabyCareAction.UPDATE_TRAVEL_EVENT: {
         const event = await entityManager.findOneOrFail(
           TravelEvent,

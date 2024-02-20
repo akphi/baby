@@ -17,6 +17,8 @@ import {
   createFilterOptions,
   type SelectChangeEvent,
   MenuItem,
+  FormHelperText,
+  Link,
 } from "@mui/material";
 import {
   BabyCareAction,
@@ -645,11 +647,19 @@ export const BabyCareEventEditor = (props: {
                       </MenuItem>
                     ))}
                   </Select>
+                  <FormHelperText>
+                    <Link
+                      href="https://www.zeitverschiebung.net/en/"
+                      target="_blank"
+                    >
+                      Help: How to find my location's timezone?
+                    </Link>
+                  </FormHelperText>
                 </FormControl>
-                <div className="flex justify-center items-center ml-2">
+                <div className="flex justify-center items-start ml-2">
                   <IconButton
                     color="primary"
-                    className="w-10 h-10"
+                    className="w-14 h-14"
                     onClick={() =>
                       setTimeZone(
                         Intl.DateTimeFormat().resolvedOptions().timeZone

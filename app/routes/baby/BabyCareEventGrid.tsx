@@ -373,7 +373,7 @@ const EventOverview = (props: {
                       )}
                     </div>
                     <div className="flex items-center font-mono text-2xs ml-0.5">
-                      days
+                      day
                     </div>
                   </div>
                 </div>

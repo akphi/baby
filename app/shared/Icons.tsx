@@ -29,6 +29,8 @@ import {
   Analytics,
   SearchOff,
   MyLocation,
+  LocalAirport,
+  NewReleases,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -129,3 +131,5 @@ export const MenuIcon = Menu;
 export const AnalyticsIcon = Analytics;
 export const ZoomOffIcon = SearchOff;
 export const MyLocationIcon = MyLocation;
+export const CurrentDataWarningStatusIcon = NewReleases;
+export const TravelStatusIcon = LocalAirport;
