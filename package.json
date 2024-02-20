@@ -17,7 +17,8 @@
     "dev": "remix dev",
     "dev:ui": "remix dev --manual",
     "start": "npm-run-all --parallel start:home start:zigbee",
-    "start:docker": "docker stop home || true && docker rm -f home || true && ./scripts/start-docker.sh",
+    "start:docker": "./scripts/start-docker.sh",
+    "restart:docker": "docker stop home || true && docker rm -f home || true && npm run start:docker",
     "start:home": "remix-serve ./build/index.js",
     "start:zigbee": "node-red --settings node-red.config.cjs",
     "typecheck": "tsc"
