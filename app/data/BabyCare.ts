@@ -562,7 +562,7 @@ export interface BabyCareEventStats {
 
 export interface BabyCareEventTimeSeriesStats extends BabyCareEventStats {
   records: BabyCareEventTimeSeriesStatsRecord[];
-  unit: string;
+  current_t_diff: number;
 }
 
 export enum BabyCareAction {
@@ -1145,6 +1145,8 @@ export class BabyCareDataRegistry {
     let result: BabyCareEventStats = {
       records: [],
     };
+
+    // time series stats
     let timeGroupByFieldFormat: string;
     let recordTimeProcessor: (
       record: BabyCareEventTimeSeriesStatsRecord
@@ -1229,6 +1231,35 @@ export class BabyCareDataRegistry {
         return result;
       }
     }
+
+    let current_t_diff: number;
+    switch (frequency.toLowerCase()) {
+      case BabyCareEventTimeSeriesStatsFrequency.DAILY.toLowerCase(): {
+        current_t_diff = differenceInCalendarDays(
+          startOfDay(new Date()),
+          profile.dob
+        );
+        break;
+      }
+      case BabyCareEventTimeSeriesStatsFrequency.WEEKLY.toLowerCase(): {
+        current_t_diff = differenceInCalendarISOWeeks(
+          startOfISOWeek(new Date()),
+          startOfISOWeek(profile.dob)
+        );
+        break;
+      }
+      case BabyCareEventTimeSeriesStatsFrequency.MONTHLY.toLowerCase(): {
+        current_t_diff = differenceInCalendarMonths(
+          startOfMonth(new Date()),
+          startOfMonth(profile.dob)
+        );
+        break;
+      }
+      default: {
+        current_t_diff = -1;
+      }
+    }
+
     switch (eventType.toLowerCase()) {
       case BabyCareEventType.BOTTLE_FEED.toLowerCase(): {
         const metadata = entityManager.getMetadata(BottleFeedEvent);
@@ -1304,7 +1335,7 @@ export class BabyCareDataRegistry {
                 : null,
             } as BottleFeedEventTimeSeriesStatsRecord;
           }),
-          unit: "ml",
+          current_t_diff,
         } as BabyCareEventTimeSeriesStats;
         break;
       }
@@ -1369,7 +1400,7 @@ export class BabyCareDataRegistry {
                 : null,
             } as PumpingEventTimeSeriesStatsRecord;
           }),
-          unit: "ml",
+          current_t_diff,
         } as BabyCareEventTimeSeriesStats;
         break;
       }
@@ -1441,7 +1472,7 @@ export class BabyCareDataRegistry {
                 : null,
             } as NursingEventTimeSeriesStatsRecord;
           }),
-          unit: "h",
+          current_t_diff,
         } as BabyCareEventTimeSeriesStats;
         break;
       }

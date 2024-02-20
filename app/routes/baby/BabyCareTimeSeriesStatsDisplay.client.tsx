@@ -94,8 +94,7 @@ const BabyCareTimeSeriesStatsDisplayHeader = (props: {
         <div className="h-8 px-4 flex items-center ml-4 rounded-full font-bold font-mono bg-slate-200 text-slate-500">
           {data.t_label}
         </div>
-        {tooltipDataIndex === undefined ||
-        tooltipDataIndex === stats.records.length - 1 ? (
+        {data.t_diff === stats.current_t_diff ? (
           <div className="h-8 w-8 flex justify-center items-center rounded-full bg-red-100 ml-2">
             <CurrentDataWarningStatusIcon className="text-red-500" />
           </div>
@@ -444,14 +443,8 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
                   drawTime: "beforeDraw", // put the annotation behind the datasets and the grid lines
                   backgroundColor: "#fee2e2", // tailwind red-100
                   borderWidth: 0,
-                  xMin:
-                    guaranteeNonNullable(
-                      stats.records[stats.records.length - 1]
-                    ).t_diff - 0.5,
-                  xMax:
-                    guaranteeNonNullable(
-                      stats.records[stats.records.length - 1]
-                    ).t_diff + 0.5,
+                  xMin: stats.current_t_diff - 0.5,
+                  xMax: stats.current_t_diff + 0.5,
                 },
               },
             },
