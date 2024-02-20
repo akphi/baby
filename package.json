@@ -17,7 +17,7 @@
     "dev": "remix dev",
     "dev:ui": "remix dev --manual",
     "start": "npm-run-all --parallel start:home start:zigbee",
-    "start:docker": "./scripts/start-docker.sh",
+    "start:docker": "docker stop home || true && docker rm -f home || true && ./scripts/start-docker.sh",
     "start:home": "remix-serve ./build/index.js",
     "start:zigbee": "node-red --settings node-red.config.cjs",
     "typecheck": "tsc"
@@ -63,7 +63,7 @@
     "@types/node": "20.11.19",
     "@types/node-red": "1.3.4",
     "chalk": "5.3.0",
-    "dotenv": "16.4.4",
+    "dotenv": "16.4.5",
     "eslint": "8.56.0",
     "express": "4.18.2",
     "node-red": "3.1.5",
