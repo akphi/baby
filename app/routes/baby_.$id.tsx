@@ -27,7 +27,7 @@ import {
   useRevalidator,
   useSubmit,
 } from "@remix-run/react";
-import { HttpMethod } from "../shared/NetworkUtils";
+import { HttpMethod, HttpStatus } from "../shared/NetworkUtils";
 import { extractRequiredString } from "../shared/FormDataUtils";
 import { BabyCareSummary } from "./baby/BabyCareSummary";
 import {
@@ -66,6 +66,12 @@ export async function action({ request }: ActionFunctionArgs) {
   const action = formData.get("__action");
 
   switch (action) {
+    case BabyCareAction.UPDATE_PROFILE: {
+      const { profile } = await BabyCareDataRegistry.createOrUpdateProfile(
+        formData
+      );
+      return json({ profile }, HttpStatus.OK);
+    }
     case BabyCareAction.REQUEST_ASSISTANT: {
       const profileIdOrHandle = extractRequiredString(formData, "id");
       await BabyCareEventManager.notificationService.requestAssistant(
