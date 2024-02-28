@@ -403,7 +403,7 @@ export const BabyCareProfileEditor = (props: {
                   <div>Newborn</div>
                   <div
                     className={cn(
-                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      "h-6 w-12 flex flex-srhink-0 justify-center items-center bg-slate-300 text-slate-500 font-mono text-xs rounded",
                       {
                         "bg-blue-500 text-slate-100":
                           birthDate &&
@@ -426,14 +426,14 @@ export const BabyCareProfileEditor = (props: {
                 >
                   <div className="flex items-center">
                     <div>Newborn</div>
-                    <div className="h-6 flex items-center bg-slate-700 text-slate-300 font-mono text-xs rounded-full ml-2 px-3 mui--nullify-disabled-wash">
-                      <div className="mr-2">Exclusive</div>
-                      <BottleIcon className="text-[16px] leading-[16px]" />
+                    <div className="h-6 flex items-center bg-slate-700 text-slate-300 font-mono text-2xs rounded-full ml-2 px-2.5 mui--nullify-disabled-wash">
+                      <div className="mr-1">Exclusive</div>
+                      <BottleIcon className="text-[14px] leading-[14px]" />
                     </div>
                   </div>
                   <div
                     className={cn(
-                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      "h-6 w-12 flex flex-srhink-0 justify-center items-center bg-slate-300 text-slate-500 font-mono text-xs rounded",
                       {
                         "bg-blue-500 text-slate-100":
                           birthDate &&
@@ -454,7 +454,7 @@ export const BabyCareProfileEditor = (props: {
                   <div>Infant</div>
                   <div
                     className={cn(
-                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      "h-6 w-12 flex flex-srhink-0 justify-center items-center bg-slate-300 text-slate-500 font-mono text-xs rounded",
                       {
                         "bg-blue-500 text-slate-100":
                           birthDate &&
@@ -484,7 +484,7 @@ export const BabyCareProfileEditor = (props: {
                   <div>Toddler</div>
                   <div
                     className={cn(
-                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      "h-6 w-12 flex flex-srhink-0 justify-center items-center bg-slate-300 text-slate-500 font-mono text-xs rounded",
                       {
                         "bg-blue-500 text-slate-100":
                           birthDate &&
@@ -514,7 +514,7 @@ export const BabyCareProfileEditor = (props: {
                   <div>Preschooler</div>
                   <div
                     className={cn(
-                      "h-6 w-14 flex justify-center items-center bg-slate-300 text-slate-500 font-mono text-sm rounded",
+                      "h-6 w-12 flex flex-srhink-0 justify-center items-center bg-slate-300 text-slate-500 font-mono text-xs rounded",
                       {
                         "bg-blue-500 text-slate-100":
                           birthDate &&

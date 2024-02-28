@@ -245,7 +245,9 @@ export const BabyCareEventEditor = (props: {
       : data.TYPE === BabyCareEventType.PUMPING
       ? BabyCareEmoji.BREAST_PUMP
       : data.TYPE === BabyCareEventType.DIAPER_CHANGE
-      ? BabyCareEmoji.PEE
+      ? (data as SerializeFrom<DiaperChangeEvent>).poop
+        ? BabyCareEmoji.POOP
+        : BabyCareEmoji.PEE
       : data.TYPE === BabyCareEventType.PLAY
       ? BabyCareEmoji.CHILD_TOY
       : data.TYPE === BabyCareEventType.BATH
