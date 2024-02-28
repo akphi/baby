@@ -19,5 +19,6 @@ RUN npm install
 RUN npm run clean
 RUN npm run build
 
-CMD ln -s /usr/share/zoneinfo/$TZ /etc/localtime && \
+# Force rewrite the timezone to be accomodate for restart as ln -s will error out if file already exists
+CMD ln -sf /usr/share/zoneinfo/$TZ /etc/localtime && \
     npm run start

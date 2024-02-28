@@ -2284,44 +2284,52 @@ class BabyCareEventNotificationService {
     if (!this.notifierWebhookUrl) {
       return;
     }
-    await fetch(this.notifierWebhookUrl, {
-      method: HttpMethod.POST,
-      headers: {
-        [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
-      },
-      body: JSON.stringify({
-        username:
-          process.env.NODE_ENV === "development" ? `{DEV} ${sender}` : sender,
-        // NOTE: Discord has a weird issue that I didn't have time to investigate where
-        // webhook bots seem to not be able to raise more than 3 push notifications on IOS
-        // e.g. after sending 3 notifications, the 4th will not be shown as push nofication
-        // the workaround is to mention roles like @everyone or @here, or some custom role like this
-        content: `${
-          this.notifierWebhookMentionRoleID
-            ? `<@&${this.notifierWebhookMentionRoleID}> `
-            : ""
-        }${message}`,
-      }),
-    });
+    try {
+      await fetch(this.notifierWebhookUrl, {
+        method: HttpMethod.POST,
+        headers: {
+          [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
+        },
+        body: JSON.stringify({
+          username:
+            process.env.NODE_ENV === "development" ? `{DEV} ${sender}` : sender,
+          // NOTE: Discord has a weird issue that I didn't have time to investigate where
+          // webhook bots seem to not be able to raise more than 3 push notifications on IOS
+          // e.g. after sending 3 notifications, the 4th will not be shown as push nofication
+          // the workaround is to mention roles like @everyone or @here, or some custom role like this
+          content: `${
+            this.notifierWebhookMentionRoleID
+              ? `<@&${this.notifierWebhookMentionRoleID}> `
+              : ""
+          }${message}`,
+        }),
+      });
+    } catch (error) {
+      console.error(`Failed to send notification`, error);
+    }
   }
 
   private async notifyDebug(sender: string, message: string) {
     if (!this.notifierWebhookDebugUrl) {
       return;
     }
-    await fetch(this.notifierWebhookDebugUrl, {
-      method: HttpMethod.POST,
-      headers: {
-        [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
-      },
-      body: JSON.stringify({
-        username:
-          process.env.NODE_ENV === "development"
-            ? `{DEBUG-DEV} ${sender}`
-            : `{DEBUG} ${sender}`,
-        content: message,
-      }),
-    });
+    try {
+      await fetch(this.notifierWebhookDebugUrl, {
+        method: HttpMethod.POST,
+        headers: {
+          [HttpHeader.CONTENT_TYPE]: ContentType.APPLICATION_JSON,
+        },
+        body: JSON.stringify({
+          username:
+            process.env.NODE_ENV === "development"
+              ? `{DEBUG-DEV} ${sender}`
+              : `{DEBUG} ${sender}`,
+          content: message,
+        }),
+      });
+    } catch (error) {
+      console.error(`Failed to send debug notification`, error);
+    }
   }
 
   private shouldNotifyEvent(event: BabyCareEvent) {
@@ -2477,9 +2485,13 @@ class BabyCareEventNotificationService {
     if (!this.requestAssistantUrl) {
       return;
     }
-    await fetch(this.requestAssistantUrl, {
-      method: HttpMethod.POST,
-    });
+    try {
+      await fetch(this.requestAssistantUrl, {
+        method: HttpMethod.POST,
+      });
+    } catch (error) {
+      console.error(`Failed to request assistant`, error);
+    }
   }
 
   async notifyMessage(
