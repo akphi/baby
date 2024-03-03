@@ -272,6 +272,14 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
   const [chart, setChart] = useState<ChartJS | undefined>();
   const [zoomLevel, setZoomLevel] = useState(1);
   const [zoomer, setZoomer] = useState<null | HTMLElement>(null);
+  const manualZoom = (level: number) => {
+    chart?.zoom(level);
+    setZoomer(null);
+    // NOTE: ideally here, we should set zoom level to chart.getZoomLevel(), but
+    // there seems to be a problem with accuracy of progamatic zoom
+    // e.g. when we set zoom level to 1.5, and immediately get zoom level, we got 2
+    setZoomLevel(level);
+  };
 
   useEffect(() => {
     let newChart: ChartJS | undefined = undefined;
@@ -683,48 +691,42 @@ export const BabyCareTimeSeriesStatsDisplay = (props: {
           >
             <MenuItem
               onClick={() => {
-                chart?.zoom(0.25);
-                setZoomer(null);
+                manualZoom(0.25);
               }}
             >
               25%
             </MenuItem>
             <MenuItem
               onClick={() => {
-                chart?.zoom(0.5);
-                setZoomer(null);
+                manualZoom(0.5);
               }}
             >
               50%
             </MenuItem>
             <MenuItem
               onClick={() => {
-                chart?.zoom(1);
-                setZoomer(null);
+                manualZoom(1);
               }}
             >
               100%
             </MenuItem>
             <MenuItem
               onClick={() => {
-                chart?.zoom(1.25);
-                setZoomer(null);
+                manualZoom(1.25);
               }}
             >
               125%
             </MenuItem>
             <MenuItem
               onClick={() => {
-                chart?.zoom(1.5);
-                setZoomer(null);
+                manualZoom(1.5);
               }}
             >
               150%
             </MenuItem>
             <MenuItem
               onClick={() => {
-                chart?.zoom(1.75);
-                setZoomer(null);
+                manualZoom(1.75);
               }}
             >
               175%
