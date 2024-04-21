@@ -8,6 +8,8 @@ import {
   type PumpingEvent,
   type NursingEvent,
   type MeasurementEvent,
+  type TravelEvent,
+  type MedicineEvent,
 } from "../../data/BabyCare";
 import { useFetcher, useSubmit } from "@remix-run/react";
 import {
@@ -49,6 +51,7 @@ import { cn } from "../../shared/StyleUtils";
 import { pruneFormData } from "../../shared/FormDataUtils";
 import { add, format, parseISO } from "date-fns";
 import { computeNewValue } from "../../shared/NumberInput";
+import { UNSPECIFIED_VALUE_TAG } from "app/data/constants";
 
 const QuickEditInlineNumberInput = (props: {
   value: number;
@@ -192,8 +195,39 @@ const EventQuickEditAction = forwardRef(
             action = BabyCareAction.REMOVE_NURSING_EVENT;
             break;
           }
+          case BabyCareEventType.__PEE:
+          case BabyCareEventType.__POOP: {
+            action = BabyCareAction.REMOVE_DIAPER_CHANGE_EVENT;
+            break;
+          }
+          case BabyCareEventType.PLAY: {
+            action = BabyCareAction.REMOVE_PLAY_EVENT;
+            break;
+          }
+          case BabyCareEventType.BATH: {
+            action = BabyCareAction.REMOVE_BATH_EVENT;
+            break;
+          }
+          case BabyCareEventType.SLEEP: {
+            action = BabyCareAction.REMOVE_SLEEP_EVENT;
+            break;
+          }
+          case BabyCareEventType.NOTE:
+          case BabyCareEventType.__FOOD_FIRST_TRY:
+          case BabyCareEventType.__MEMORY: {
+            action = BabyCareAction.REMOVE_NOTE_EVENT;
+            break;
+          }
+          case BabyCareEventType.MEDICINE: {
+            action = BabyCareAction.REMOVE_MEDICINE_EVENT;
+            break;
+          }
           case BabyCareEventType.MEASUREMENT: {
             action = BabyCareAction.REMOVE_MEASUREMENT_EVENT;
+            break;
+          }
+          case BabyCareEventType.TRAVEL: {
+            action = BabyCareAction.REMOVE_TRAVEL_EVENT;
             break;
           }
           default:
@@ -256,6 +290,13 @@ const EventQuickEditAction = forwardRef(
     const [weight, setWeight] = useState(
       (data as SerializeFrom<MeasurementEvent>).weight
     );
+    const [prescription, setPrescription] = useState(
+      (data as SerializeFrom<MedicineEvent>).prescription
+    );
+    const [destination, setDestination] = useState(
+      (data as SerializeFrom<TravelEvent>).destination
+    );
+    const [comment, setComment] = useState(data.comment);
 
     const debouncedUpdate = useMemo(
       () =>
@@ -267,6 +308,9 @@ const EventQuickEditAction = forwardRef(
             height?: number | undefined;
             weight?: number | undefined;
             time?: Date | undefined;
+            destination?: string | undefined;
+            prescription?: string | undefined;
+            comment?: string | undefined;
           }) => {
             let action: string;
             switch (data.TYPE) {
@@ -282,8 +326,39 @@ const EventQuickEditAction = forwardRef(
                 action = BabyCareAction.UPDATE_NURSING_EVENT;
                 break;
               }
+              case BabyCareEventType.__PEE:
+              case BabyCareEventType.__POOP: {
+                action = BabyCareAction.UPDATE_DIAPER_CHANGE_EVENT;
+                break;
+              }
+              case BabyCareEventType.PLAY: {
+                action = BabyCareAction.UPDATE_PLAY_EVENT;
+                break;
+              }
+              case BabyCareEventType.BATH: {
+                action = BabyCareAction.UPDATE_BATH_EVENT;
+                break;
+              }
+              case BabyCareEventType.SLEEP: {
+                action = BabyCareAction.UPDATE_SLEEP_EVENT;
+                break;
+              }
+              case BabyCareEventType.NOTE:
+              case BabyCareEventType.__FOOD_FIRST_TRY:
+              case BabyCareEventType.__MEMORY: {
+                action = BabyCareAction.UPDATE_NOTE_EVENT;
+                break;
+              }
+              case BabyCareEventType.MEDICINE: {
+                action = BabyCareAction.UPDATE_MEDICINE_EVENT;
+                break;
+              }
               case BabyCareEventType.MEASUREMENT: {
                 action = BabyCareAction.UPDATE_MEASUREMENT_EVENT;
+                break;
+              }
+              case BabyCareEventType.TRAVEL: {
+                action = BabyCareAction.UPDATE_TRAVEL_EVENT;
                 break;
               }
               default:
@@ -419,60 +494,126 @@ const EventQuickEditAction = forwardRef(
                 </QuickEditInlineNumberInput>
               </>
             )}
-            <div className="relative h-8 w-24 shrink-0 flex justify-center items-center text-slate-300 bg-slate-800 rounded">
-              <button
-                className="absolute h-full w-1/2 flex justify-start items-center pl-1 left-0 text-slate-500 hover:text-slate-300"
-                onClick={() => {
-                  debouncedUpdate.cancel();
-                  const value = add(time, {
-                    minutes: -30,
-                  });
-                  setTime(value);
-                  debouncedUpdate({
-                    time: value,
+            {(
+              [
+                BabyCareEventType.BOTTLE_FEED,
+                BabyCareEventType.NURSING,
+                BabyCareEventType.PUMPING,
+                BabyCareEventType.__POOP,
+                BabyCareEventType.__PEE,
+                BabyCareEventType.PLAY,
+                BabyCareEventType.BATH,
+                BabyCareEventType.SLEEP,
+              ] as string[]
+            ).includes(data.TYPE) && (
+              <div className="relative h-8 w-24 shrink-0 flex justify-center items-center text-slate-300 bg-slate-800 rounded">
+                <button
+                  className="absolute h-full w-1/2 flex justify-start items-center pl-1 left-0 text-slate-500 hover:text-slate-300"
+                  onClick={() => {
+                    debouncedUpdate.cancel();
+                    const value = add(time, {
+                      minutes: -30,
+                    });
+                    setTime(value);
+                    debouncedUpdate({
+                      time: value,
 
-                    // NOTE: this is a design-limitation, we might miss something and
-                    // it can cause a bug where updating the time will skip updating the rest
-                    volume,
-                    leftDuration,
-                    rightDuration,
-                    weight,
-                    height,
-                  });
-                }}
-              >
-                <Replay30Icon className="text-xl" />
-              </button>
-              <div className="w-full h-full flex rounded justify-center items-center">
-                <div className="flex items-center font-mono text-xs">
-                  {format(time, "HH:mm")}
+                      // NOTE: this is a design-limitation, we might miss something and
+                      // it can cause a bug where updating the time will skip updating the rest
+                      volume,
+                      leftDuration,
+                      rightDuration,
+                      weight,
+                      height,
+                    });
+                  }}
+                >
+                  <Replay30Icon className="text-xl" />
+                </button>
+                <div className="w-full h-full flex rounded justify-center items-center">
+                  <div className="flex items-center font-mono text-xs">
+                    {format(time, "HH:mm")}
+                  </div>
                 </div>
-              </div>
-              <button
-                className="absolute h-full w-1/2 flex justify-end items-center pr-1 right-0 text-slate-500 hover:text-slate-300"
-                onClick={() => {
-                  debouncedUpdate.cancel();
-                  const value = add(time, {
-                    minutes: 10,
-                  });
-                  setTime(value);
-                  debouncedUpdate({
-                    time: value,
+                <button
+                  className="absolute h-full w-1/2 flex justify-end items-center pr-1 right-0 text-slate-500 hover:text-slate-300"
+                  onClick={() => {
+                    debouncedUpdate.cancel();
+                    const value = add(time, {
+                      minutes: 10,
+                    });
+                    setTime(value);
+                    debouncedUpdate({
+                      time: value,
 
-                    // NOTE: this is a design-limitation, we might miss something and
-                    // it can cause a bug where updating the time will skip updating the rest
-                    volume,
-                    leftDuration,
-                    rightDuration,
-                    weight,
-                    height,
-                  });
-                }}
-              >
-                <Forward10Icon className="text-xl" />
-              </button>
-            </div>
+                      // NOTE: this is a design-limitation, we might miss something and
+                      // it can cause a bug where updating the time will skip updating the rest
+                      volume,
+                      leftDuration,
+                      rightDuration,
+                      weight,
+                      height,
+                    });
+                  }}
+                >
+                  <Forward10Icon className="text-xl" />
+                </button>
+              </div>
+            )}
           </div>
+          {data.TYPE === BabyCareEventType.TRAVEL && (
+            <div className="relative h-8 w-60 shrink-0 flex justify-center items-center text-slate-300 bg-slate-800 rounded">
+              <input
+                className="w-full h-full rounded bg-transparent font-mono text-sm text-center outline-none pr-8"
+                autoFocus={true}
+                value={destination === UNSPECIFIED_VALUE_TAG ? "" : destination}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  debouncedUpdate.cancel();
+                  setDestination(value);
+                  debouncedUpdate({ destination: value });
+                }}
+              />
+            </div>
+          )}
+          {data.TYPE === BabyCareEventType.MEDICINE && (
+            <div className="relative h-8 w-60 shrink-0 flex justify-center items-center text-slate-300 bg-slate-800 rounded">
+              <input
+                className="w-full h-full rounded bg-transparent font-mono text-sm text-center outline-none pr-8"
+                autoFocus={true}
+                value={
+                  prescription === UNSPECIFIED_VALUE_TAG ? "" : prescription
+                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  debouncedUpdate.cancel();
+                  setPrescription(value);
+                  debouncedUpdate({ prescription: value });
+                }}
+              />
+            </div>
+          )}
+          {(
+            [
+              BabyCareEventType.NOTE,
+              BabyCareEventType.__MEMORY,
+              BabyCareEventType.__FOOD_FIRST_TRY,
+            ] as string[]
+          ).includes(data.TYPE) && (
+            <div className="relative h-8 w-60 shrink-0 flex justify-center items-center text-slate-300 bg-slate-800 rounded">
+              <input
+                className="w-full h-full rounded bg-transparent font-mono text-sm text-center outline-none pr-8"
+                autoFocus={true}
+                value={comment}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  debouncedUpdate.cancel();
+                  setComment(value);
+                  debouncedUpdate({ comment: value });
+                }}
+              />
+            </div>
+          )}
         </div>
         <div className="relative h-14 flex">
           <div className="h-full w-10 flex items-center justify-center">
@@ -570,17 +711,7 @@ export const BabyCareDashboard = (props: {
   >(undefined);
 
   useEffect(() => {
-    if (
-      fetcher.data &&
-      (
-        [
-          BabyCareEventType.BOTTLE_FEED,
-          BabyCareEventType.NURSING,
-          BabyCareEventType.PUMPING,
-          BabyCareEventType.MEASUREMENT,
-        ] as string[]
-      ).includes(fetcher.data.event.TYPE)
-    ) {
+    if (fetcher.data) {
       setEventToQuickEdit(fetcher.data.event);
     }
   }, [fetcher.data]);
@@ -707,14 +838,8 @@ export const BabyCareDashboard = (props: {
           >
             <SleepIcon className="w-20 h-20 flex justify-center items-center rounded-full border-2 bg-lime-100 border-lime-500 text-5xl text-black" />
           </IconButton>
-          <EventQuickEdit
-            key={eventToQuickEdit?.id}
-            data={eventToQuickEdit}
-            onClose={() => setEventToQuickEdit(undefined)}
-          />
         </div>
       </div>
-
       <div className="flex flex-col justify-center items-center mt-6 p-6 bg-white rounded-xl shadow-md w-fit">
         <div className="flex justify-center items-center">
           <IconButton
@@ -810,6 +935,11 @@ export const BabyCareDashboard = (props: {
           <IconButton className="w-24 h-24 invisible" />
         </div>
       </div>
+      <EventQuickEdit
+        key={eventToQuickEdit?.id}
+        data={eventToQuickEdit}
+        onClose={() => setEventToQuickEdit(undefined)}
+      />
     </div>
   );
 };
