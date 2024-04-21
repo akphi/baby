@@ -43,6 +43,8 @@ export async function action({ request }: ActionFunctionArgs) {
     case BabyCareAction.CREATE_MEASUREMENT_EVENT:
     case BabyCareAction.CREATE_MEDICINE_EVENT:
     case BabyCareAction.CREATE_NOTE_EVENT:
+    case BabyCareAction.CREATE_MEMORY_EVENT:
+    case BabyCareAction.CREATE_FOOD_FIRST_TRY_EVENT:
     case BabyCareAction.CREATE_TRAVEL_EVENT: {
       const profileIdOrHandle = extractRequiredString(formData, "id");
       const event = await BabyCareDataRegistry.quickCreateEvent(

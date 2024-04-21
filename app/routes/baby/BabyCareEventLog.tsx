@@ -15,6 +15,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ChildToyIcon,
+  FoodIcon,
   MeasurementIcon,
   MedicineIcon,
   MemoryIcon,
@@ -163,10 +164,11 @@ export const BabyCareEventLog = (props: {
                 [BabyCareEventType.SLEEP]: [],
                 [BabyCareEventType.BATH]: [],
                 [BabyCareEventType.PLAY]: [],
-                [BabyCareEventType.MEASUREMENT]: [],
                 [BabyCareEventType.MEDICINE]: [],
-                [BabyCareEventType.NOTE]: [],
+                [BabyCareEventType.MEASUREMENT]: [],
+                [BabyCareEventType.__FOOD_FIRST_TRY]: [],
                 [BabyCareEventType.__MEMORY]: [],
+                [BabyCareEventType.NOTE]: [],
                 [BabyCareEventType.TRAVEL]: [],
               },
               groupBy(events, (event) =>
@@ -178,6 +180,8 @@ export const BabyCareEventLog = (props: {
                   ? (event as SerializeFrom<NoteEvent>).purpose ===
                     NotePurpose.MEMORY
                     ? BabyCareEventType.__MEMORY
+                    : NotePurpose.FOOD_FIRST_TRY
+                    ? BabyCareEventType.__FOOD_FIRST_TRY
                     : BabyCareEventType.NOTE
                   : event.TYPE
               )
@@ -231,6 +235,9 @@ export const BabyCareEventLog = (props: {
                 {type === BabyCareEventType.__MEMORY && (
                   <MemoryIcon className="text-[20px] leading-[20px]" />
                 )}
+                {type === BabyCareEventType.__FOOD_FIRST_TRY && (
+                  <FoodIcon className="text-[20px] leading-[20px]" />
+                )}
                 {type === BabyCareEventType.TRAVEL && (
                   <TravelIcon className="text-[20px] leading-[20px]" />
                 )}
@@ -263,6 +270,12 @@ export const BabyCareEventLog = (props: {
                   event.TYPE === BabyCareEventType.NOTE &&
                   (event as SerializeFrom<NoteEvent>).purpose ===
                     NotePurpose.MEMORY
+                );
+              case BabyCareEventType.__FOOD_FIRST_TRY:
+                return (
+                  event.TYPE === BabyCareEventType.NOTE &&
+                  (event as SerializeFrom<NoteEvent>).purpose ===
+                    NotePurpose.FOOD_FIRST_TRY
                 );
               default:
                 return event.TYPE === selectedEvent;

@@ -23,6 +23,7 @@ import {
   BottleIcon,
   BreastPumpIcon,
   ChildToyIcon,
+  FoodIcon,
   MeasurementIcon,
   MedicineIcon,
   MemoryIcon,
@@ -493,6 +494,9 @@ const EventTypeDisplay = (
       {data?.TYPE === BabyCareEventType.NOTE &&
         ((data as SerializeFrom<NoteEvent>).purpose === NotePurpose.MEMORY ? (
           <MemoryIcon className="h-full w-5 flex items-center text-base" />
+        ) : (data as SerializeFrom<NoteEvent>).purpose ===
+          NotePurpose.FOOD_FIRST_TRY ? (
+          <FoodIcon className="h-full w-5 flex items-center text-base" />
         ) : (
           <NoteIcon className="h-full w-5 flex items-center text-base" />
         ))}
@@ -508,6 +512,9 @@ const EventTypeDisplay = (
             : data.TYPE === BabyCareEventType.NOTE
             ? (data as SerializeFrom<NoteEvent>).purpose === NotePurpose.MEMORY
               ? BabyCareEventType.__MEMORY
+              : (data as SerializeFrom<NoteEvent>).purpose ===
+                NotePurpose.FOOD_FIRST_TRY
+              ? "Food"
               : BabyCareEventType.NOTE
             : data.TYPE}
         </div>

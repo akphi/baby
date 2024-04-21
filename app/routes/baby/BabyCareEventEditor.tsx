@@ -560,6 +560,9 @@ export const BabyCareEventEditor = (props: {
                       <div className="text-zinc-400">None</div>
                     </MenuItem>
                     <MenuItem value={NotePurpose.MEMORY}>Memory</MenuItem>
+                    <MenuItem
+                      value={NotePurpose.FOOD_FIRST_TRY}
+                    >{`Food (First Try)`}</MenuItem>
                   </Select>
                 </FormControl>
               </div>

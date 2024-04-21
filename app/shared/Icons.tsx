@@ -51,6 +51,7 @@ export enum BabyCareEmoji {
   NOTE = "📝",
   MEMORY = "🌈",
   TRAVEL = "🚌",
+  FOOD = "🍗"
 }
 
 export const NursingIcon = (props: IconProps) => (
@@ -100,6 +101,9 @@ export const MemoryIcon = (props: IconProps) => (
 );
 export const TravelIcon = (props: IconProps) => (
   <Icon {...props}>{BabyCareEmoji.TRAVEL}</Icon>
+);
+export const FoodIcon = (props: IconProps) => (
+  <Icon {...props}>{BabyCareEmoji.FOOD}</Icon>
 );
 export const AddIcon = Add;
 export const AddCircleIcon = AddCircle;

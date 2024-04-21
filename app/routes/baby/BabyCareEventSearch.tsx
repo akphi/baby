@@ -138,6 +138,9 @@ export const BabyCareEventSearch = (props: {
           <MenuItem value={BabyCareEventType.__MEMORY.toLowerCase()}>
             Memory
           </MenuItem>
+          <MenuItem value={BabyCareEventType.__FOOD_FIRST_TRY.toLowerCase()}>
+            {`Food (First Try)`}
+          </MenuItem>
           <MenuItem value={BabyCareEventType.TRAVEL.toLowerCase()}>
             Travel
           </MenuItem>

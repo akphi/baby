@@ -174,6 +174,7 @@ export enum BabyCareEventType {
   __PEE = "Pee",
   __FEEDING = "Feeding",
   __MEMORY = "Memory",
+  __FOOD_FIRST_TRY = "Food (First Try)",
 }
 
 export abstract class BabyCareEvent {
@@ -434,6 +435,7 @@ export class MedicineEvent extends BabyCareEvent {
 
 export enum NotePurpose {
   MEMORY = "MEMORY",
+  FOOD_FIRST_TRY = "FOOD_FIRST_TRY",
 }
 
 @Entity()
@@ -448,6 +450,8 @@ export class NoteEvent extends BabyCareEvent {
   override get notificationSummary() {
     return this.purpose === NotePurpose.MEMORY
       ? `Jotting down memory`
+      : this.purpose === NotePurpose.FOOD_FIRST_TRY
+      ? `Jotting down food first try`
       : `Making note`;
   }
 
@@ -617,10 +621,14 @@ export enum BabyCareAction {
   UPDATE_NOTE_EVENT = "baby-care.note-event.update",
   REMOVE_NOTE_EVENT = "baby-care.note-event.remove",
 
+  CREATE_MEMORY_EVENT = "baby-care.memory-event.create",
+  CREATE_FOOD_FIRST_TRY_EVENT = "baby-care.food-first-try-event.create",
+
   CREATE_TRAVEL_EVENT = "baby-care.travel-event.create",
   UPDATE_TRAVEL_EVENT = "baby-care.travel-event.update",
   REMOVE_TRAVEL_EVENT = "baby-care.travel-event.remove",
 
+  FETCH_FOODS = "baby-care.fetch-top-prescriptions",
   FETCH_TOP_PRESCRIPTIONS = "baby-care.fetch-top-prescriptions",
 }
 
@@ -1053,7 +1061,8 @@ export class BabyCareDataRegistry {
         break;
       }
       case BabyCareEventType.NOTE.toLowerCase():
-      case BabyCareEventType.__MEMORY.toLowerCase(): {
+      case BabyCareEventType.__MEMORY.toLowerCase():
+      case BabyCareEventType.__FOOD_FIRST_TRY.toLowerCase(): {
         result = await entityManager.findAndCount(
           NoteEvent,
           {
@@ -1065,6 +1074,8 @@ export class BabyCareDataRegistry {
             purpose:
               eventType === BabyCareEventType.__MEMORY
                 ? NotePurpose.MEMORY
+                : eventType === BabyCareEventType.__FOOD_FIRST_TRY
+                ? NotePurpose.FOOD_FIRST_TRY
                 : null,
             comment: options?.searchText
               ? {
@@ -1727,6 +1738,18 @@ export class BabyCareDataRegistry {
       }
       case BabyCareAction.CREATE_NOTE_EVENT: {
         event = new NoteEvent(new Date(), profile);
+        break;
+      }
+      case BabyCareAction.CREATE_MEMORY_EVENT: {
+        const noteEvent = new NoteEvent(new Date(), profile);
+        noteEvent.purpose = NotePurpose.MEMORY;
+        event = noteEvent;
+        break;
+      }
+      case BabyCareAction.CREATE_FOOD_FIRST_TRY_EVENT: {
+        const noteEvent = new NoteEvent(new Date(), profile);
+        noteEvent.purpose = NotePurpose.FOOD_FIRST_TRY;
+        event = noteEvent;
         break;
       }
       case BabyCareAction.CREATE_TRAVEL_EVENT: {
