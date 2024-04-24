@@ -10,6 +10,7 @@ import {
   type MeasurementEvent,
   type TravelEvent,
   type MedicineEvent,
+  type NoteEvent,
 } from "../../data/BabyCare";
 import { useFetcher, useSubmit } from "@remix-run/react";
 import {
@@ -296,7 +297,9 @@ const EventQuickEditAction = forwardRef(
     const [destination, setDestination] = useState(
       (data as SerializeFrom<TravelEvent>).destination
     );
-    const [comment, setComment] = useState(data.comment);
+    const [title, setTitle] = useState(
+      (data as SerializeFrom<NoteEvent>).title
+    );
 
     const debouncedUpdate = useMemo(
       () =>
@@ -310,7 +313,7 @@ const EventQuickEditAction = forwardRef(
             time?: Date | undefined;
             destination?: string | undefined;
             prescription?: string | undefined;
-            comment?: string | undefined;
+            title?: string | undefined;
           }) => {
             let action: string;
             switch (data.TYPE) {
@@ -375,6 +378,9 @@ const EventQuickEditAction = forwardRef(
                   rightDuration: formData?.rightDuration,
                   height: formData?.height,
                   weight: formData?.weight,
+                  destination: formData?.destination,
+                  prescription: formData?.prescription,
+                  title: formData?.title,
                 }),
               },
               { method: HttpMethod.POST }
@@ -604,12 +610,12 @@ const EventQuickEditAction = forwardRef(
               <input
                 className="w-full h-full rounded bg-transparent font-mono text-sm text-center outline-none pr-8"
                 autoFocus={true}
-                value={comment}
+                value={title}
                 onChange={(event) => {
                   const value = event.target.value;
                   debouncedUpdate.cancel();
-                  setComment(value);
-                  debouncedUpdate({ comment: value });
+                  setTitle(value);
+                  debouncedUpdate({ title: value });
                 }}
               />
             </div>

@@ -7,6 +7,7 @@ import {
   type EntityDTO,
   DateTimeType,
   JsonType,
+  raw,
 } from "@mikro-orm/core";
 import { type SqlEntityManager, SqliteDriver } from "@mikro-orm/sqlite";
 import { Entity, PrimaryKey } from "@mikro-orm/core";
@@ -23,6 +24,7 @@ import {
   parse,
   startOfISOWeek,
   startOfMonth,
+  isSameMonth,
 } from "date-fns";
 import { v4 as uuid } from "uuid";
 import { hasher as initHasher } from "node-object-hash";
@@ -443,6 +445,9 @@ export class NoteEvent extends BabyCareEvent {
   @Property({ type: "string", nullable: true })
   purpose?: string | undefined;
 
+  @Property({ type: "string", nullable: true })
+  title?: string | undefined;
+
   override get eventType() {
     return BabyCareEventType.NOTE;
   }
@@ -459,6 +464,7 @@ export class NoteEvent extends BabyCareEvent {
     return HASHER.hash({
       ...this.hashContent,
       purpose: this.purpose,
+      title: this.title,
     });
   }
 }
@@ -567,6 +573,15 @@ export interface BabyCareEventStats {
 export interface BabyCareEventTimeSeriesStats extends BabyCareEventStats {
   records: BabyCareEventTimeSeriesStatsRecord[];
   current_t_diff: number;
+}
+
+export interface BabyCareCalendarEvent {
+  id: string;
+  time: number;
+  day: number;
+  year: number;
+  title?: string | undefined;
+  description?: string | undefined;
 }
 
 export enum BabyCareAction {
@@ -1072,9 +1087,11 @@ export class BabyCareDataRegistry {
               $lte: options?.endDate ? endOfDay(options?.endDate) : null,
             }),
             purpose:
-              eventType === BabyCareEventType.__MEMORY
+              eventType.toLowerCase() ===
+              BabyCareEventType.__MEMORY.toLowerCase()
                 ? NotePurpose.MEMORY
-                : eventType === BabyCareEventType.__FOOD_FIRST_TRY
+                : eventType.toLowerCase() ===
+                  BabyCareEventType.__FOOD_FIRST_TRY.toLowerCase()
                 ? NotePurpose.FOOD_FIRST_TRY
                 : null,
             comment: options?.searchText
@@ -1493,6 +1510,51 @@ export class BabyCareDataRegistry {
     }
 
     return result;
+  }
+
+  static async getCalendarEvents(
+    profile: BabyCareProfile,
+    month: Date
+  ): Promise<BabyCareCalendarEvent[]> {
+    const entityManager = await BabyCareDataRegistry.getEntityManager();
+
+    // NOTE: only collect memory events for current and before
+    const events = await entityManager.find(
+      NoteEvent,
+      {
+        profile,
+        purpose: NotePurpose.MEMORY,
+        time: { $lt: startOfMonth(add(month, { months: 1 })) },
+        [raw(
+          `STRFTIME('%m', DATE(CAST(time/1000 as int), 'unixepoch', 'localtime'))`
+        )]: (month.getMonth() + 1).toString().padStart(2, "0"),
+      },
+      {
+        orderBy: { time: "DESC" },
+      }
+    );
+
+    return [
+      ...(isSameMonth(profile.dob, month)
+        ? [
+            {
+              id: "__birthday__",
+              time: profile.dob.valueOf(),
+              day: profile.dob.getDate(),
+              year: profile.dob.getFullYear(),
+              title: `🎂 ${profile.nickname ?? profile.name}'s Birthday`,
+            },
+          ]
+        : []),
+      ...events.map((event) => ({
+        id: event.id,
+        time: event.time.valueOf(),
+        day: event.time.getDate(),
+        year: event.time.getFullYear(),
+        title: event.title,
+        description: event.comment,
+      })),
+    ];
   }
 
   static async fetchProfileByIdOrHandle(idOrHandle: string) {
@@ -1952,6 +2014,7 @@ export class BabyCareDataRegistry {
 
         event.time = new Date(extractRequiredString(formData, "time"));
         event.purpose = extractOptionalString(formData, "purpose")?.trim();
+        event.title = extractOptionalString(formData, "title")?.trim();
         event.comment = extractOptionalString(formData, "comment")?.trim();
 
         updatedEvent = event;

@@ -356,6 +356,18 @@ const EventOverview = (props: {
             )}
           </div>
         )}
+      {(
+        [
+          BabyCareEventType.NOTE,
+          BabyCareEventType.__MEMORY,
+          BabyCareEventType.__FOOD_FIRST_TRY,
+        ] as string[]
+      ).includes(data.TYPE) &&
+        (data as SerializeFrom<NoteEvent>).title && (
+          <div className="flex items-center rounded h-6 text-2xs text-slate-600 bg-indigo-100 px-2">
+            {(data as SerializeFrom<NoteEvent>).title}
+          </div>
+        )}
       {data.TYPE === BabyCareEventType.TRAVEL &&
         (data as SerializeFrom<TravelEvent>).destination && (
           <>

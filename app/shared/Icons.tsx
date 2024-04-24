@@ -31,6 +31,7 @@ import {
   MyLocation,
   LocalAirport,
   NewReleases,
+  CalendarMonth,
 } from "@mui/icons-material";
 import Icon, { type IconProps } from "@mui/material/Icon";
 
@@ -51,7 +52,7 @@ export enum BabyCareEmoji {
   NOTE = "📝",
   MEMORY = "🌈",
   TRAVEL = "🚌",
-  FOOD = "🍗"
+  FOOD = "🍗",
 }
 
 export const NursingIcon = (props: IconProps) => (
@@ -137,3 +138,4 @@ export const ZoomOffIcon = SearchOff;
 export const MyLocationIcon = MyLocation;
 export const CurrentDataWarningStatusIcon = NewReleases;
 export const TravelStatusIcon = LocalAirport;
+export const CalendarIcon = CalendarMonth;

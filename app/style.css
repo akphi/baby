@@ -37,3 +37,21 @@ body {
 .mui--nullify-disabled-wash {
   -webkit-text-fill-color: initial;
 }
+
+.fc .fc-toolbar-title {
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    Liberation Mono, Courier New, monospace;
+  color: theme(colors.slate.700);
+  user-select: none;
+}
+
+.fc .fc-toolbar.fc-header-toolbar {
+  margin-bottom: 0.5rem;
+}
+
+.fc {
+  color: theme(colors.slate.700);
+  --fc-border-color: theme(colors.slate.200);
+  --fc-today-bg-color: theme(colors.slate.100);
+}

@@ -40,6 +40,7 @@ import {
   MoreVertIcon,
   ClockIcon,
   AnalyticsIcon,
+  CalendarIcon,
 } from "../shared/Icons";
 import { cn } from "../shared/StyleUtils";
 import { useEffect, useState } from "react";
@@ -255,6 +256,21 @@ export default function BabyCare() {
                   <AnalyticsIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText>Trend</ListItemText>
+              </MenuItem>
+            </Link>
+            <Link
+              to={`/baby/${profile.handle ?? profile.id}/calendar`}
+              className="h-full"
+            >
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                }}
+              >
+                <ListItemIcon>
+                  <CalendarIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Calendar</ListItemText>
               </MenuItem>
             </Link>
             <Divider className="my-2" />

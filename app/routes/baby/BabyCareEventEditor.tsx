@@ -132,6 +132,9 @@ export const BabyCareEventEditor = (props: {
   const [purpose, setPurpose] = useState(
     (data as SerializeFrom<NoteEvent>).purpose
   );
+  const [title, setTitle] = useState(
+    (data as SerializeFrom<NoteEvent>).title
+  );
   const [destination, setDestination] = useState(
     (data as SerializeFrom<TravelEvent>).destination
   );
@@ -217,6 +220,7 @@ export const BabyCareEventEditor = (props: {
 
         prescription: prescriptionOption?.prescription,
         purpose,
+        title,
 
         endTime: endTime?.toISOString(),
         destination,
@@ -541,6 +545,19 @@ export const BabyCareEventEditor = (props: {
           )}
           {data.TYPE === BabyCareEventType.NOTE && (
             <>
+              <div className="w-full py-2">
+                <TextField
+                  label="Title"
+                  value={title}
+                  autoFocus
+                  variant="outlined"
+                  onChange={(event) => {
+                    setTitle(event.target.value ?? "");
+                  }}
+                  className="w-full"
+                  disabled={Boolean(readOnly)}
+                />
+              </div>
               <div className="w-full py-2">
                 <FormControl className="w-full">
                   <InputLabel>Purpose</InputLabel>
